@@ -1,0 +1,5 @@
+<data>
+    <xpath expr="/tree/field[@name='company']" position="after">
+        <field name="model_type"/>
+    </xpath>
+</data>
