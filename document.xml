@@ -3,11 +3,23 @@
      copyright notices and license terms. -->
 <tryton>
     <data>
+        <!-- papyrus.queue -->
+        <record model="ir.ui.view" id="queue_view_form">
+            <field name="model">papyrus.queue</field>
+            <field name="inherit" ref="papyrus.papyrus_queue_view_form"/>
+            <field name="name">queue_form</field>
+        </record>
+
         <!-- papyrus.document -->
         <record model="ir.ui.view" id="document_view_form">
             <field name="model">papyrus.document</field>
             <field name="inherit" ref="papyrus.papyrus_document_view_form"/>
             <field name="name">document_form</field>
+        </record>
+        <record model="ir.ui.view" id="document_view_list">
+            <field name="model">papyrus.document</field>
+            <field name="inherit" ref="papyrus.papyrus_document_view_list"/>
+            <field name="name">document_list</field>
         </record>
     </data>
 </tryton>

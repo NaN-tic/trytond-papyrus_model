@@ -3,12 +3,10 @@
      copyright notices and license terms. -->
 <data>
    <xpath expr="/form/notebook/page[@id='image']/group[@id='extra']" position="inside">
-        <group id="model_type" col="2" colspan="4">
-          <label name="model_type"/>
-          <field name="model_type"/>
-        </group>
-        <field name="invoice" mode="form,tree" colspan="4"/>
-        <field name="sale" mode="form,tree" colspan="4"/>
-        <field name="shipment_in" mode="form,tree" colspan="4"/>
+       <label name="model_type"/>
+       <field name="model_type"/>
+       <field name="invoice" mode="form,tree" colspan="4"/>
+       <field name="sale" mode="form,tree" colspan="4"/>
+       <field name="shipment_in" mode="form,tree" colspan="4"/>
    </xpath>
 </data>
