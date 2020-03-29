@@ -10,9 +10,9 @@ module = 'papyrus_model'
 
 def register():
     Pool.register(
+        document.Queue,
         document.Document,
         invoice.Invoice,
         sale.Sale,
         stock.ShipmentIn,
-        module=module, type_='model'
-    )
+        module=module, type_='model')
