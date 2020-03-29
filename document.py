@@ -1,12 +1,27 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
-from trytond.model import fields, ModelView
+from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
-from trytond.pyson import Bool, Eval, If
-from trytond.i18n import gettext
-from trytond.exceptions import UserError
-from trytond.transaction import Transaction
+from trytond.pyson import Eval
+
+
+class Queue(metaclass=PoolMeta):
+    'Papyrus Queue'
+    __name__ = 'papyrus.queue'
+    model_type = fields.Selection([
+            (None, ''),
+            ('invoice', 'Invoice'),
+            ('sale', 'Sale'),
+            ('shipment_in', 'Shipment In'),
+            ], 'Model Type', states={
+            'invisible': Eval('type') != 'document',
+            })
+
+    def get_document(self, filename):
+        document = super().get_document(filename)
+        document.model_type = self.model_type
+        return document
 
 
 class Document(metaclass=PoolMeta):

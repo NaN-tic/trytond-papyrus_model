@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="/form/field[@name='scheduler']" position="after">
+        <label name="model_type"/>
+        <field name="model_type"/>
+    </xpath>
+</data>
