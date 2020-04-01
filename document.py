@@ -5,16 +5,17 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 
+MODEL_TYPE = [
+    (None, ''),
+    ('invoice', 'Invoice'),
+    ('sale', 'Sale'),
+    ('shipment_in', 'Shipment In'),
+    ]
 
 class Queue(metaclass=PoolMeta):
     'Papyrus Queue'
     __name__ = 'papyrus.queue'
-    model_type = fields.Selection([
-            (None, ''),
-            ('invoice', 'Invoice'),
-            ('sale', 'Sale'),
-            ('shipment_in', 'Shipment In'),
-            ], 'Model Type', states={
+    model_type = fields.Selection(MODEL_TYPE, 'Model Type', states={
             'invisible': Eval('type') != 'document',
             })
 
@@ -27,12 +28,7 @@ class Queue(metaclass=PoolMeta):
 class Document(metaclass=PoolMeta):
     'Papyrus Document'
     __name__ = 'papyrus.document'
-    model_type = fields.Selection([
-            (None, ''),
-            ('invoice', 'Invoice'),
-            ('sale', 'Sale'),
-            ('shipment_in', 'Shipment In'),
-            ], 'Model Type')
+    model_type = fields.Selection(MODEL_TYPE, 'Model Type')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
         size=1,
         states={
@@ -47,6 +43,8 @@ class Document(metaclass=PoolMeta):
         states={
             'invisible': Eval('model_type') != 'shipment_in',
         }, depends=['model_type'])
+    guessed_company = fields.Many2One('company.company', 'Guessed Company')
+    guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
     @classmethod
     def view_attributes(cls):
@@ -65,6 +63,139 @@ class Document(metaclass=PoolMeta):
     def scan_engines(self):
         super().scan_engines()
         return ['text', 'textboxes']
+
+    def scan(self):
+        super().scan()
+        self.guess_company()
+        self.guess_model_type()
+        if self.model_type:
+            getattr(self, 'guess_%s' % self.model_type)()
+
+    def guess_company(self):
+        pool = Pool()
+        Company = pool.get('company.company')
+
+        if self.company:
+            return
+
+        def normalize_code(code):
+            # Try to remove non-alphanumeric symbols
+            for char in '-. ,':
+                code = code.replace(char, '')
+            code = code.lower()
+            return code
+
+        identifiers = {}
+        for company in Company.search([]):
+            for identifier in company.party.identifiers:
+                if not identifier.code:
+                    continue
+                code = normalize_code(identifier.code)
+                identifiers[code] = company
+                if identifier.type == 'eu_vat':
+                    code = code[2:]
+                    identifiers[code] = company
+
+        for box in self.boxes:
+            text = box.text
+            if text is None:
+                continue
+            text = text.strip()
+            if not text:
+                continue
+
+            text = normalize_code(text)
+            if text in identifiers:
+                self.guessed_company = identifiers[text]
+                self.company = self.guessed_company
+                break
+
+    def guess_model_type(self):
+        if self.model_type:
+            return
+        if not self.text:
+            return
+
+        def find_words(type_, words):
+            text = self.text.lower()
+            for word in words:
+                if word in text:
+                    self.guessed_model_type = type_
+                    self.model_type = self.guessed_model_type
+                    return True
+            return False
+
+        if find_words('invoice', ['factura', 'invoice', 'abono']):
+            return
+
+        if find_words('shipment_in', ['albarán', 'albarà', 'albaran', 'albara',
+                    'shipment', 'delivery']):
+            return
+
+        if find_words('sale', ['pedido', 'comanda', 'order']):
+            return
+
+    def guess_party(self):
+        pool = Pool()
+        Company = pool.get('company.company')
+        Identifier = pool.get('party.identifier')
+
+        def normalize_code(code):
+            # Try to remove non-alphanumeric symbols
+            for char in '-. ,':
+                code = code.replace(char, '')
+            code = code.lower()
+            return code
+
+        companies = [x.party.id for x in Company.search([])]
+        parties = {}
+        for identifier in Identifier.search([
+                    ('party', 'not in', companies),
+                    ]):
+            code = normalize_code(identifier.code)
+            parties[code] = identifier.party
+            if identifier.type == 'eu_vat':
+                code = code[2:]
+                parties[code] = identifier.party
+
+        for box in self.boxes:
+            text = box.text
+            if text is None:
+                continue
+            text = text.strip()
+            if not text:
+                continue
+            text = normalize_code(text)
+            if text in parties:
+                return parties[text]
+
+    def guess_invoice(self):
+        party = self.guess_party()
+        if not party:
+            return
+        invoice = self._get_invoice()
+        invoice.party = party
+        invoice.on_change_party()
+        invoice.account = invoice.on_change_with_account()
+        self.invoice = [invoice]
+
+    def guess_sale(self):
+        party = self.guess_party()
+        if not party:
+            return
+        sale = self._get_invoice()
+        sale.party = party
+        sale.on_change_party()
+        self.sale = [sale]
+
+    def guess_shipment_in(self):
+        party = self.guess_party()
+        if not party:
+            return
+        shipment = self._get_shipment()
+        shipment.party = party
+        shipment.on_change_party()
+        self.shipment = [shipment]
 
     def get_record(self):
         record = super().get_record()
@@ -93,7 +224,7 @@ class Document(metaclass=PoolMeta):
         defaults = Invoice.default_get(list(Invoice._fields.keys()),
             with_rec_name=False)
         invoice = Invoice(**defaults)
-        invoice.type = 'out'
+        invoice.type = 'in'
         invoice.on_change_type()
         return invoice
 
