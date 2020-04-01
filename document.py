@@ -1,6 +1,7 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+from datetime import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
@@ -169,6 +170,19 @@ class Document(metaclass=PoolMeta):
             if text in parties:
                 return parties[text]
 
+    def guess_date(self):
+        def parse_date(text):
+            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y'):
+                try:
+                    return datetime.strptime(text, pattern)
+                except ValueError:
+                    pass
+
+        for box in self.boxes:
+            date = parse_date(box.text.strip())
+            if date:
+                return date
+
     def guess_invoice(self):
         party = self.guess_party()
         if not party:
@@ -177,6 +191,7 @@ class Document(metaclass=PoolMeta):
         invoice.party = party
         invoice.on_change_party()
         invoice.account = invoice.on_change_with_account()
+        invoice.invoice_date = self.guess_date()
         self.invoice = [invoice]
 
     def guess_sale(self):
@@ -186,6 +201,7 @@ class Document(metaclass=PoolMeta):
         sale = self._get_invoice()
         sale.party = party
         sale.on_change_party()
+        sale.sale_date = self.guess_date()
         self.sale = [sale]
 
     def guess_shipment_in(self):
@@ -195,6 +211,7 @@ class Document(metaclass=PoolMeta):
         shipment = self._get_shipment()
         shipment.party = party
         shipment.on_change_party()
+        shipment.effective_date = self.guess_date()
         self.shipment = [shipment]
 
     def get_record(self):
