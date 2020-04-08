@@ -242,6 +242,25 @@ class Document(metaclass=PoolMeta):
             sale.document = self
             sale.save()
 
+    def guess_shipment_in_warehouse(self, shipment):
+        Move = Pool().get('stock.move')
+
+        # Only if there are moves and all go to the same location
+        # we can guess the warehouse
+        moves = Move.search([
+                ('company', '=', self.company),
+                ('state', '=', 'draft'),
+                ('from_location', '=', shipment.supplier.supplier_location),
+                ('to_location.type', '=', 'storage'),
+                ])
+        if not moves:
+            return
+        location = moves[0].to_location
+        for move in moves:
+            if move.to_location != location:
+                return
+        return location.warehouse
+
     def guess_shipment_in(self):
         if not self.company:
             return
@@ -252,6 +271,10 @@ class Document(metaclass=PoolMeta):
             shipment = self._get_shipment_in()
             shipment.supplier = party
             shipment.on_change_supplier()
+            if not shipment.warehouse:
+                shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
+                if not shipment.warehouse:
+                    return
             shipment.effective_date = self.guess_date()
             shipment.document = self
             shipment.save()
