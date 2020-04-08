@@ -5,6 +5,7 @@ from datetime import datetime
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
+from trytond.transaction import Transaction
 
 MODEL_TYPE = [
     (None, ''),
@@ -198,35 +199,46 @@ class Document(metaclass=PoolMeta):
                 return date
 
     def guess_invoice(self):
-        party = self.guess_party()
-        if not party:
+        if not self.company:
             return
-        invoice = self._get_invoice()
-        invoice.party = party
-        invoice.on_change_party()
-        invoice.account = invoice.on_change_with_account()
-        invoice.invoice_date = self.guess_date()
-        self.invoice = [invoice]
+        with Transaction().set_context(company=self.company.id):
+            party = self.guess_party()
+            if not party:
+                return
+            invoice = self._get_invoice()
+            invoice.party = party
+            invoice.on_change_party()
+            invoice.invoice_date = self.guess_date()
+            invoice.document = self
+            invoice.save()
 
     def guess_sale(self):
-        party = self.guess_party()
-        if not party:
+        if not self.company:
             return
-        sale = self._get_invoice()
-        sale.party = party
-        sale.on_change_party()
-        sale.sale_date = self.guess_date()
-        self.sale = [sale]
+        with Transaction().set_context(company=self.company.id):
+            party = self.guess_party()
+            if not party:
+                return
+            sale = self._get_sale()
+            sale.party = party
+            sale.on_change_party()
+            sale.sale_date = self.guess_date()
+            sale.document = self
+            sale.save()
 
     def guess_shipment_in(self):
-        party = self.guess_party()
-        if not party:
+        if not self.company:
             return
-        shipment = self._get_shipment()
-        shipment.party = party
-        shipment.on_change_party()
-        shipment.effective_date = self.guess_date()
-        self.shipment = [shipment]
+        with Transaction().set_context(company=self.company.id):
+            party = self.guess_party()
+            if not party:
+                return
+            shipment = self._get_shipment_in()
+            shipment.supplier = party
+            shipment.on_change_supplier()
+            shipment.effective_date = self.guess_date()
+            shipment.document = self
+            shipment.save()
 
     def get_record(self):
         record = super().get_record()
@@ -236,7 +248,6 @@ class Document(metaclass=PoolMeta):
             record, = self.sale
         elif self.model_type == 'shipment_in':
             record, = self.shipment_in
-
         return record
 
     @fields.depends('model_type', 'invoice', 'sale', 'shipment_in')
