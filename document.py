@@ -177,10 +177,18 @@ class Document(metaclass=PoolMeta):
                 return parties[text]
 
     def guess_date(self):
+        Date = Pool().get('ir.date')
+        year = Date().today().year
+        min_year = year - 1
+        max_year = year + 1
+
         def parse_date(text):
-            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y'):
+            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
+                    '%d.%m.%Y', '%d.%m.%y'):
                 try:
-                    return datetime.strptime(text, pattern)
+                    date = datetime.strptime(text, pattern)
+                    if date.year >= min_year and date.year <= max_year:
+                        return date
                 except ValueError:
                     pass
 
