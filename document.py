@@ -6,6 +6,8 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
+from trytond.exceptions import UserError
+from trytond.i18n import gettext
 
 MODEL_TYPE = [
     (None, ''),
@@ -32,21 +34,35 @@ class Document(metaclass=PoolMeta):
     __name__ = 'papyrus.document'
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
-        size=1,
+        size=1, add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'invoice',
         }, depends=['model_type'])
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
+        add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'sale',
         }, depends=['model_type'])
     shipment_in = fields.One2Many('stock.shipment.in', 'document',
-        "Shipment In", size=1,
+        "Shipment In", size=1, add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'shipment_in',
         }, depends=['model_type'])
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
+
+    @classmethod
+    def delete(cls, documents):
+        with Transaction().set_user(0):
+            for document in cls.browse([x.id for x in documents]):
+                for field in ('invoice', 'sale', 'shipment_in'):
+                    records = getattr(document, field)
+                    if records:
+                        raise UserError(gettext('papyrus_model.'
+                                'msg_cannot_delete_with_related_record',
+                                document=document.rec_name,
+                                record=records[0].rec_name))
+        super().delete(documents)
 
     @classmethod
     def view_attributes(cls):
