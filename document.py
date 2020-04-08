@@ -142,6 +142,7 @@ class Document(metaclass=PoolMeta):
 
     def guess_party(self):
         pool = Pool()
+        Party = pool.get('party.party')
         Company = pool.get('company.company')
         Identifier = pool.get('party.identifier')
 
@@ -156,6 +157,7 @@ class Document(metaclass=PoolMeta):
         parties = {}
         for identifier in Identifier.search([
                     ('party', 'not in', companies),
+                    ('type', 'in', Party.tax_identifier_types()),
                     ]):
             code = normalize_code(identifier.code)
             parties[code] = identifier.party
