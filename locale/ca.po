@@ -1,0 +1,87 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:account.invoice,document:"
+msgid "Document"
+msgstr "Document"
+
+msgctxt "field:papyrus.document,guessed_company:"
+msgid "Guessed Company"
+msgstr "Companyia suposada"
+
+msgctxt "field:papyrus.document,guessed_model_type:"
+msgid "Guessed Model Type"
+msgstr "Tipus de model suposat"
+
+msgctxt "field:papyrus.document,invoice:"
+msgid "Account Invoice"
+msgstr "Factura"
+
+msgctxt "field:papyrus.document,model_type:"
+msgid "Model Type"
+msgstr "Tipus de model"
+
+msgctxt "field:papyrus.document,sale:"
+msgid "Sale"
+msgstr "Venda"
+
+msgctxt "field:papyrus.document,shipment_in:"
+msgid "Shipment In"
+msgstr "Albarà de proveïdor"
+
+msgctxt "field:papyrus.queue,model_type:"
+msgid "Model Type"
+msgstr "Tipus de model"
+
+msgctxt "field:sale.sale,document:"
+msgid "Document"
+msgstr "Document"
+
+msgctxt "field:stock.shipment.in,document:"
+msgid "Document"
+msgstr "Document"
+
+msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot be removed because \"%(record)s\" is linked"
+" to it. You must remove or unlink the related record first."
+msgstr ""
+"El document \"%(document)s\" no es pot eliminar perquè \"%(record)s\" hi "
+"està vinculat. Cal que primer eliminis o desvinculis el registre relacionat."
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Invoice"
+msgstr "Factura"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Sale"
+msgstr "Venda"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Shipment In"
+msgstr "Albarà de proveïdor"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Invoice"
+msgstr "Factura"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Sale"
+msgstr "Venda"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Shipment In"
+msgstr "Albarà de proveïdor"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Invoice"
+msgstr "Factura"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Sale"
+msgstr "Venda"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Shipment In"
+msgstr "Albarà de proveïdor"
