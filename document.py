@@ -65,20 +65,6 @@ class Document(metaclass=PoolMeta):
                                 record=records[0].rec_name))
         super().delete(documents)
 
-    @classmethod
-    def view_attributes(cls):
-        return super().view_attributes() + [
-            ('//field[@name="invoice"]', 'states', {
-                'invisible': Eval('model_type') != 'invoice',
-                }),
-            ('//field[@name="sale"]', 'states', {
-                'invisible': Eval('model_type') != 'sale',
-                }),
-            ('//field[@name="shipment_in"]', 'states', {
-                'invisible': Eval('model_type') != 'shipment_in',
-                })
-            ]
-
     def scan_engines(self):
         super().scan_engines()
         yield 'text'
