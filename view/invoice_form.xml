@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="//page[@id='info']/field[@name='cancel_move']" position="after">
+        <label name="document"/>
+        <field name="document"/>
+    </xpath>
+</data>
