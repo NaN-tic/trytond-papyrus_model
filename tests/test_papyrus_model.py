@@ -8,7 +8,7 @@ from trytond.tests.test_tryton import ModuleTestCase
 
 class PapyrusModelTestCase(ModuleTestCase):
     'Test Papyrus Model module'
-    module = 'papyrus.model'
+    module = 'papyrus_model'
 
 
 def suite():
