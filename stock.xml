@@ -1,0 +1,14 @@
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="shipment_in_view_form">
+            <field name="model">stock.shipment.in</field>
+            <field name="inherit" ref="stock.shipment_in_view_form"/>
+            <field name="name">shipment_in_form</field>
+        </record>
+        <record model="ir.ui.view" id="shipment_in_view_tree">
+            <field name="model">stock.shipment.in</field>
+            <field name="inherit" ref="stock.shipment_in_view_tree"/>
+            <field name="name">shipment_in_tree</field>
+        </record>
+    </data>
+</tryton>

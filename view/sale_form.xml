@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="/form/notebook/page[@id='other']/field[@name='origin']" position="after">
+        <label name="document"/>
+        <field name="document"/>
+    </xpath>
+</data>
