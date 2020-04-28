@@ -212,6 +212,7 @@ class Document(metaclass=PoolMeta):
             invoice.party = party
             invoice.on_change_party()
             invoice.invoice_date = self.guess_date()
+            invoice.payment_term = invoice.on_change_with_payment_term()
             invoice.document = self
             invoice.save()
 
