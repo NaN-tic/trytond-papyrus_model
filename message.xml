@@ -1,6 +1,10 @@
 <tryton>
-    <data> <record model="ir.message" id="msg_cannot_delete_with_related_record">
+    <data>
+        <record model="ir.message" id="msg_cannot_delete_with_related_record">
             <field name="text">Document "%(document)s" cannot be removed because "%(record)s" is linked to it. You must remove or unlink the related record first.</field>
         </record>
+        <record model="ir.message" id="msg_cannot_process_without_related_record">
+            <field name="text">If you have a model type selected, you cannot process the document without creating the related model.</field>
+       </record>
     </data>
 </tryton>
