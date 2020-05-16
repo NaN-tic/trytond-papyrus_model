@@ -268,12 +268,15 @@ class Document(metaclass=PoolMeta):
 
     def get_record(self):
         record = super().get_record()
-        if self.model_type == 'invoice':
+        if self.model_type == 'invoice' and self.invoice:
             record, = self.invoice
-        elif self.model_type == 'sale':
+        elif self.model_type == 'sale' and self.sale:
             record, = self.sale
-        elif self.model_type == 'shipment_in':
+        elif self.model_type == 'shipment_in' and self.shipment_in:
             record, = self.shipment_in
+        else:
+            raise UserError(gettext('papyrus_model.'
+                    'msg_cannot_process_without_related_record'))
         return record
 
     @fields.depends('model_type', 'invoice', 'sale', 'shipment_in')
