@@ -2,7 +2,7 @@
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
 from datetime import datetime
-from trytond.model import fields
+from trytond.model import fields, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
@@ -54,16 +54,36 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def delete(cls, documents):
+        exists = cls.model_exists(documents)
+        if exists:
+            records, document = exists
+            raise UserError(gettext('papyrus_model.'
+                    'msg_cannot_delete_with_related_record',
+                    document=document.rec_name,
+                    record=records[0].rec_name))
+        super().delete(documents)
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('pending')
+    def pending(cls, documents):
+        exists = cls.model_exists(documents)
+        if exists:
+            records, document = exists
+            raise UserError(gettext('papyrus_model.'
+                    'msg_cannot_pending_with_related_record',
+                    document=document.rec_name,
+                    record=records[0].rec_name))
+        super().pending(documents)
+
+    @classmethod
+    def model_exists(cls, documents):
         with Transaction().set_user(0):
             for document in cls.browse([x.id for x in documents]):
                 for field in ('invoice', 'sale', 'shipment_in'):
                     records = getattr(document, field)
                     if records:
-                        raise UserError(gettext('papyrus_model.'
-                                'msg_cannot_delete_with_related_record',
-                                document=document.rec_name,
-                                record=records[0].rec_name))
-        super().delete(documents)
+                        return records, document
 
     def scan_engines(self):
         super().scan_engines()
