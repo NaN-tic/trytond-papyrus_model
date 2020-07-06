@@ -8,6 +8,7 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
+from statistics import mode, StatisticsError
 
 MODEL_TYPE = [
     (None, ''),
@@ -234,6 +235,7 @@ class Document(metaclass=PoolMeta):
             invoice.invoice_date = self.guess_date()
             invoice.document = self
             invoice.save()
+            self.guess_employee([('invoice.party', '=', party)])
 
     def guess_sale(self):
         if not self.company:
@@ -248,6 +250,7 @@ class Document(metaclass=PoolMeta):
             sale.sale_date = self.guess_date()
             sale.document = self
             sale.save()
+            self.guess_employee([('sale.party', '=', party)])
 
     def guess_shipment_in_warehouse(self, shipment):
         Move = Pool().get('stock.move')
@@ -285,6 +288,7 @@ class Document(metaclass=PoolMeta):
             shipment.effective_date = self.guess_date()
             shipment.document = self
             shipment.save()
+            self.guess_employee([('shipment_in.supplier', '=', party)])
 
     def get_record(self):
         record = super().get_record()
@@ -332,3 +336,17 @@ class Document(metaclass=PoolMeta):
             with_rec_name=False)
         shipment_in = ShipmentIn(**defaults)
         return shipment_in
+
+    def guess_employee(self, domain):
+        if self.employee:
+            return
+        rows = self.search([
+                (self.model_type, '!=', None),
+                ('state', '=', 'processed'),
+                ] + domain, limit=5, order=[('id', 'DESC')])
+        employees = [r.employee.id for r in rows if r.employee]
+        if employees:
+            try:
+                self.employee = mode(employees)
+            except StatisticsError:
+                self.employee = employees[0]
