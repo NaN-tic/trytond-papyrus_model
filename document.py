@@ -89,7 +89,7 @@ class Document(metaclass=PoolMeta):
     def scan_engines(self):
         super().scan_engines()
         yield 'text'
-        if self.text.strip():
+        if self.text and self.text.strip():
             yield 'textboxes'
         else:
             yield 'tesseract'
