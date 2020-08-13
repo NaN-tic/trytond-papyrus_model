@@ -223,7 +223,7 @@ class Document(metaclass=PoolMeta):
                 return date
 
     def guess_invoice(self):
-        if not self.company:
+        if not self.company or self.invoice:
             return
         with Transaction().set_context(company=self.company.id):
             party = self.guess_party()
@@ -238,7 +238,7 @@ class Document(metaclass=PoolMeta):
             self.guess_employee([('invoice.party', '=', party)])
 
     def guess_sale(self):
-        if not self.company:
+        if not self.company or self.sale:
             return
         with Transaction().set_context(company=self.company.id):
             party = self.guess_party()
@@ -272,7 +272,7 @@ class Document(metaclass=PoolMeta):
         return location.warehouse
 
     def guess_shipment_in(self):
-        if not self.company:
+        if not self.company or self.shipment_in:
             return
         with Transaction().set_context(company=self.company.id):
             party = self.guess_party()
