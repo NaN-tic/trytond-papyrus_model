@@ -274,7 +274,7 @@ class Document(metaclass=PoolMeta):
                         ('type', '=', 'in'),
                         ('untaxed_amount', '>', Decimal(0)),
                         ('state', 'in', ['posted', 'paid']),
-                        ], limit=1)
+                        ], order=[('invoice_date', 'DESC')], limit=1)
                 if existing_invoices:
                     invoice, = Invoice.copy(existing_invoices, default={
                             'reference': None,
