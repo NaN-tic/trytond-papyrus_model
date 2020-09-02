@@ -1,6 +1,7 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+from decimal import Decimal
 from datetime import datetime
 from trytond.model import fields, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
@@ -223,15 +224,38 @@ class Document(metaclass=PoolMeta):
                 return date
 
     def guess_invoice(self):
+        pool = Pool()
+        Invoice = pool.get('account.invoice')
+        InvoiceLine = pool.get('account.invoice.line')
+
         if not self.company or self.invoice:
             return
         with Transaction().set_context(company=self.company.id):
             party = self.guess_party()
             if not party:
                 return
-            invoice = self._get_invoice()
-            invoice.party = party
-            invoice.on_change_party()
+            invoice = None
+            pending_lines = InvoiceLine.search([
+                    ('invoice', '=', None),
+                    ('party', '=', party),
+                    ('invoice_type', '=', 'in'),
+                    ], limit=1)
+            if not pending_lines:
+                existing_invoices = Invoice.search([
+                        ('party', '=', party),
+                        ('type', '=', 'in'),
+                        ('untaxed_amount', '>', Decimal(0)),
+                        ('state', 'in', ['posted', 'paid']),
+                        ], limit=1)
+                if existing_invoices:
+                    invoice, = Invoice.copy(existing_invoices, default={
+                            'reference': None,
+                            'invoice_date': None,
+                            })
+            if not invoice:
+                invoice = self._get_invoice()
+                invoice.party = party
+                invoice.on_change_party()
             invoice.invoice_date = self.guess_date()
             invoice.payment_term = invoice.on_change_with_payment_term()
             invoice.account = invoice.on_change_with_account()
