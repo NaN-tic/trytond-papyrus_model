@@ -1,15 +1,20 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+import re
+import ngram
+import stdnum
+import json
 from decimal import Decimal
 from datetime import datetime
+from statistics import mode, StatisticsError
 from trytond.model import fields, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
-from statistics import mode, StatisticsError
+from trytond.cache import Cache
 
 MODEL_TYPE = [
     (None, ''),
@@ -31,6 +36,225 @@ MONTHS = (
     (11, ('novembre', 'noviembre', 'november')),
     (12, ('desembre', 'diciembre', 'december')),
     )
+
+
+class DocumentBox(metaclass=PoolMeta):
+    __name__ = 'papyrus.document.box'
+    category = fields.Char('category')
+    categories = fields.Char('Categories')
+    _caches = Cache('papyrus.document.box')
+
+    def basic_ner_zip(self):
+        pool = Pool()
+        Zip = pool.get('country.zip')
+        g = self._caches.get('zips')
+        if not g:
+            zips = [x.zip.lower() for x in Zip.search([])]
+            g = ngram.NGram(zips)
+            self._caches.set('zips', g)
+        for item in g.search(self.text.lower(), threshold=0.9):
+            return 'zip', item[1]
+
+    def basic_ner_city(self):
+        pool = Pool()
+        Zip = pool.get('country.zip')
+        g = self._caches.get('cities')
+        if not g:
+            cities = [x.city.lower() for x in Zip.search([])]
+            g = ngram.NGram(cities)
+            self._caches.set('cities', g)
+        for item in g.search(self.text.lower(), threshold=0.9):
+            return 'city', item[1]
+
+    def basic_ner_subdivision(self):
+        pool = Pool()
+        Subdivision = pool.get('country.subdivision')
+        g = self._caches.get('subdivisions')
+        if not g:
+            subdivisions = [x.name.lower() for x in Subdivision.search([])]
+            g = ngram.NGram(subdivisions)
+            self._caches.set('subdivisions', g)
+        for item in g.search(self.text.lower(), threshold=0.9):
+            return 'subdivision', item[1]
+
+    def basic_ner_country(self):
+        pool = Pool()
+        Country = pool.get('country.country')
+        g = self._caches.get('countries')
+        if not g:
+            countries = [x.name.lower() for x in Country.search([])]
+            g = ngram.NGram(countries)
+            self._caches.set('countries', g)
+        for item in g.search(self.text.lower(), threshold=0.9):
+            return 'country', item[1]
+
+    def basic_ner_date(self):
+        Date = Pool().get('ir.date')
+        year = Date().today().year
+        min_year = year - 1
+        max_year = year + 1
+
+        def parse_date(text):
+            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
+                    '%d.%m.%Y', '%d.%m.%y'):
+                try:
+                    date = datetime.strptime(text, pattern)
+                    if date.year >= min_year and date.year <= max_year:
+                        return date
+                except ValueError:
+                    pass
+
+        date = parse_date(self.text)
+        if date:
+            return 'date', 0.98
+
+    def basic_ner_phone(self):
+        text = self.text.replace('.', '').replace(' ', '').replace('-', '')
+        text = text.replace('(', '').replace(')', '')
+        if len(text) <= 5:
+            return
+        # If any character is different from '+' or a number it is not a phone
+        # number
+        invalid = any(x for x in text if x not in '+0123456789')
+        if invalid:
+            return
+        return 'phone', 0.98
+
+    def basic_ner_email(self):
+        emails = re.findall("([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)",
+            self.text)
+        if len(emails) == 1:
+            return 'e-mail', 0.98
+
+    def basic_ner_url(self):
+        text = self.text.lower()
+        text = text.strip()
+        if text.startswith('http'):
+            return 'url', 0.98
+        if text.startswith('www'):
+            return 'url', 0.98
+
+    def basic_ner_integer(self):
+        text = self.text.strip()
+        remains = set(text) - set('0123456789')
+        if not remains:
+            return 'integer', 1
+        text = text.replace(' ', '')
+        if not remains:
+            return 'integer', 0.98
+
+    @staticmethod
+    def to_float(text):
+        idx_dot = text.find('.')
+        idx_comma = text.find(',')
+        if idx_dot >= 0 and idx_comma >= 0:
+            if idx_dot > idx_comma:
+                text = text.replace(',', '')
+            else:
+                text = text.replace('.', '')
+                text = text.replace(',', '.')
+        try:
+            return float(text)
+        except ValueError:
+            return
+
+    def basic_ner_float(self):
+        text = self.text.strip()
+        value = self.to_float(text)
+        if not value is None:
+            return 'float', 0.95
+        text = text.replace(' ', '')
+        value = self.to_float(text)
+        if not value is None:
+            return 'float', 0.92
+
+    def basic_ner_page(self):
+        text = self.text.replace(' ', '')
+        if not '/' in text:
+            return
+        ps = text.split('/')
+        if len(ps) != 2:
+            return
+        try:
+            [int(x) for x in ps]
+        except ValueError:
+            return
+        return 'page', 0.95
+
+    def basic_ner_tax_identifier(self):
+        pool = Pool()
+        Party = pool.get('party.party')
+
+        text = self.text.strip()
+        if len(text) < 6:
+            return
+        for type in Party.tax_identifier_types():
+            # TODO: It's not obvious why we should only check
+            # tax_identifier_types.
+            module = stdnum.get_cc_module(*type.split('_', 1))
+            try:
+                if module and module.is_valid(text):
+                    break
+            except:
+                pass
+        else:
+            return
+        return 'tax_identifier', 1
+
+    def basic_ner_currency(self):
+        pool = Pool()
+        Currency = pool.get('currency.currency')
+
+        text = self.text.strip().lower()
+        currencies = Currency.search([])
+        for currency in currencies:
+            if text == currency.symbol.lower():
+                return 'currency', 0.99
+            if text == currency.name.lower() or text == currency.code.lower():
+                return 'currency', 0.95
+
+    def basic_ner_bic(self):
+        if stdnum.bic.is_valid(self.text.strip()):
+            # There are lots of false positives with words such as 'CANTIDAD'
+            # or 'FERNANDO', so we cannot assign a high probability
+            return 'bic', 0.5
+
+    def basic_ner_iban(self):
+        text = self.text.strip()
+        if stdnum.iban.is_valid(text):
+            return 'iban', 1
+        text = text.replace(' ', '')
+        if stdnum.iban.is_valid(text):
+            return 'iban', 0.95
+
+    def basic_ner_payment_type(self):
+        text = self.text.strip()
+        if text in ('cheque', 'transferencia', 'recibo'):
+            return 'payment-type', 0.99
+
+    def basic_ner_payment_term(self):
+        text = self.text.strip()
+        if text in ('10 dias', '20 dias', '30 dias', '60 dias'):
+            return 'payment-term', 0.99
+
+    def basic_ner(self):
+        categories = []
+        for ner in ('zip', 'integer', 'float', 'city', 'subdivision',
+                'country', 'date', 'phone', 'email', 'url', 'page', 'currency',
+                'bic', 'iban', 'payment_type', 'payment_term',
+                'tax_identifier'):
+            method = getattr(self, 'basic_ner_%s' % ner)
+            category = method()
+            if category:
+                categories.append(category)
+                _, percent = category
+                if percent > 0.9:
+                    break
+        self.categories = json.dumps(categories)
+        #self.categories = ' / '.join(['%s,%.2f)' % (x[0], x[1]) for x in
+                #categories])
+
+
 
 class Queue(metaclass=PoolMeta):
     'Papyrus Queue'
@@ -109,8 +333,60 @@ class Document(metaclass=PoolMeta):
         else:
             yield 'tesseract'
 
+    def guess_boxes(self):
+        counter = 0
+        # Start with basic NER
+        for box in self.boxes:
+            counter += 1
+            print('Checking "%s" (%d/%d)...' % (box.text, counter,
+                    len(self.boxes)))
+            box.basic_ner()
+            print('Result: ', box.categories)
+
+        # Now group boxes in the same line
+
+
+        # Now search for specific attributes
+        date = None
+        dates = []
+        for box in self.boxes:
+            categories = json.loads(box.categories)
+            for category, probability in categories:
+                if category == 'date':
+                    dates.append(box)
+        if len(dates) == 1:
+            date = dates[0].text
+
+        print('DATE: ', date)
+
+
+
+    def on_change_with_image(self, name=None):
+        import io
+        from PIL import Image, ImageDraw
+
+        image = super().on_change_with_image(name)
+        if image:
+            im = Image.open(io.BytesIO(image))
+            draw = ImageDraw.Draw(im)
+            xscale = 1.385
+            yscale = 1.385
+            for box in self.boxes:
+                if not box.categories:
+                    continue
+                draw.rectangle(
+                    (box.x0 * xscale, box.y0 * yscale,
+                        box.x1 * xscale, box.y1 * yscale),
+                    #fill=(0, 192, 192),
+                    outline=(0, 192, 192))
+            image = io.BytesIO()
+            im.save(image, format='png')
+            image = image.getvalue()
+        return image
+
     def scan(self):
         super().scan()
+        self.guess_boxes()
         self.guess_company()
         self.guess_model_type()
         if self.model_type:

@@ -10,6 +10,7 @@ module = 'papyrus_model'
 
 def register():
     Pool.register(
+        document.DocumentBox,
         document.Queue,
         document.Document,
         invoice.Invoice,
