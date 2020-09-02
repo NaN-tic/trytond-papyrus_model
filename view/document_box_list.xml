@@ -1,0 +1,5 @@
+<data>
+    <xpath expr="/tree/field[@name='text']" position="after">
+        <field name="categories"/>
+    </xpath>
+</data>

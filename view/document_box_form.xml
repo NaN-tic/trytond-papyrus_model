@@ -1,0 +1,6 @@
+<data>
+    <xpath expr="/form/field[@name='text']" position="after">
+        <label name="categories"/>
+        <field name="categories"/>
+    </xpath>
+</data>
