@@ -17,6 +17,20 @@ MODEL_TYPE = [
     ('sale', 'Sale'),
     ('shipment_in', 'Shipment In'),
     ]
+MONTHS = (
+    (1, ('gener', 'enero', 'january')),
+    (2, ('febrer', 'febrero', 'february')),
+    (3, ('març', 'marzo', 'march')),
+    (4, ('abril', 'april')),
+    (5, ('maig', 'mayo', 'may')),
+    (6, ('juny', 'junio', 'june')),
+    (7, ('juliol', 'julio', 'july')),
+    (8, ('agost', 'agosto', 'august')),
+    (9, ('setembre', 'septiembre', 'september')),
+    (10, ('octubre', 'october')),
+    (11, ('novembre', 'noviembre', 'november')),
+    (12, ('desembre', 'diciembre', 'december')),
+    )
 
 class Queue(metaclass=PoolMeta):
     'Papyrus Queue'
@@ -209,6 +223,20 @@ class Document(metaclass=PoolMeta):
         max_year = year + 1
 
         def parse_date(text):
+            for month, names in MONTHS:
+                for name in names:
+                    text = text.replace(name, str(month))
+
+            for month, names in MONTHS:
+                for name in names:
+                    # Frequently months are abbreviated to the first 3 letters
+                    # sometimes with a dot at the end
+                    text = text.replace(name[:3] + '.', str(month))
+                    text = text.replace(name[:3], str(month))
+
+            # Remove empty spaces
+            text = text.replace(' ', '')
+
             for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
                     '%d.%m.%Y', '%d.%m.%y'):
                 try:
