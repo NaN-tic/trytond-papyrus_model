@@ -269,17 +269,32 @@ class Document(metaclass=PoolMeta):
                     ('invoice_type', '=', 'in'),
                     ], limit=1)
             if not pending_lines:
-                existing_invoices = Invoice.search([
-                        ('party', '=', party),
-                        ('type', '=', 'in'),
-                        ('untaxed_amount', '>', Decimal(0)),
-                        ('state', 'in', ['posted', 'paid']),
-                        ], order=[('invoice_date', 'DESC')], limit=1)
-                if existing_invoices:
-                    invoice, = Invoice.copy(existing_invoices, default={
-                            'reference': None,
-                            'invoice_date': None,
-                            })
+                domain = [
+                    ('party', '=', party),
+                    ('type', '=', 'in'),
+                    ('untaxed_amount', '>', Decimal(0)),
+                    ('state', 'in', ['posted', 'paid']),
+                    ]
+                last_invoices = Invoice.search(domain,
+                    order=[('invoice_date', 'DESC')], limit=5)
+                # Invoices that have at least one line with an origin are not
+                # elligible.
+                # Note that we cannot use a domain that looks like
+                # "('lines.origin', '=', None)" to pick the last_invoices
+                # because that would return invoices that have at least one
+                # line without origin, but the invoice may have other lines
+                # with origin and we do not want to duplicate those.
+                invalid_invoices = set(Invoice.search(domain + [
+                        ('lines.origin', '!=', None),
+                        ], order=[('invoice_date', 'DESC')], limit=5))
+                for last_invoice in last_invoices:
+                    if last_invoice not in invalid_invoices:
+                        invoice, = Invoice.copy([last_invoice], default={
+                                'reference': None,
+                                'invoice_date': None,
+                                })
+                        break
+
             if not invoice:
                 invoice = self._get_invoice()
                 invoice.party = party
