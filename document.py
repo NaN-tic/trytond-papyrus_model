@@ -322,6 +322,7 @@ class Document(metaclass=PoolMeta):
             invoice.payment_term = invoice.on_change_with_payment_term()
             invoice.account = invoice.on_change_with_account()
             invoice.document = self
+            invoice.on_change_lines()
             invoice.save()
             self.guess_employee([('invoice.party', '=', party)])
 
