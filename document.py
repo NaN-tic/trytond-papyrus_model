@@ -320,6 +320,7 @@ class Document(metaclass=PoolMeta):
                 invoice.on_change_party()
             invoice.invoice_date = self.guess_date()
             invoice.document = self
+            invoice.on_change_lines()
             invoice.save()
             self.guess_employee([('invoice.party', '=', party)])
 
