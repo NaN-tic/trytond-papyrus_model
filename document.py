@@ -9,6 +9,7 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
+from trytond.model.fields.selection import TranslatedSelection
 from statistics import mode, StatisticsError
 
 MODEL_TYPE = [
@@ -68,15 +69,30 @@ class Document(metaclass=PoolMeta):
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
+    def get_model_type_name(self, records):
+        Model = Pool().get('ir.model')
+
+        if self.model_type:
+            t = TranslatedSelection('model_type')
+            model_type = t.__get__(self, self)
+        else:
+            record = records[0]
+            model, = Model.search([('model_name', '=', record.__name__)], limit=1)
+            model_type = model.name
+        return model_type
+
     @classmethod
     def delete(cls, documents):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
+            model_type_name = document.get_model_type_name(records)
+
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_delete_with_related_record',
                     document=document.rec_name,
-                    record=records[0].rec_name))
+                    record=records[0].rec_name,
+                    model_type=model_type_name))
         super().delete(documents)
 
     @classmethod
@@ -86,10 +102,13 @@ class Document(metaclass=PoolMeta):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
+            model_type_name = document.get_model_type_name(records)
+
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_pending_with_related_record',
                     document=document.rec_name,
-                    record=records[0].rec_name))
+                    record=records[0].rec_name,
+                    model_type=model_type_name))
         super().pending(documents)
 
     @classmethod
