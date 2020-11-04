@@ -261,7 +261,7 @@ class Document(metaclass=PoolMeta):
                 try:
                     date = datetime.strptime(text, pattern)
                     if date.year >= min_year and date.year <= max_year:
-                        return date
+                        return date.date()
                 except ValueError:
                     pass
 
