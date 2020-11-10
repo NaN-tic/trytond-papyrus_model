@@ -50,6 +50,8 @@ class Document(metaclass=PoolMeta):
     'Papyrus Document'
     __name__ = 'papyrus.document'
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
+    party = fields.Function(fields.Many2One('party.party', 'Party'),
+        'get_party', searcher='search_party')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
         size=1, add_remove=[('document', '=', None)], context={
             'type': 'in',
@@ -80,6 +82,22 @@ class Document(metaclass=PoolMeta):
             model, = Model.search([('model_name', '=', record.__name__)], limit=1)
             model_type = model.name
         return model_type
+
+    def get_party(self, name):
+        if self.model_type == 'invoice' and self.invoice:
+            return self.invoice[0].party.id
+        elif self.model_type == 'sale' and self.sale:
+            return self.sale[0].party.id
+        elif self.model_type == 'shipment_in' and self.shipment_in:
+            return self.shipment_in[0].supplier.id
+
+    @classmethod
+    def search_party(cls, name, clause):
+        return ['OR',
+            ('invoice.party',) + tuple(clause[1:]),
+            ('sale.party',) + tuple(clause[1:]),
+            ('shipment_in.supplier',) + tuple(clause[1:]),
+            ]
 
     @classmethod
     def delete(cls, documents):

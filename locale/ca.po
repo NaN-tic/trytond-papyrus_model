@@ -22,6 +22,10 @@ msgctxt "field:papyrus.document,model_type:"
 msgid "Model Type"
 msgstr "Tipus de model"
 
+msgctxt "field:papyrus.document,party:"
+msgid "Party"
+msgstr "Tercer"
+
 msgctxt "field:papyrus.document,sale:"
 msgid "Sale"
 msgstr "Venda"
