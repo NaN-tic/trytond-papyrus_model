@@ -10,5 +10,15 @@
             <field name="inherit" ref="account_invoice.invoice_view_tree"/>
             <field name="name">invoice_tree</field>
         </record>
+
+        <record model="ir.action.wizard" id="act_open_dossier">
+            <field name="name">Invoice Dossier</field>
+            <field name="wiz_name">invoice.dossier</field>
+        </record>
+        <record model="ir.action.keyword" id="action_open_dossier">
+            <field name="action" ref="act_open_dossier"/>
+            <field name="keyword">form_action</field>
+            <field name="model">account.invoice,-1</field>
+        </record>
     </data>
 </tryton>
