@@ -304,6 +304,7 @@ class Document(metaclass=PoolMeta):
                     ('invoice', '=', None),
                     ('party', '=', party),
                     ('invoice_type', '=', 'in'),
+                    ('company', '=', self.company.id),
                     ], limit=1)
             if not pending_lines:
                 domain = [
@@ -311,6 +312,7 @@ class Document(metaclass=PoolMeta):
                     ('type', '=', 'in'),
                     ('untaxed_amount', '>', Decimal(0)),
                     ('state', 'in', ['posted', 'paid']),
+                    ('company', '=', self.company.id),
                     ]
                 last_invoices = Invoice.search(domain,
                     order=[('invoice_date', 'DESC')], limit=5)
@@ -448,6 +450,7 @@ class Document(metaclass=PoolMeta):
         rows = self.search([
                 (self.model_type, '!=', None),
                 ('state', '=', 'processed'),
+                ('company', '=', self.company)
                 ] + domain, limit=5, order=[('id', 'DESC')])
         employees = [r.employee.id for r in rows if r.employee]
         if employees:
