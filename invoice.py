@@ -26,7 +26,6 @@ class InvoiceDossier(Wizard):
 
     def do_open_(self, action):
         pool = Pool()
-        Attachment = pool.get('ir.attachment')
         SaleLine = pool.get('sale.line')
         PurchaseLine = pool.get('purchase.line')
         Invoice = pool.get('account.invoice')
