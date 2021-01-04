@@ -217,7 +217,7 @@ class Document(metaclass=PoolMeta):
         if find_words('sale', ['pedido', 'comanda', 'order']):
             return
 
-    def guess_party(self):
+    def guess_party(self, type_=None):
         pool = Pool()
         Party = pool.get('party.party')
         Company = pool.get('company.company')
@@ -230,9 +230,18 @@ class Document(metaclass=PoolMeta):
             code = code.lower()
             return code
 
+        # Check type_ only if party_customer or party_supplier modules are
+        # activated
+        if type_ == 'customer' and hasattr(Party, 'customer'):
+            domain = [('party.customer', '=', True)]
+        elif type_ == 'supplier' and hasattr(Party, 'supplier'):
+            domain = [('party.supplier', '=', True)]
+        else:
+            domain = []
+
         companies = [x.party.id for x in Company.search([])]
         parties = {}
-        for identifier in Identifier.search([
+        for identifier in Identifier.search(domain + [
                     ('party', 'not in', companies),
                     ('type', 'in', Party.tax_identifier_types()),
                     ]):
@@ -296,7 +305,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.invoice:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('supplier')
             if not party:
                 return
             invoice = None
@@ -348,7 +357,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.sale:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('customer')
             if not party:
                 return
             sale = self._get_sale()
@@ -382,7 +391,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.shipment_in:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('supplier')
             if not party:
                 return
             shipment = self._get_shipment_in()
