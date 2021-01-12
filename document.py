@@ -16,7 +16,6 @@ from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.model.fields.selection import TranslatedSelection
 from trytond.cache import Cache
-from statistics import mode, StatisticsError
 
 MODEL_TYPE = [
     (None, ''),
