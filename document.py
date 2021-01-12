@@ -15,6 +15,7 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.cache import Cache
+from trytond.model.fields.selection import TranslatedSelection
 
 MODEL_TYPE = [
     (None, ''),
@@ -385,6 +386,8 @@ class Document(metaclass=PoolMeta):
     'Papyrus Document'
     __name__ = 'papyrus.document'
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
+    party = fields.Function(fields.Many2One('party.party', 'Party'),
+        'get_party', searcher='search_party')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
         size=1, add_remove=[('document', '=', None)], context={
             'type': 'in',
@@ -404,15 +407,46 @@ class Document(metaclass=PoolMeta):
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
+    def get_model_type_name(self, records):
+        Model = Pool().get('ir.model')
+
+        if self.model_type:
+            t = TranslatedSelection('model_type')
+            model_type = t.__get__(self, self)
+        else:
+            record = records[0]
+            model, = Model.search([('model', '=', record.__name__)], limit=1)
+            model_type = model.name
+        return model_type
+
+    def get_party(self, name):
+        if self.model_type == 'invoice' and self.invoice:
+            return self.invoice[0].party.id
+        elif self.model_type == 'sale' and self.sale:
+            return self.sale[0].party.id
+        elif self.model_type == 'shipment_in' and self.shipment_in:
+            return self.shipment_in[0].supplier.id
+
+    @classmethod
+    def search_party(cls, name, clause):
+        return ['OR',
+            ('invoice.party',) + tuple(clause[1:]),
+            ('sale.party',) + tuple(clause[1:]),
+            ('shipment_in.supplier',) + tuple(clause[1:]),
+            ]
+
     @classmethod
     def delete(cls, documents):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
+            model_type_name = document.get_model_type_name(records)
+
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_delete_with_related_record',
                     document=document.rec_name,
-                    record=records[0].rec_name))
+                    record=records[0].rec_name,
+                    model_type=model_type_name))
         super().delete(documents)
 
     @classmethod
@@ -422,10 +456,13 @@ class Document(metaclass=PoolMeta):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
+            model_type_name = document.get_model_type_name(records)
+
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_pending_with_related_record',
                     document=document.rec_name,
-                    record=records[0].rec_name))
+                    record=records[0].rec_name,
+                    model_type=model_type_name))
         super().pending(documents)
 
     @classmethod
@@ -616,7 +653,7 @@ class Document(metaclass=PoolMeta):
         if find_words('sale', ['pedido', 'comanda', 'order']):
             return
 
-    def guess_party(self):
+    def guess_party(self, type_=None):
         pool = Pool()
         Party = pool.get('party.party')
         Company = pool.get('company.company')
@@ -629,9 +666,18 @@ class Document(metaclass=PoolMeta):
             code = code.lower()
             return code
 
+        # Check type_ only if party_customer or party_supplier modules are
+        # activated
+        if type_ == 'customer' and hasattr(Party, 'customer'):
+            domain = [('party.customer', '=', True)]
+        elif type_ == 'supplier' and hasattr(Party, 'supplier'):
+            domain = [('party.supplier', '=', True)]
+        else:
+            domain = []
+
         companies = [x.party.id for x in Company.search([])]
         parties = {}
-        for identifier in Identifier.search([
+        for identifier in Identifier.search(domain + [
                     ('party', 'not in', companies),
                     ('type', 'in', Party.tax_identifier_types()),
                     ]):
@@ -678,7 +724,7 @@ class Document(metaclass=PoolMeta):
                 try:
                     date = datetime.strptime(text, pattern)
                     if date.year >= min_year and date.year <= max_year:
-                        return date
+                        return date.date()
                 except ValueError:
                     pass
 
@@ -695,7 +741,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.invoice:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('supplier')
             if not party:
                 return
             invoice = None
@@ -703,6 +749,7 @@ class Document(metaclass=PoolMeta):
                     ('invoice', '=', None),
                     ('party', '=', party),
                     ('invoice_type', '=', 'in'),
+                    ('company', '=', self.company.id),
                     ], limit=1)
             if not pending_lines:
                 domain = [
@@ -710,6 +757,7 @@ class Document(metaclass=PoolMeta):
                     ('type', '=', 'in'),
                     ('untaxed_amount', '>', Decimal(0)),
                     ('state', 'in', ['posted', 'paid']),
+                    ('company', '=', self.company.id),
                     ]
                 last_invoices = Invoice.search(domain,
                     order=[('invoice_date', 'DESC')], limit=5)
@@ -739,6 +787,7 @@ class Document(metaclass=PoolMeta):
             invoice.payment_term = invoice.on_change_with_payment_term()
             invoice.account = invoice.on_change_with_account()
             invoice.document = self
+            invoice.on_change_lines()
             invoice.save()
             self.guess_employee([('invoice.party', '=', party)])
 
@@ -746,7 +795,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.sale:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('customer')
             if not party:
                 return
             sale = self._get_sale()
@@ -780,7 +829,7 @@ class Document(metaclass=PoolMeta):
         if not self.company or self.shipment_in:
             return
         with Transaction().set_context(company=self.company.id):
-            party = self.guess_party()
+            party = self.guess_party('supplier')
             if not party:
                 return
             shipment = self._get_shipment_in()
@@ -848,6 +897,7 @@ class Document(metaclass=PoolMeta):
         rows = self.search([
                 (self.model_type, '!=', None),
                 ('state', '=', 'processed'),
+                ('company', '=', self.company)
                 ] + domain, limit=5, order=[('id', 'DESC')])
         employees = [r.employee.id for r in rows if r.employee]
         if employees:

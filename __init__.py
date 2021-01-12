@@ -17,3 +17,6 @@ def register():
         sale.Sale,
         stock.ShipmentIn,
         module=module, type_='model')
+    Pool.register(
+        invoice.InvoiceDossier,
+        module=module, type_='wizard')
