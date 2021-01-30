@@ -17,7 +17,7 @@
         </record>
         <record model="ir.action.keyword" id="action_open_dossier">
             <field name="action" ref="act_open_dossier"/>
-            <field name="keyword">form_action</field>
+            <field name="keyword">form_relate</field>
             <field name="model">account.invoice,-1</field>
         </record>
     </data>

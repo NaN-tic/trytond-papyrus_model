@@ -46,6 +46,10 @@ msgctxt "field:stock.shipment.in,document:"
 msgid "Document"
 msgstr "Documento"
 
+msgctxt "model:ir.action,name:act_open_dossier"
+msgid "Invoice Dossier"
+msgstr "Expediente"
+
 msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
 msgid ""
 "Document \"%(document)s\" cannot be removed because \"%(record)s\" "
