@@ -50,10 +50,11 @@ class InvoiceDossier(Wizard):
         for invoice_stock in invoice_stocks:
             resources.add(str(invoice_stock.stock_move.shipment))
 
-        domain = ['OR']
+        sub_domain = []
         for resource in resources:
-            domain.append([('resource', '=', resource)])
+            sub_domain.append(resource)
 
+        domain = [["resource", "in", sub_domain]]
         action['pyson_domain'] = PYSONEncoder().encode(domain)
         return action, {}
 

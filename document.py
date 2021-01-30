@@ -415,7 +415,7 @@ class Document(metaclass=PoolMeta):
             model_type = t.__get__(self, self)
         else:
             record = records[0]
-            model, = Model.search([('model_name', '=', record.__name__)], limit=1)
+            model, = Model.search([('model', '=', record.__name__)], limit=1)
             model_type = model.name
         return model_type
 
