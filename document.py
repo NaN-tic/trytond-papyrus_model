@@ -223,13 +223,29 @@ class Document(metaclass=PoolMeta):
                     nearest = b
             return nearest
 
+        def find_header(box, boxes):
+            r = Rectangle(box)
+            r.y1 = r.y0
+            r.y0 = 0
+
+            nearest = None
+            for b in boxes:
+                if (not b.main_category
+                        or not b.main_category.endswith('-header')):
+                    continue
+                if b == box or not b.intersects(r):
+                    continue
+                if not nearest or b.y1 > nearest.y1:
+                    nearest = b
+            return nearest
+
         for box in bests:
             if box.main_category not in (None, 'integer', 'float', 'date'):
                 continue
             #if box.main_weight > 0.10:
                 #continue
             before = find_before(box, bests)
-            print('Box: %s Before: %s' % (box, before))
+            #print('Box: %s Before: %s' % (box, before))
             if before and before.main_category:
                 if before.main_category.endswith('-label'):
                     category = before.main_category.split('-label')[0]
@@ -237,9 +253,10 @@ class Document(metaclass=PoolMeta):
                     box.categories = []
                     box.categories.append((category, 0.9))
                     box.compute_main_category()
+                    continue
 
             above = find_above(box, bests)
-            print('Box: %s Above: %s' % (box, before))
+            #print('Box: %s Above: %s' % (box, before))
             if above and above.main_category:
                 if above.main_category.endswith('-label'):
                     category = above.main_category.split('-label')[0]
@@ -247,6 +264,16 @@ class Document(metaclass=PoolMeta):
                     box.categories = []
                     box.categories.append((category, 0.9))
                     box.compute_main_category()
+                    continue
+
+            header = find_header(box, bests)
+            #print('Box: %s Header: %s' % (box, before))
+            if header:
+                category = header.main_category.split('-header')[0]
+                # Clean categories otherwise 'integer' will weight more
+                box.categories = []
+                box.categories.append((category, 0.9))
+                box.compute_main_category()
 
         print('#' * 50)
         print('#' * 50)
