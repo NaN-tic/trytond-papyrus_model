@@ -1,9 +1,6 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
-import re
-import ngram
-import stdnum
 import json
 from decimal import Decimal
 from datetime import datetime
@@ -15,7 +12,8 @@ from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.model.fields.selection import TranslatedSelection
-from trytond.cache import Cache
+from .utils import Rectangle, Sentencer
+
 
 MODEL_TYPE = [
     (None, ''),
@@ -37,336 +35,12 @@ MONTHS = (
     (11, ('novembre', 'noviembre', 'november')),
     (12, ('desembre', 'diciembre', 'december')),
     )
-NUMBER_SET = set('0123456789')
-
-class Rectangle:
-    def __init__(self, *args):
-        if len(args) == 1:
-            r = args[0]
-            for p in ('x0', 'y0', 'x1', 'y1', 'text'):
-                assert hasattr(r, p)
-                setattr(self, p, getattr(r, p))
-        else:
-            assert len(args) == 5
-            self.x0 = args[0]
-            self.y0 = args[1]
-            self.x1 = args[2]
-            self.y1 = args[3]
-            self.text = args[4]
-        self.check()
-
-    def check(self):
-        if self.x0 > self.x1 or self.y0 > self.y1:
-            raise ValueError('coordinates are invalid')
-
-    def intersects(self, other):
-        self.check()
-        if min(self.x1, other.x1) < max(self.x0, other.x0):
-            return False
-        if min(self.y1, other.y1) < max(self.y0, other.y0):
-            return False
-        return True
 
 
 class DocumentBox(metaclass=PoolMeta):
     __name__ = 'papyrus.document.box'
     category = fields.Char('category')
     categories = fields.Char('Categories')
-    _caches = Cache('papyrus.document.box')
-
-    def basic_ner_zip(self):
-        pool = Pool()
-        Zip = pool.get('country.zip')
-        g = self._caches.get('zips')
-        if not g:
-            zips = [x.zip.lower() for x in Zip.search([])]
-            g = ngram.NGram(zips)
-            self._caches.set('zips', g)
-        for item in g.search(self.text.lower(), threshold=0.9):
-            return 'zip', item[1]
-
-    def basic_ner_city(self):
-        pool = Pool()
-        Zip = pool.get('country.zip')
-        g = self._caches.get('cities')
-        if not g:
-            cities = [x.city.lower() for x in Zip.search([])]
-            g = ngram.NGram(cities)
-            self._caches.set('cities', g)
-        for item in g.search(self.text.lower(), threshold=0.9):
-            return 'city', item[1]
-
-    def basic_ner_subdivision(self):
-        pool = Pool()
-        Subdivision = pool.get('country.subdivision')
-        g = self._caches.get('subdivisions')
-        if not g:
-            subdivisions = [x.name.lower() for x in Subdivision.search([])]
-            g = ngram.NGram(subdivisions)
-            self._caches.set('subdivisions', g)
-        for item in g.search(self.text.lower(), threshold=0.9):
-            return 'subdivision', item[1]
-
-    def basic_ner_country(self):
-        pool = Pool()
-        Country = pool.get('country.country')
-        g = self._caches.get('countries')
-        if not g:
-            countries = [x.name.lower() for x in Country.search([])]
-            g = ngram.NGram(countries)
-            self._caches.set('countries', g)
-        for item in g.search(self.text.lower(), threshold=0.9):
-            return 'country', item[1]
-
-    def basic_ner_street(self):
-        text = self.text.lower()
-        text = text.strip()
-
-        if len(text) < 10:
-            return
-        if (text.startswith('c/') or text.startswith('carrer')
-                or text.startswith('calle')):
-            return 'street', 0.6
-        if (text.endswith('street') or text.endswith('st.')
-                or text.endswith('st')):
-            return 'street', 0.6
-        if text.endswith('avenue') or text.endswith('ave.'):
-            return 'street', 0.6
-
-        # If starts with letters and has a 1 to 3 digit number at the end
-        # it is likely a street
-        text = text.replace(',', ' ')
-        ending = text.split()[-1]
-        try:
-            int(ending)
-        except:
-            return
-        beginning = set(' '.join(text.split()[:-1]))
-        if not beginning & NUMBER_SET:
-            return 'street', 0.6
-
-
-    def basic_ner_date(self):
-        Date = Pool().get('ir.date')
-        year = Date().today().year
-        min_year = year - 1
-        max_year = year + 1
-
-        def parse_date(text):
-            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
-                    '%d.%m.%Y', '%d.%m.%y'):
-                try:
-                    date = datetime.strptime(text, pattern)
-                    if date.year >= min_year and date.year <= max_year:
-                        return date
-                except ValueError:
-                    pass
-
-        date = parse_date(self.text)
-        if date:
-            return 'date', 0.98
-
-    def basic_ner_phone(self):
-        text = self.text.replace('.', '').replace(' ', '').replace('-', '')
-        text = text.replace('(', '').replace(')', '')
-        if len(text) <= 5:
-            return
-        # If any character is different from '+' or a number it is not a phone
-        # number
-        invalid = any(x for x in text if x not in '+0123456789')
-        if invalid:
-            return
-        return 'phone', 0.98
-
-    def basic_ner_email(self):
-        emails = re.findall("([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)",
-            self.text)
-        if len(emails) == 1:
-            return 'e-mail', 0.98
-
-    def basic_ner_url(self):
-        text = self.text.lower()
-        text = text.strip()
-        if text.startswith('http'):
-            return 'url', 0.98
-        if text.startswith('www'):
-            return 'url', 0.98
-
-    def basic_ner_integer(self):
-        text = self.text.strip()
-        remains = set(text) - NUMBER_SET
-        if not remains:
-            return 'integer', 1
-        text = text.replace(' ', '')
-        if not remains:
-            return 'integer', 0.98
-
-    @staticmethod
-    def to_float(text):
-        idx_dot = text.find('.')
-        idx_comma = text.find(',')
-        if idx_dot >= 0 and idx_comma >= 0:
-            if idx_dot > idx_comma:
-                text = text.replace(',', '')
-            else:
-                text = text.replace('.', '')
-                text = text.replace(',', '.')
-        try:
-            return float(text)
-        except ValueError:
-            return
-
-    def basic_ner_float(self):
-        text = self.text.strip()
-        value = self.to_float(text)
-        if not value is None:
-            return 'float', 0.95
-        text = text.replace(' ', '')
-        value = self.to_float(text)
-        if not value is None:
-            return 'float', 0.92
-
-    def basic_ner_page(self):
-        text = self.text.replace(' ', '')
-        if not '/' in text:
-            return
-        ps = text.split('/')
-        if len(ps) != 2:
-            return
-        try:
-            [int(x) for x in ps]
-        except ValueError:
-            return
-        return 'page', 0.95
-
-    def basic_ner_tax_identifier(self):
-        pool = Pool()
-        Party = pool.get('party.party')
-
-        text = self.text.strip()
-        if len(text) < 6:
-            return
-        for type in Party.tax_identifier_types():
-            # TODO: It's not obvious why we should only check
-            # tax_identifier_types.
-            # TODO: Given that we have a patch that discarts non eu-vat tax
-            # identifiers, we prepend 'ES'
-            module = stdnum.get_cc_module(*type.split('_', 1))
-            try:
-                if module and module.is_valid(text):
-                    break
-            except:
-                pass
-        else:
-            return
-        return 'tax_identifier', 1
-
-    def basic_ner_currency(self):
-        pool = Pool()
-        Currency = pool.get('currency.currency')
-
-        text = self.text.strip().lower()
-        currencies = Currency.search([])
-        for currency in currencies:
-            if text == currency.symbol.lower():
-                return 'currency', 0.99
-            if text == currency.name.lower() or text == currency.code.lower():
-                return 'currency', 0.95
-
-    def basic_ner_bic(self):
-        if stdnum.bic.is_valid(self.text.strip()):
-            # There are lots of false positives with words such as 'CANTIDAD'
-            # or 'FERNANDO', so we cannot assign a high probability
-            return 'bic', 0.5
-
-    def basic_ner_iban(self):
-        text = self.text.strip()
-        if stdnum.iban.is_valid(text):
-            return 'iban', 1
-        text = text.replace(' ', '')
-        if stdnum.iban.is_valid(text):
-            return 'iban', 0.95
-
-    def basic_ner_payment_type(self):
-        text = self.text.strip()
-        if text in ('cheque', 'transferencia', 'recibo'):
-            return 'payment-type', 0.99
-
-    def basic_ner_payment_term(self):
-        text = self.text.strip()
-        if text in ('10 dias', '20 dias', '30 dias', '60 dias'):
-            return 'payment-term', 0.99
-
-    def basic_ner_label(self, category, labels, threshold=0.95):
-        text = self.text.lower()
-        text = text.replace(':', '')
-        text = text.strip()
-        g = self._caches.get(category)
-        if not g:
-            g = ngram.NGram(labels)
-            self._caches.set(category, g)
-        for item in g.search(text, threshold=threshold):
-            return category, item[1]
-
-    def basic_ner(self):
-        categories = []
-        for ner in ('zip', 'integer', 'float', 'city', 'subdivision',
-                'country', 'street', 'date', 'phone', 'email', 'url', 'page',
-                'currency', 'bic', 'iban', 'payment_type', 'payment_term',
-                'tax_identifier'):
-            method = getattr(self, 'basic_ner_%s' % ner)
-            category = method()
-            if category:
-                categories.append(category)
-                _, percent = category
-                if percent > 0.9:
-                   break
-        LABELS = [
-            ('page-label', ('pàgina', 'pàg.', 'página', 'pág.', 'page',
-                    'p.')),
-            ('invoice_number-label', ('número de factura', 'número factura',
-                    'núm. factura', 'núm. fra.', 'nº factura', 'factura nº',
-                    'nº de factura', 'nº.factura', 'nº fra', 'nº fact', 'nº',
-                    'factura', 'factura de cargo', 'nota de cargo',
-                    'invoice number', 'invoice')),
-            ('invoice_date-label', ('fecha factura', 'fecha', 'invoice date',
-                'date')),
-            ('email-label', ('correu electrònic', 'correu-e',
-                    'correo electrónico', 'correo-e', 'e-mail', 'email')),
-            ('url-label', ('pàgina web', 'web', 'url')),
-            ('phone-label', ('telèfon', 'tel.', 't.', 'teléfono', 'telephone',
-                    'phone', 't.')),
-            ('fax-label', ('fax', 'fax.')),
-            ('tax_identifer-label', ('n.i.f.', 'nif', 'c.i.f.', 'cif',
-                    'tax identifier')),
-            ('customer_code-label', ('client', 'cliente', 'customer')),
-            ('payment_type-label', ('forma de pagament', 'forma de pago',
-                    'payment type')),
-            ('untaxed_amount-label', ('base imposable', 'base imp.',
-                    'base imponible', 'untaxed amount')),
-            ('total_amount-label', ('total factura', 'total', 'total fra.',
-                    'total amount')),
-            # Non-labels
-            ('enterprise_type', ('s.l.', 'sl', 's.a.', 'sa', 's.c.c.l.',
-                    'sccl', 's.c.p.', 'scp', 'inc.', 'inc', 'limited')),
-            # Headers
-            ('product_code-header', ('codi', 'código', 'code')),
-            ('product_description-header', ('descripció', 'descripción')),
-            ('quantity-header', ('quantitat', 'cantidad', 'quantity')),
-            ('discount-header', ('descompte', 'dte.', 'descuento', 'dto.')),
-            ('unit_price-header', ('preu unitari', 'preu unitat', 'preu un.',
-                    'preu', 'precio unitario', 'precio unidad', 'precio un.'
-                    'precio', 'unit price', 'price')),
-            ('amount-header', ('import', 'importe', 'amount')),
-            ]
-        for item in LABELS:
-            category = self.basic_ner_label(item[0], item[1])
-            if category:
-                categories.append(category)
-                _, percent = category
-                if percent > 0.95:
-                    break
-        self.categories = json.dumps(categories)
 
 
 class Queue(metaclass=PoolMeta):
@@ -474,71 +148,65 @@ class Document(metaclass=PoolMeta):
                     if records:
                         return records, document
 
-    def scan_engines(self):
-        super().scan_engines()
-        yield 'text'
-        if self.text and self.text.strip():
-            yield 'textboxes'
-        else:
-            yield 'tesseract'
-
     def guess_sentences(self):
-        pool = Pool()
-        DocumentBox = pool.get('papyrus.document.box')
+        #pool = Pool()
+        #DocumentBox = pool.get('papyrus.document.box')
 
         new_boxes = []
-        boxes = sorted([b for b in self.boxes if b.type == 'text'],
-            key=lambda b: (b.y0, b.x0))
+        boxes = [Rectangle(x) for x in self.boxes if x.type == 'text']
+        boxes = sorted(boxes, key=lambda b: (b.y0, b.x0))
+
+        bests = []
+
         while boxes:
-            new_current_boxes = []
-            box = boxes.pop(0)
-            print('Looking for sentences of "%s"' % box.text)
-            current_r = Rectangle(box)
-            current_categories = json.loads(box.categories)
-            # To find the next box in the line, we look no further than the
-            # current bounding box + the length of the box's length.
-            current_r.x1 += current_r.y1 - current_r.y0
-            for ibox in boxes:
-                if current_r.text.strip().endswith(':'):
-                    break
-                if not current_r.intersects(ibox):
-                    continue
+            print()
+            print('*' * 50)
+            box = boxes[0]
+            print('Picked box: ', box)
+            sentencer = Sentencer(box, boxes)
+            print('Processing Max Sentence:', sentencer.max_sentence)
 
-                new_box = DocumentBox()
-                new_box.type = 'text'
-                new_box.x0 = min(current_r.x0, ibox.x0)
-                new_box.y0 = min(current_r.y0, ibox.y0)
-                new_box.x1 = max(current_r.x1, ibox.x1)
-                new_box.y1 = max(current_r.y1, ibox.y1)
-                # TODO: This condition should not be necessary as we always
-                # process the left-most box before the right one. Isn't it?
-                if current_r.x0 < ibox.x0:
-                    new_box.text = current_r.text + ' ' + ibox.text
-                else:
-                    new_box.text = ibox.text + ' ' + current_r.text
-                new_box.basic_ner()
-                new_box_categories = json.loads(new_box.categories)
-                current_r = Rectangle(new_box)
-                current_r.x1 += current_r.y1 - current_r.y0
-                if not current_categories:
-                    new_current_boxes.append(new_box)
+            best = None
+            best_weight = 0.0
+            for combination in sentencer.combinations():
+                weight = 0.0
+                for box in combination:
+                    box.basic_ner()
+                    print('Box: %s, Category: %s' % (box, box.main_category))
+                    weight += box.main_weight
+                weight /= len(combination)
+                if (not best
+                        or weight > best_weight
+                        or (weight == best_weight
+                            and len(combination) < len(best))):
+                    best = combination
+                    best_weight = weight
+            print('Best:', best)
+            bests += best
 
+            for box in sentencer.max_sentence:
+                boxes.remove(box)
 
-            new_boxes += new_current_boxes
+        print('#' * 50)
+        print('#' * 50)
+        print('#' * 50)
+        print(bests)
+        print('#' * 50)
+        print('#' * 50)
 
         self.boxes = self.boxes + tuple(new_boxes)
 
     def guess_boxes(self):
-        counter = 0
+        #counter = 0
         # Start with basic NER
-        for box in self.boxes:
-            counter += 1
-            print('Checking "%s" (%d/%d)...' % (box.text, counter,
-                    len(self.boxes)))
-            box.basic_ner()
-            print('Result: ', box.categories)
+        #for box in self.boxes:
+            #counter += 1
+            #print('Checking "%s" (%d/%d)...' % (box.text, counter,
+                    #len(self.boxes)))
+            #box.basic_ner()
+            #print('Result: ', box.categories)
 
-        self.save()
+        #self.save()
         # Now group boxes in the same line
         self.guess_sentences()
 
@@ -580,6 +248,14 @@ class Document(metaclass=PoolMeta):
             im.save(image, format='png')
             image = image.getvalue()
         return image
+
+    def scan_engines(self):
+        super().scan_engines()
+        yield 'text'
+        if self.text and self.text.strip():
+            yield 'textboxes'
+        else:
+            yield 'tesseract'
 
     def scan(self):
         super().scan()
