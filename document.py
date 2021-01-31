@@ -172,7 +172,8 @@ class Document(metaclass=PoolMeta):
                 weight = 0.0
                 for box in combination:
                     box.basic_ner()
-                    print('Box: %s, Category: %s' % (box, box.main_category))
+                    print('Box: %s, Category: %s, Weight: %.2f' % (box,
+                            box.main_category, box.main_weight))
                     weight += box.main_weight
                 weight /= len(combination)
                 if (not best
@@ -186,6 +187,66 @@ class Document(metaclass=PoolMeta):
 
             for box in sentencer.max_sentence:
                 boxes.remove(box)
+
+        print('#' * 50)
+        print('#' * 50)
+        print('#' * 50)
+        print(bests)
+        print('#' * 50)
+        print('#' * 50)
+        def find_before(box, boxes):
+            r = Rectangle(box)
+            height = r.height
+            r.y0 += height * 0.15
+            r.y1 -= height * 0.15
+            r.x1 = r.x0
+            r.x0 = 0
+
+            nearest = None
+            for b in boxes:
+                if b == box or not b.intersects(r):
+                    continue
+                if not nearest or b.x1 > nearest.x1:
+                    nearest = b
+            return nearest
+
+        def find_above(box, boxes):
+            r = Rectangle(box)
+            r.y1 = r.y0
+            r.y0 = 0
+
+            nearest = None
+            for b in boxes:
+                if b == box or not b.intersects(r):
+                    continue
+                if not nearest or b.y1 > nearest.y1:
+                    nearest = b
+            return nearest
+
+        for box in bests:
+            if box.main_category not in (None, 'integer', 'float', 'date'):
+                continue
+            #if box.main_weight > 0.10:
+                #continue
+            before = find_before(box, bests)
+            print('Box: %s Before: %s' % (box, before))
+            if before and before.main_category:
+                if before.main_category.endswith('-label'):
+                    category = before.main_category.split('-label')[0]
+                    # Clean categories otherwise 'integer' will weight more
+                    box.categories = []
+                    box.categories.append((category, 0.9))
+                    box.compute_main_category()
+
+            above = find_above(box, bests)
+            print('Box: %s Above: %s' % (box, before))
+            if above and above.main_category:
+                if above.main_category.endswith('-label'):
+                    category = above.main_category.split('-label')[0]
+                    # Clean categories otherwise 'integer' will weight more
+                    box.categories = []
+                    box.categories.append((category, 0.9))
+                    box.compute_main_category()
 
         print('#' * 50)
         print('#' * 50)

@@ -86,7 +86,7 @@ class Rectangle:
     def __repr__(self):
         #return 'Rectangle(%.3f, %.3f, %.3f, %.3f, "%s")' % (self.x0, self.y0,
             #self.x1, self.y1, self.text)
-        return '"%s"' % self.text
+        return '"%s" (%s)' % (self.text, self.main_category)
 
     def check(self):
         if self.x0 > self.x1 or self.y0 > self.y1:
@@ -410,7 +410,9 @@ class Rectangle:
                     _, weight = category
                     if weight > 0.95:
                         break
+        self.compute_main_category()
 
+    def compute_main_category(self):
         self.main_category = None
         self.main_weight = 0.0
         for category, weight in self.categories:
@@ -428,8 +430,17 @@ class Sentencer:
         self.compute_max_sentence()
 
     def compute_max_sentence(self):
+        def make_thinner(box):
+            # In some cases bounding boxes for words in two separate lines
+            # overlap So we make height 30% thinner. Experience shows that
+            # reducing it 20% is not enough
+            height = box.height
+            box.y0 += height * 0.15
+            box.y1 -= height * 0.15
+
         current = Rectangle(self.box)
         current.x1 += current.height
+        make_thinner(current)
         self.max_sentence = []
         for box in self.boxes:
             if not current.intersects(box):
@@ -437,6 +448,7 @@ class Sentencer:
             self.max_sentence.append(box)
             current = current.combine(box)
             current.x1 += current.height
+            make_thinner(current)
             if current.text.strip().endswith(':'):
                 break
 
