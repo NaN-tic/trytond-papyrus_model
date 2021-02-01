@@ -138,6 +138,20 @@ class Document(metaclass=PoolMeta):
                     if records:
                         return records, document
 
+    @classmethod
+    def validate(cls, documents):
+        super(Document, cls).validate(documents)
+        for document in documents:
+            document.validate_company()
+
+    def validate_company(self):
+        if self.company and self.invoice:
+            if self.company != self.invoice[0].company:
+                raise UserError(gettext(
+                    'papyrus_model.msg_cannot_change_company',
+                    document=self.number,
+                    invoice=self.invoice[0].id))
+
     def scan_engines(self):
         super().scan_engines()
         yield 'text'
