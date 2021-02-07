@@ -88,6 +88,19 @@ class Rectangle:
             #self.x1, self.y1, self.text)
         return '"%s" (%s)' % (self.text, self.main_category)
 
+    def has_a_number(self):
+        if set('0123456789') & set(self.text):
+            return True
+        return False
+
+    def is_number(self):
+        text = self.text.replace('.', '').replace(',', '')
+        try:
+            float(text)
+            return True
+        except ValueError:
+            return False
+
     def check(self):
         if self.x0 > self.x1 or self.y0 > self.y1:
             raise ValueError('coordinates are invalid')
