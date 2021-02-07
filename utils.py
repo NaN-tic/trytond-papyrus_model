@@ -182,7 +182,7 @@ class Rectangle:
         if len(text) < 10:
             return
         if (text.startswith('c/') or text.startswith('carrer')
-                or text.startswith('calle')):
+                or text.startswith('cl.') or text.startswith('calle')):
             return 'street', 0.6
         if (text.endswith('street') or text.endswith('st.')
                 or text.endswith('st')):
