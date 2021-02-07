@@ -1,0 +1,7 @@
+<tree>
+    <field name="document"/>
+    <field name="field"/>
+    <field name="line"/>
+    <field name="text"/>
+    <field name="value_reference"/>
+</tree>

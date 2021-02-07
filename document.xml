@@ -33,5 +33,17 @@
             <field name="inherit" ref="papyrus.papyrus_document_box_view_list"/>
             <field name="name">document_box_list</field>
         </record>
+
+        <!-- papyrus.document.value -->
+        <record model="ir.ui.view" id="papyrus_document_value_view_form">
+            <field name="model">papyrus.document.value</field>
+            <field name="type">form</field>
+            <field name="name">document_value_form</field>
+        </record>
+        <record model="ir.ui.view" id="papyrus_document_value_view_list">
+            <field name="model">papyrus.document.value</field>
+            <field name="type">tree</field>
+            <field name="name">document_value_list</field>
+        </record>
     </data>
 </tryton>

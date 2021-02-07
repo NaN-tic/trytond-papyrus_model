@@ -1,11 +1,12 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
-import json
+import io
+from PIL import Image, ImageDraw
 from decimal import Decimal
 from datetime import datetime
 from statistics import mode, StatisticsError
-from trytond.model import fields, ModelView, Workflow
+from trytond.model import fields, ModelSQL, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
@@ -56,6 +57,35 @@ class Queue(metaclass=PoolMeta):
         return document
 
 
+class Value(ModelSQL, ModelView):
+    'Papyrus Document Value'
+    __name__ = 'papyrus.document.value'
+    document = fields.Many2One('papyrus.document', 'Document', required=True,
+        ondelete='CASCADE')
+    field = fields.Char('Field', required=True)
+    line = fields.Integer('Line')
+    text = fields.Char('Text')
+    value_reference = fields.Reference('Value', selection='get_value_reference')
+    x0 = fields.Float('x0')
+    y0 = fields.Float('x0')
+    x1 = fields.Float('x1')
+    y1 = fields.Float('y1')
+
+    @classmethod
+    def _get_value_reference(cls):
+        return ['party.party', 'party.identifier', 'product.product',
+            'currency.currency']
+
+    @classmethod
+    def get_value_reference(cls):
+        Model = Pool().get('ir.model')
+        models = cls._get_value_reference()
+        models = Model.search([
+                ('model', 'in', models),
+                ])
+        return [('', '')] + [(m.model, m.name) for m in models]
+
+
 class Document(metaclass=PoolMeta):
     'Papyrus Document'
     __name__ = 'papyrus.document'
@@ -80,6 +110,8 @@ class Document(metaclass=PoolMeta):
             }, depends=['model_type'])
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
+    values = fields.One2Many('papyrus.document.value', 'document', 'Values',
+        readonly=True)
 
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
@@ -148,11 +180,7 @@ class Document(metaclass=PoolMeta):
                     if records:
                         return records, document
 
-    def guess_sentences(self):
-        #pool = Pool()
-        #DocumentBox = pool.get('papyrus.document.box')
-
-        new_boxes = []
+    def guess_boxes(self):
         boxes = [Rectangle(x) for x in self.boxes if x.type == 'text']
         boxes = sorted(boxes, key=lambda b: (b.y0, b.x0))
 
@@ -170,12 +198,19 @@ class Document(metaclass=PoolMeta):
             best_weight = 0.0
             for combination in sentencer.combinations():
                 weight = 0.0
+                count = 0
                 for box in combination:
                     box.basic_ner()
                     print('Box: %s, Category: %s, Weight: %.2f' % (box,
                             box.main_category, box.main_weight))
-                    weight += box.main_weight
-                weight /= len(combination)
+                    if box.main_weight > 0:
+                        weight += box.main_weight
+                        # Only count boxes with main_weight > 1 for the average
+                        # TODO: To improve
+                        count += 1
+
+                if count > 0:
+                    weight /= count
                 if (not best
                         or weight > best_weight
                         or (weight == best_weight
@@ -240,31 +275,57 @@ class Document(metaclass=PoolMeta):
             return nearest
 
         for box in bests:
-            if box.main_category not in (None, 'integer', 'float', 'date'):
+            if box.main_category and box.main_category.endswith('-label'):
                 continue
-            #if box.main_weight > 0.10:
+            #if box.main_category not in (None, 'integer', 'float', 'date'):
+            #    continue
+            #if box.main_weight > 0.95:
                 #continue
             before = find_before(box, bests)
+            if before and before.text == ':':
+                before = find_before(before, bests)
             #print('Box: %s Before: %s' % (box, before))
             if before and before.main_category:
                 if before.main_category.endswith('-label'):
                     category = before.main_category.split('-label')[0]
-                    # Clean categories otherwise 'integer' will weight more
-                    box.categories = []
-                    box.categories.append((category, 0.9))
-                    box.compute_main_category()
-                    continue
+                    add = True
+                    if category == 'invoice_number':
+                        if not box.has_a_number():
+                            add = False
+                    elif category == 'invoice_date':
+                        if box.type != 'date':
+                            add = False
+                    elif 'amount' in category:
+                        if not box.is_number():
+                            add = False
+                    if add:
+                        # Clean categories otherwise 'integer' will weight more
+                        box.categories = []
+                        box.categories.append((category, 0.9))
+                        box.compute_main_category()
+                        continue
 
             above = find_above(box, bests)
             #print('Box: %s Above: %s' % (box, before))
             if above and above.main_category:
                 if above.main_category.endswith('-label'):
                     category = above.main_category.split('-label')[0]
-                    # Clean categories otherwise 'integer' will weight more
-                    box.categories = []
-                    box.categories.append((category, 0.9))
-                    box.compute_main_category()
-                    continue
+                    add = True
+                    if category == 'invoice_number':
+                        if not box.has_a_number():
+                            add = False
+                    elif category == 'invoice_date':
+                        if box.type != 'date':
+                            add = False
+                    elif 'amount' in category:
+                        if not box.is_number():
+                            add = False
+                    if add:
+                        # Clean categories otherwise 'integer' will weight more
+                        box.categories = []
+                        box.categories.append((category, 0.9))
+                        box.compute_main_category()
+                        continue
 
             header = find_header(box, bests)
             #print('Box: %s Header: %s' % (box, before))
@@ -282,56 +343,48 @@ class Document(metaclass=PoolMeta):
         print('#' * 50)
         print('#' * 50)
 
-        self.boxes = self.boxes + tuple(new_boxes)
+        Value = Pool().get('papyrus.document.value')
+        Value.delete(Value.search([('document', '=', self.id)]))
 
-    def guess_boxes(self):
-        #counter = 0
-        # Start with basic NER
-        #for box in self.boxes:
-            #counter += 1
-            #print('Checking "%s" (%d/%d)...' % (box.text, counter,
-                    #len(self.boxes)))
-            #box.basic_ner()
-            #print('Result: ', box.categories)
+        values = []
+        for box in bests:
+            if box.main_category in ('invoice_number', 'invoice_date',
+                    'total_amount', 'tax_identifier'):
+                print('%s: %s' % (box.main_category, box.text))
+                value = Value()
+                value.field = box.main_category
+                value.text = box.text
+                value.x0 = box.x0
+                value.y0 = box.y0
+                value.x1 = box.x1
+                value.y1 = box.y1
+                values.append(value)
 
-        #self.save()
-        # Now group boxes in the same line
-        self.guess_sentences()
+        self.values = values
+        self.save()
 
-        # Now search for specific attributes
-        date = None
-        dates = []
-        for box in self.boxes:
-            categories = json.loads(box.categories)
-            for category, probability in categories:
-                if category == 'date':
-                    dates.append(box)
-        if len(dates) == 1:
-            date = dates[0].text
-
-        print('DATE: ', date)
+        print('-' * 50)
 
     def on_change_with_image(self, name=None):
-        import io
-        from PIL import Image, ImageDraw
-
         image = super().on_change_with_image(name)
         if image:
             im = Image.open(io.BytesIO(image))
+            if im.getbands() != ('R', 'G', 'B'):
+                # If image is not 'RGB' convert it so we can add color
+                # rectangles
+                im = im.convert('RGB')
             draw = ImageDraw.Draw(im)
             xscale = 1.385
             yscale = 1.385
-            GREEN = (0, 192, 192)
-            #RED = (192, 0, 0)
-            for box in self.boxes:
-                categories = json.loads(box.categories)
-                if not categories:
-                    continue
+            OUTLINE = (192, 0, 0)
+            for value in self.values:
+                x0 = value.x0 or 0
+                y0 = value.y0 or 0
+                x1 = value.x1 or 0
+                y1 = value.y1 or 0
                 draw.rectangle(
-                    (box.x0 * xscale, box.y0 * yscale,
-                        box.x1 * xscale, box.y1 * yscale),
-                    #fill=(0, 192, 192),
-                    outline=GREEN)
+                    (x0 * xscale, y0 * yscale, x1 * xscale, y1 * yscale),
+                    outline=OUTLINE)
             image = io.BytesIO()
             im.save(image, format='png')
             image = image.getvalue()
@@ -347,9 +400,9 @@ class Document(metaclass=PoolMeta):
 
     def scan(self):
         super().scan()
-        self.guess_boxes()
         self.guess_company()
         self.guess_model_type()
+        self.guess_boxes()
         if self.model_type:
             getattr(self, 'guess_%s' % self.model_type)()
 

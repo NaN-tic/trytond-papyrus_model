@@ -1,0 +1,20 @@
+<form>
+    <label name="document"/>
+    <field name="document"/>
+    <label name="field"/>
+    <field name="field"/>
+    <label name="line"/>
+    <field name="line"/>
+    <label name="text"/>
+    <field name="text"/>
+    <label name="value_reference"/>
+    <field name="value_reference"/>
+    <label name="x0"/>
+    <field name="x0"/>
+    <label name="y0"/>
+    <field name="y0"/>
+    <label name="x1"/>
+    <field name="x1"/>
+    <label name="y1"/>
+    <field name="y1"/>
+</form>

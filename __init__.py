@@ -13,6 +13,7 @@ def register():
         document.DocumentBox,
         document.Queue,
         document.Document,
+        document.Value,
         invoice.Invoice,
         sale.Sale,
         stock.ShipmentIn,
