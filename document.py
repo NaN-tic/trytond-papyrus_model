@@ -347,9 +347,14 @@ class Document(metaclass=PoolMeta):
         Value.delete(Value.search([('document', '=', self.id)]))
 
         values = []
+        processed = set()
         for box in bests:
             if box.main_category in ('invoice_number', 'invoice_date',
                     'total_amount', 'tax_identifier'):
+                if box.main_category in ('invoice_number', 'invoice_date'):
+                    if box.main_category in processed:
+                        continue
+                    processed.add(box.main_category)
                 print('%s: %s' % (box.main_category, box.text))
                 value = Value()
                 value.field = box.main_category
@@ -359,6 +364,20 @@ class Document(metaclass=PoolMeta):
                 value.x1 = box.x1
                 value.y1 = box.y1
                 values.append(value)
+
+        if 'invoice_date' not in processed:
+            for box in bests:
+                if box.type == 'date':
+                    value = Value()
+                    value.field = 'invoice_date'
+                    value.text = box.text
+                    value.x0 = box.x0
+                    value.y0 = box.y0
+                    value.x1 = box.x1
+                    value.y1 = box.y1
+                    values.append(value)
+                    break
+
 
         self.values = values
         self.save()
