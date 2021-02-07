@@ -73,6 +73,7 @@ class Rectangle:
         self.children = []
         self.main_category = None
         self.main_weight = 0.0
+        self.type = None
         self.check()
 
     @property
@@ -411,10 +412,16 @@ class Rectangle:
 
     def basic_ner(self):
         self.categories = []
-        for ner in ('zip', 'integer', 'float', 'city', 'subdivision',
-                'country', 'street', 'date', 'phone', 'email', 'url', 'page',
+        for ner in ('integer', 'float', 'date'):
+            method = getattr(self, 'basic_ner_%s' % ner)
+            category = method()
+            if category:
+                self.type = category[0]
+
+        for ner in ('zip', 'city', 'subdivision',
+                'country', 'street', 'email', 'url', 'page',
                 'currency', 'bic', 'iban', 'payment_type', 'payment_term',
-                'tax_identifier', 'party'):
+                'tax_identifier', 'party'): # 'phone'
             method = getattr(self, 'basic_ner_%s' % ner)
             category = method()
             if category:
