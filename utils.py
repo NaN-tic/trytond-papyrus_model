@@ -330,6 +330,7 @@ class Rectangle:
         Party = pool.get('party.party')
 
         text = self.text.strip()
+        text = text.replace('-', '').replace('.', '')
         if len(text) < 6:
             return
         for type in Party.tax_identifier_types():
