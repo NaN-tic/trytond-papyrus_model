@@ -246,7 +246,9 @@ class Rectangle:
                 except ValueError:
                     pass
 
-        date = parse_date(self.text)
+
+
+        date = parse_date(self.text.strip().lower())
         if date:
             return 'date', 0.98
 
