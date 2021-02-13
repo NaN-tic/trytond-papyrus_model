@@ -9,6 +9,9 @@
     <field name="text"/>
     <label name="value_reference"/>
     <field name="value_reference"/>
+    <label name="page"/>
+    <field name="page"/>
+    <newline/>
     <label name="x0"/>
     <field name="x0"/>
     <label name="y0"/>

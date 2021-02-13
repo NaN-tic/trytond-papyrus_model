@@ -66,6 +66,7 @@ class Value(ModelSQL, ModelView):
     line = fields.Integer('Line')
     text = fields.Char('Text')
     value_reference = fields.Reference('Value', selection='get_value_reference')
+    page = fields.Integer('Page')
     x0 = fields.Float('x0')
     y0 = fields.Float('x0')
     x1 = fields.Float('x1')
@@ -181,7 +182,8 @@ class Document(metaclass=PoolMeta):
                         return records, document
 
     def guess_boxes(self):
-        boxes = [Rectangle(x) for x in self.boxes if x.type == 'text']
+        boxes = [Rectangle(x) for x in self.boxes if x.type == 'text'
+            and getattr(x, 'page', None) in (1, None)]
         boxes = sorted(boxes, key=lambda b: (b.y0, b.x0))
 
         bests = []
@@ -359,6 +361,7 @@ class Document(metaclass=PoolMeta):
                 value = Value()
                 value.field = box.main_category
                 value.text = box.text
+                value.page = 1
                 value.x0 = box.x0
                 value.y0 = box.y0
                 value.x1 = box.x1
@@ -366,17 +369,24 @@ class Document(metaclass=PoolMeta):
                 values.append(value)
 
         if 'invoice_date' not in processed:
+            date_value = None
+            first = (999, 999)
             for box in bests:
                 if box.type == 'date':
-                    value = Value()
-                    value.field = 'invoice_date'
-                    value.text = box.text
-                    value.x0 = box.x0
-                    value.y0 = box.y0
-                    value.x1 = box.x1
-                    value.y1 = box.y1
-                    values.append(value)
-                    break
+                    pos = (box.y0, box.x0)
+                    if pos > first:
+                        continue
+                    first = pos
+                    date_value = Value()
+                    date_value.field = 'invoice_date'
+                    date_value.text = box.text
+                    date_value.page = 1
+                    date_value.x0 = box.x0
+                    date_value.y0 = box.y0
+                    date_value.x1 = box.x1
+                    date_value.y1 = box.y1
+            if date_value:
+                values.append(date_value)
 
 
         self.values = values
@@ -384,6 +394,7 @@ class Document(metaclass=PoolMeta):
 
         print('-' * 50)
 
+    @fields.depends('values')
     def on_change_with_image(self, name=None):
         image = super().on_change_with_image(name)
         if image:
@@ -396,7 +407,9 @@ class Document(metaclass=PoolMeta):
             xscale = 1.385
             yscale = 1.385
             OUTLINE = (192, 0, 0)
-            for value in self.values:
+            for value in (self.values or []):
+                if (value.page or 1) != self.current_page:
+                    continue
                 x0 = value.x0 or 0
                 y0 = value.y0 or 0
                 x1 = value.x1 or 0
