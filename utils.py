@@ -109,6 +109,7 @@ class Rectangle:
 
     def is_number(self):
         text = self.text.replace('.', '').replace(',', '')
+        text = text.replace('€', '').replace('$', '')
         try:
             float(text)
             return True
