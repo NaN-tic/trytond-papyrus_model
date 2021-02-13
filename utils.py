@@ -252,8 +252,29 @@ class Rectangle:
         max_year = year + 1
 
         def parse_date(text):
+            for number, names in [
+                    ('01', ('gener', 'enero', 'january', 'gen', 'ene', 'jan')),
+                    ('02', ('febrer', 'febrero', 'february', 'feb')),
+                    ('03', ('març', 'marzo', 'march', 'mar', )),
+                    ('04', ('abril', 'april', 'abr', 'apr')),
+                    ('05', ('maig', 'mayo', 'may', 'mai')),
+                    ('06', ('juny', 'junio', 'june', 'jun')),
+                    ('07', ('juliol', 'julio', 'júlio', 'july')),
+                    ('08', ('agost', 'agosto', 'august', 'ago', 'aug')),
+                    ('09', ('setembre', 'septiembre', 'september', 'set', 'sep')),
+                    ('10', ('octubre', 'october', 'oct')),
+                    ('11', ('novembre', 'noviembre', 'november', 'nov')),
+                    ('12', ('desembre', 'diciembre', 'december', 'dec')),
+                    ]:
+                for name in names:
+                    text = text.replace(name + '.', number)
+                    text = text.replace(name, number)
+
+            for prep in ('de', 'del'):
+                text = text.replace(prep, '')
+
             for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
-                    '%d.%m.%Y', '%d.%m.%y'):
+                    '%d.%m.%Y', '%d.%m.%y', '%d %m %Y', '%d %m %y'):
                 try:
                     date = datetime.strptime(text, pattern)
                     if date.year >= min_year and date.year <= max_year:
