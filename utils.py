@@ -50,7 +50,7 @@ LABELS = [
             'suma de importes', 'base i.v.a.', 'base iva', 'base no exenta iva',
             'total imponible', 'total sin iva', 'total eur iva excl.',
             'base imponible - tax base', 'suma', 'base impuestos',
-            'imp.base',
+            'imp.base', 'base imponible (eur)',
             # German
             'nettobetrag')),
     ('tax_amount-label', ('import iva', 'importe iva', 'imp.iva',
