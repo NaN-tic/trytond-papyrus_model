@@ -272,8 +272,9 @@ class Rectangle:
         if stripped in names + trade_names:
             return 'party', 0.9
 
-        for suffix in ('s.l.', 'sl', 's.a.', 'sa', 's.a.u.', 's.c.c.l.',
-                's.c.c.l', 'sccl', 's.c.p.', 'scp', 'inc.', 'inc', 'limited'):
+        for suffix in ('s.l.', 'sl', 's.l.u.', 's.a.', 's.a', 'sa', 's.a.u.',
+                's.c.c.l.', 's.c.c.l', 'sccl', 's.c.p.', 'scp', 'inc.', 'inc',
+                'limited'):
             if stripped.endswith(suffix):
                 return 'party', 0.7
 
