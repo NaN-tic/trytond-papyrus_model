@@ -534,9 +534,19 @@ class Sentencer:
         current.x1 += current.height
         make_thinner(current)
         self.max_sentence = []
+        previous = None
         for box in self.boxes:
             if not current.intersects(box):
                 continue
+            # In some cases (specially with dates) we find two boxes that
+            # intersect and which have the same content.
+            # If we don't discard those duplicates, then the plain algorithm
+            # will combine both boxes. Funny enough duplicate boxes are not
+            # visible to the user but it messes the results.
+            if (previous and previous.intersects(box)
+                    and previous.text == box.text):
+                continue
+            previous = box
             self.max_sentence.append(box)
             current = current.combine(box)
             current.x1 += current.height
