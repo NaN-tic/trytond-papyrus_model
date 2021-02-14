@@ -1,6 +1,7 @@
 import re
 import stdnum
 import ngram
+import math
 from datetime import datetime
 from trytond.pool import Pool
 from trytond.cache import Cache
@@ -164,6 +165,48 @@ class Rectangle:
         if min(self.y1, other.y1) < max(self.y0, other.y0):
             return False
         return True
+
+    def distance(self, other):
+        '''
+        Return distance between two rectangles.
+
+        The algorithm works as follows:
+        If rectangles intersect, then return distance = 0.
+
+        If neither x and y coordinates of rectangles do not intersect then the
+        distance between the two rectangles is computed as the distance between
+        the nearest corners.
+
+        If there's some overlapping: that is, either horizontal edges are
+        overlap or vertical edges overlap, then compute the distance as the
+        distance between those edges.
+        '''
+        def point_distance(x1, y1, x2, y2):
+            return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+        self.check()
+        if self.intersects(other):
+            return 0.0
+
+        if self.x1 <= other.x0 and self.y1 <= other.y0:
+            return point_distance(self.x1, self.y1, other.x0, other.y0)
+        elif self.x0 >= other.x1 and self.y1 <= other.y0:
+            return point_distance(self.x0, self.y1, other.x1, other.y0)
+        elif self.x1 <= other.x0 and self.y0 >= other.y1:
+            return point_distance(self.x1, self.y0, other.x0, other.y1)
+        elif self.x0 >= other.x1 and self.y0 >= other.y1:
+            return point_distance(self.x0, self.y0, other.x1, other.y1)
+        elif (self.x1 >= other.x0 and self.x0 <= other.x0
+                or self.x0 <= other.x1 and self.x1 >= other.x1):
+            if self.y1 <= other.y0:
+                return other.y0 - self.y1
+            else:
+                return self.y0 - other.y1
+        else:
+            if self.x1 <= other.x0:
+                return other.x0 - self.x1
+            else:
+                return self.x0 - other.x1
 
     def combine(self, *args):
         'Combine multiple rectangles (they should be sorted) and return a new'

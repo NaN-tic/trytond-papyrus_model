@@ -185,6 +185,7 @@ class Document(metaclass=PoolMeta):
         boxes = [Rectangle(x) for x in self.boxes if x.type == 'text'
             and getattr(x, 'page', None) in (1, None)]
         boxes = sorted(boxes, key=lambda b: (b.y0, b.x0))
+        first_page_boxes = boxes.copy()
 
         bests = []
 
@@ -271,6 +272,32 @@ class Document(metaclass=PoolMeta):
                         and b.main_category_contains('label')
                         and not nearest.main_category_contains('label')):
                     nearest = b
+            return nearest
+
+        def find_above_before(box, boxes):
+            '''
+            In some cases the box is not exactly below the label but somewhat
+            more on the right.
+
+            In those cases, it is useful to find the nearest 'label' box that is
+            located in the rectangle that goes from the top left corner of the
+            page until the top left corner of the box.
+            '''
+            r = Rectangle(box)
+            r.x0 = 0
+            r.y0 = 0
+            r.y1 = box.y0 - 0.01
+            r.x1 = box.x0 - 0.01
+
+            nearest = None
+            nearest_distance = None
+            for b in boxes:
+                if b == box or not b.intersects(r):
+                    continue
+                distance = b.distance(box)
+                if not nearest or distance < nearest_distance:
+                    nearest = b
+                    nearest_distance = distance
             return nearest
 
         def find_header(box, boxes):
@@ -362,14 +389,15 @@ class Document(metaclass=PoolMeta):
         Value.delete(Value.search([('document', '=', self.id)]))
 
         values = []
-        processed = set()
+        candidates = {}
         for box in bests:
             if box.main_category in ('invoice_number', 'invoice_date',
-                    'total_amount', 'tax_identifier'):
-                if box.main_category in ('invoice_number', 'invoice_date'):
-                    if box.main_category in processed:
-                        continue
-                    processed.add(box.main_category)
+                    'untaxed_amount', 'total_amount', 'tax_identifier'):
+
+                if box.main_category in ('invoice_number', 'invoice_date',
+                        'total_amount', 'untaxed_amount'):
+                    candidates.setdefault(box.main_category, []).append(box)
+                    continue
                 print('%s: %s' % (box.main_category, box.text))
                 value = Value()
                 value.field = box.main_category
@@ -381,7 +409,40 @@ class Document(metaclass=PoolMeta):
                 value.y1 = box.y1
                 values.append(value)
 
-        if 'invoice_date' not in processed:
+        if 'invoice_number' in candidates:
+            possible = candidates['invoice_number']
+            box = possible.pop()
+            for candidate in possible:
+                if (candidate.y0, candidate.x0) < (box.y0, box.x0):
+                    box = candidate
+            value = Value()
+            value.field = box.main_category
+            value.text = box.text
+            value.page = 1
+            value.x0 = box.x0
+            value.y0 = box.y0
+            value.x1 = box.x1
+            value.y1 = box.y1
+            values.append(value)
+            del candidates['invoice_number']
+
+        if 'invoice_date' in candidates:
+            dates = candidates['invoice_date']
+            box = dates.pop()
+            for candidate in dates:
+                if (candidate.y0, candidate.x0) < (box.y0, box.x0):
+                    box = candidate
+            value = Value()
+            value.field = box.main_category
+            value.text = box.text
+            value.page = 1
+            value.x0 = box.x0
+            value.y0 = box.y0
+            value.x1 = box.x1
+            value.y1 = box.y1
+            values.append(value)
+            del candidates['invoice_date']
+        else:
             date_value = None
             first = (999, 999)
             for box in bests:
@@ -400,6 +461,124 @@ class Document(metaclass=PoolMeta):
                     date_value.y1 = box.y1
             if date_value:
                 values.append(date_value)
+            else:
+                # If we could not find any date processing the grouping, then
+                # we just try to find any date in the text (in the first page
+                # only, by now)
+                box = None
+                for candidate in first_page_boxes:
+                    if not candidate.basic_ner_date():
+                        continue
+                    if (not box
+                            or (candidate.y0, candidate.x0) < (box.y0, box.x0)):
+                        box = candidate
+
+                if box:
+                    date_value = Value()
+                    date_value.field = 'invoice_date'
+                    date_value.text = box.text
+                    date_value.page = 1
+                    date_value.x0 = box.x0
+                    date_value.y0 = box.y0
+                    date_value.x1 = box.x1
+                    date_value.y1 = box.y1
+                    values.append(date_value)
+
+        if 'total_amount' in candidates:
+            possible = candidates['total_amount']
+            box = possible.pop()
+            for candidate in possible:
+                if (candidate.y0, candidate.x0) > (box.y0, box.x0):
+                    box = candidate
+            value = Value()
+            value.field = box.main_category
+            value.text = box.text
+            value.page = 1
+            value.x0 = box.x0
+            value.y0 = box.y0
+            value.x1 = box.x1
+            value.y1 = box.y1
+            values.append(value)
+            del candidates['total_amount']
+        else:
+            possible = []
+            for box in bests:
+                if not box.is_number():
+                    continue
+                nearest = find_above_before(box, bests)
+                if (nearest and nearest.main_category
+                        and nearest.main_category.endswith('-label')):
+                    category = nearest.main_category.split('-label')[0]
+                    if category == 'total_amount':
+                        possible.append(box)
+            if possible:
+                box = possible.pop()
+                for candidate in possible:
+                    if (candidate.y0, candidate.x0) > (box.y0, box.x0):
+                        box = candidate
+
+                box.categories = []
+                box.categories.append(('total_amount', 0.9))
+                box.compute_main_category()
+                value = Value()
+                value.field = box.main_category
+                value.text = box.text
+                value.page = 1
+                value.x0 = box.x0
+                value.y0 = box.y0
+                value.x1 = box.x1
+                value.y1 = box.y1
+                values.append(value)
+
+        if 'untaxed_amount' in candidates:
+            possible = candidates['untaxed_amount']
+            box = possible.pop()
+            for candidate in possible:
+                if (candidate.y0, candidate.x0) > (box.y0, box.x0):
+                    box = candidate
+            value = Value()
+            value.field = box.main_category
+            value.text = box.text
+            value.page = 1
+            value.x0 = box.x0
+            value.y0 = box.y0
+            value.x1 = box.x1
+            value.y1 = box.y1
+            values.append(value)
+            del candidates['untaxed_amount']
+        else:
+            possible = []
+            for box in bests:
+                if not box.is_number():
+                    continue
+                nearest = find_above_before(box, bests)
+                if (nearest and nearest.main_category
+                        and nearest.main_category.endswith('-label')):
+                    category = nearest.main_category.split('-label')[0]
+                    if category == 'untaxed_amount':
+                        possible.append(box)
+            if possible:
+                box = possible.pop()
+                for candidate in possible:
+                    if (candidate.y0, candidate.x0) > (box.y0, box.x0):
+                        box = candidate
+
+                box.categories = []
+                box.categories.append(('untaxed_amount', 0.9))
+                box.compute_main_category()
+                value = Value()
+                value.field = box.main_category
+                value.text = box.text
+                value.page = 1
+                value.x0 = box.x0
+                value.y0 = box.y0
+                value.x1 = box.x1
+                value.y1 = box.y1
+                values.append(value)
+
+
+        # TODO: When searching for the party we may use the e-mail or phonoe if
+        # VAT is not found
 
 
         self.values = values
