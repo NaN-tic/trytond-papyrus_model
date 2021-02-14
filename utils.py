@@ -245,6 +245,8 @@ class Rectangle:
             int(ending)
         except:
             return
+        if len(ending) > 3:
+            return
         beginning = set(' '.join(text.split()[:-1]))
         if not beginning & NUMBER_SET:
             return 'street', 0.6
