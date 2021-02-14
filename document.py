@@ -250,6 +250,8 @@ class Document(metaclass=PoolMeta):
                     #
                     # We want to ignore the dots in those cases.
                     continue
+                if b.text.strip().lower() == 'eur':
+                    continue
                 if b == box or not b.intersects(r):
                     continue
                 if not nearest or b.x1 > nearest.x1:
