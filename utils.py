@@ -41,7 +41,7 @@ LABELS = [
             'kunden-nr.')),
     ('payment_type-label', ('forma de pagament', 'forma de pago',
             'payment type')),
-    ('amount_without_discount-label', ('total bruto')),
+    ('amount_without_discount-label', ('total bruto',)),
     ('untaxed_amount-label', ('base imposable', 'base imp.',
             'base imponible', 'untaxed amount', 'base', 'b.imposable',
             'importe', 'base i.', 'base amount', 'b. imponible', 'b.imponible',
