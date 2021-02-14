@@ -134,8 +134,14 @@ class Rectangle:
         return False
 
     def is_number(self):
-        text = self.text.replace('.', '').replace(',', '')
+        text = self.text.lower()
+
+        text = text.replace('.', '').replace(',', '').replace("'", '')
+        # Yes, there are cases where ´ is used as decimal separator :(
+        text = text.replace("`", '').replace('´', '')
         text = text.replace('€', '').replace('$', '')
+        text = text.replace('(', '').replace(')', '')
+        text = text.replace('euros', '').replace('euro', '').replace('eur', '')
         try:
             float(text)
             return True
