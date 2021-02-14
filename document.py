@@ -241,6 +241,15 @@ class Document(metaclass=PoolMeta):
 
             nearest = None
             for b in boxes:
+                if not (set(b.text) - {'.', ' ', '…'}):
+                    # If the text of b, onlyl contains dots or spaces, simply
+                    # ignore it. In some rare cases, there is is a string of
+                    # dots such as:
+                    #
+                    # Total  ..........     410,19
+                    #
+                    # We want to ignore the dots in those cases.
+                    continue
                 if b == box or not b.intersects(r):
                     continue
                 if not nearest or b.x1 > nearest.x1:
