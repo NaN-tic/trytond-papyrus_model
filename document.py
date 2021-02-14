@@ -267,7 +267,9 @@ class Document(metaclass=PoolMeta):
             for b in boxes:
                 if b == box or not b.intersects(r):
                     continue
-                if not nearest or b.y1 > nearest.y1:
+                if not nearest or b.y1 > nearest.y1 or (b.y1 == nearest.y1
+                        and b.main_category_contains('label')
+                        and not nearest.main_category_contains('label')):
                     nearest = b
             return nearest
 

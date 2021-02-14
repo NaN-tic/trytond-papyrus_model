@@ -112,6 +112,10 @@ class Rectangle:
         self.type = None
         self.check()
 
+    def main_category_contains(self, name):
+        if self.main_category and name in self.main_category:
+            return True
+
     @property
     def height(self):
         return self.y1 - self.y0
