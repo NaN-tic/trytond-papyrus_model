@@ -385,7 +385,8 @@ class Rectangle:
             [int(x) for x in ps]
         except ValueError:
             return
-        return 'page', 0.95
+        if int(ps[0]) <= int(ps[1]):
+            return 'page', 0.95
 
     def basic_ner_tax_identifier(self):
         pool = Pool()
