@@ -285,6 +285,7 @@ class Rectangle:
         max_year = year + 1
 
         def parse_date(text):
+            original = text
             for number, names in [
                     ('01', ('gener', 'enero', 'january', 'gen', 'ene', 'jan')),
                     ('02', ('febrer', 'febrero', 'february', 'feb')),
@@ -302,10 +303,11 @@ class Rectangle:
                 for name in names:
                     text = text.replace(name + '.', number)
                     text = text.replace(name, number)
-
             for prep in ('de', 'del'):
                 text = text.replace(prep, '')
-
+            if text != original:
+                text = '-'.join([x for x in text.split(' ') if x])
+            text = text.replace(' ', '')
             for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
                     '%d.%m.%Y', '%d.%m.%y', '%d %m %Y', '%d %m %y'):
                 try:
@@ -314,8 +316,6 @@ class Rectangle:
                         return date
                 except ValueError:
                     pass
-
-
 
         date = parse_date(self.text.strip().lower())
         if date:
