@@ -48,7 +48,8 @@ LABELS = [
             'total neto', 'neto', 'suma excl. i.v.a.', 'vat base',
             'suma de importes', 'base i.v.a.', 'base iva', 'base no exenta iva',
             'total imponible', 'total sin iva', 'total eur iva excl.',
-            'base imponible - tax base', 'suma',
+            'base imponible - tax base', 'suma', 'base impuestos',
+            'imp.base',
             # German
             'nettobetrag')),
     ('tax_amount-label', ('import iva', 'importe iva', 'imp.iva',
@@ -57,9 +58,9 @@ LABELS = [
             'total fra.', 'total (eur)', 'total eur', 'total euros',
             'total a pagar', 'total amount', 'invoice amount',
             'total factura/total invoice', 'total factura / total invoice',
-            'total cargo', 'total (€)', 'liquido', 'líquido',
+            'total cargo', 'total (€)', 'liquido', 'líquido', 'líquido(eur)',
             'total factura en eur', 'importe total', 'total eur iva incl.',
-            'total importe - amount',
+            'total importe - amount', 'total factura eur',
             # German
             'endbetrag /eur')),
     ('due_date-label', ('data de venciment', 'data venciment', 'venciment',
