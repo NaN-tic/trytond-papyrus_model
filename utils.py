@@ -148,6 +148,7 @@ class Rectangle:
         text = text.replace('€', '').replace('$', '')
         text = text.replace('(', '').replace(')', '')
         text = text.replace('euros', '').replace('euro', '').replace('eur', '')
+        text = text.replace(' ', '')
         try:
             float(text)
             return True
