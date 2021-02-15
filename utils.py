@@ -581,12 +581,16 @@ class Sentencer:
             box.y0 += height * 0.15
             box.y1 -= height * 0.15
 
+        self.max_sentence = []
+        self.max_sentence.append(self.box)
         current = Rectangle(self.box)
         current.x1 += current.height
         make_thinner(current)
-        self.max_sentence = []
+
         previous = None
         for box in self.boxes:
+            if box == self.box:
+                continue
             if not current.intersects(box):
                 continue
             # In some cases (specially with dates) we find two boxes that
