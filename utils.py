@@ -575,11 +575,11 @@ class Sentencer:
     def compute_max_sentence(self):
         def make_thinner(box):
             # In some cases bounding boxes for words in two separate lines
-            # overlap So we make height 30% thinner. Experience shows that
-            # reducing it 20% is not enough
+            # overlap So we make height 40% thinner. Experience shows that
+            # reducing it 30% is not enough
             height = box.height
-            box.y0 += height * 0.15
-            box.y1 -= height * 0.15
+            box.y0 += height * 0.20
+            box.y1 -= height * 0.20
 
         self.max_sentence = []
         self.max_sentence.append(self.box)
