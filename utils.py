@@ -132,7 +132,7 @@ class Rectangle:
     def __repr__(self):
         #return 'Rectangle(%.3f, %.3f, %.3f, %.3f, "%s")' % (self.x0, self.y0,
             #self.x1, self.y1, self.text)
-        return '"%s" (%s)' % (self.text, self.main_category)
+        return '"%s" (%s - %s)' % (self.text, self.main_category, self.type)
 
     def has_a_number(self):
         if set('0123456789') & set(self.text):
