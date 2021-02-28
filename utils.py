@@ -360,7 +360,7 @@ class Rectangle:
                 text = '-'.join([x for x in text.split(' ') if x])
             text = text.replace(' ', '')
             for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
-                    '%d.%m.%Y', '%d.%m.%y', '%d %m %Y', '%d %m %y'):
+                    '%d.%m.%Y', '%d.%m.%y', '%d %m %Y', '%d %m %y', '%Y-%m-%d'):
                 try:
                     date = datetime.strptime(text, pattern)
                     if date.year >= min_year and date.year <= max_year:
