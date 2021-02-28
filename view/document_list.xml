@@ -2,5 +2,6 @@
     <xpath expr="/tree/field[@name='company']" position="after">
         <field name="model_type"/>
         <field name="party" expand="2"/>
+        <button name="rescan"/>
     </xpath>
 </data>

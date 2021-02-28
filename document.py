@@ -622,6 +622,28 @@ class Document(metaclass=PoolMeta):
         else:
             yield 'tesseract'
 
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls._buttons.update({
+                'rescan': {},
+                })
+
+    @classmethod
+    @ModelView.button
+    def rescan(cls, documents):
+        DocumentBox = Pool().get('papyrus.document.box')
+        boxes = []
+        for document in documents:
+            document.text = None
+            boxes += list(document.boxes)
+        if boxes:
+            DocumentBox.delete(boxes)
+        cls.save(documents)
+
+        for document in documents:
+            document.scan()
+
     def scan(self):
         super().scan()
         self.guess_company()

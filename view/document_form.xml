@@ -9,6 +9,9 @@
         <field name="sale" mode="form,tree" colspan="4"/>
         <field name="shipment_in" mode="form,tree" colspan="4"/>
     </xpath>
+    <xpath expr="/form/group[@id='buttons']" position="inside">
+        <button name="rescan"/>
+    </xpath>
     <xpath expr="/form/notebook" position="inside">
         <page name="values">
             <field name="values" colspan="4"/>

@@ -21,6 +21,15 @@
             <field name="inherit" ref="papyrus.papyrus_document_view_list"/>
             <field name="name">document_list</field>
         </record>
+        <record model="ir.model.button" id="document_rescan_button">
+            <field name="name">rescan</field>
+            <field name="string">Rescan</field>
+            <field name="model" search="[('model', '=', 'papyrus.document')]"/>
+        </record>
+        <record model="ir.model.button-res.group" id="document_rescan_button_group_papyrus">
+            <field name="button" ref="document_rescan_button"/>
+            <field name="group" ref="papyrus.group_papyrus"/>
+        </record>
 
         <!-- papyrus.document.box -->
         <record model="ir.ui.view" id="papyrus_document_box_view_form">
