@@ -56,18 +56,24 @@ class Document(metaclass=PoolMeta):
         size=1, add_remove=[('document', '=', None)], context={
             'type': 'in',
             }, states={
-            'invisible': Eval('model_type') != 'invoice',
-            }, depends=['model_type'])
+            'invisible': (Eval('model_type') != 'invoice'),
+            }, domain=[
+            ('company', '=', Eval('company')),
+            ], depends=['model_type','company'])
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
         add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'sale',
-            }, depends=['model_type'])
+            }, domain=[
+            ('company', 'in', Eval('company')),
+            ], depends=['model_type','company'])
     shipment_in = fields.One2Many('stock.shipment.in', 'document',
         "Shipment In", size=1, add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'shipment_in',
-            }, depends=['model_type'])
+            }, domain=[
+            ('company', 'in', Eval('company')),
+            ], depends=['model_type','company'])
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
@@ -137,6 +143,28 @@ class Document(metaclass=PoolMeta):
                     records = getattr(document, field)
                     if records:
                         return records, document
+
+    @classmethod
+    def validate(cls, documents):
+        super(Document, cls).validate(documents)
+        for document in documents:
+            document.validate_company()
+
+    def validate_company(self):
+        pool = Pool()
+        Company = pool.get('company.company')
+        Document = pool.get('papyrus.document')
+
+        companies = Company.search([])
+        for company in companies:
+            with Transaction().set_context(company=company.id):
+                document = Document(self.id)
+                if document.company and document.invoice:
+                    if document.company != document.invoice[0].company:
+                        raise UserError(gettext(
+                            'papyrus_model.msg_cannot_change_company',
+                            document=document.number,
+                            invoice=document.invoice[0].id))
 
     def scan_engines(self):
         super().scan_engines()
