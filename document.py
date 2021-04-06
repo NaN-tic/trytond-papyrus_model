@@ -71,6 +71,12 @@ class Document(metaclass=PoolMeta):
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
+    @classmethod
+    def __setup__(cls):
+        super(Document, cls).__setup__()
+        # Fields to check the company
+        cls._check_company = {'invoice','sale','shipment_in'}
+
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
 
@@ -144,61 +150,23 @@ class Document(metaclass=PoolMeta):
         for document in documents:
             document.validate_company()
 
-    def check_record_invoice(self):
-        pool = Pool()
-        Company = pool.get('company.company')
-        Document = pool.get('papyrus.document')
-
-        companies = Company.search([])
-        for company in companies:
-            with Transaction().set_user(0):
-                document = Document(self.id)
-                if document.company and document.invoice:
-                    if document.company != document.invoice[0].company:
-                        raise UserError(gettext(
-                            'papyrus_model.msg_cannot_change_company_invoice',
-                            document=document.number,
-                            invoice=document.invoice[0].rec_name))
-
-    def check_record_sale(self):
-        pool = Pool()
-        Company = pool.get('company.company')
-        Document = pool.get('papyrus.document')
-
-        companies = Company.search([])
-        for company in companies:
-            with Transaction().set_user(0):
-                document = Document(self.id)
-                if document.company and document.sale:
-                    if document.company != document.sale[0].company:
-                        raise UserError(gettext(
-                            'papyrus_model.msg_cannot_change_company_sale',
-                            document=document.number,
-                            sale=document.sale[0].rec_name))
-
-    def check_record_shipment_in(self):
-        pool = Pool()
-        Company = pool.get('company.company')
-        Document = pool.get('papyrus.document')
-
-        companies = Company.search([])
-        for company in companies:
-            with Transaction().set_user(0):
-                document = Document(self.id)
-                if document.company and document.shipment_in:
-                    if document.company != document.shipment_in[0].company:
-                        raise UserError(gettext(
-                            'papyrus_model.msg_cannot_change_company_shipment_in',
-                            document=document.number,
-                            shipment_in=document.shipment_in[0].rec_name))
-
     def validate_company(self):
-        if self.model_type == 'invoice':
-            self.check_record_invoice()
-        elif self.model_type == 'sale':
-            self.check_record_sale()
-        elif self.model_type == 'shipment_in':
-            self.check_record_shipment_in()
+        pool = Pool()
+        Document = pool.get('papyrus.document')
+
+        with Transaction().set_user(0):
+            document = Document(self.id)
+            print('DOCUMENT 1',document._check_company)
+            print('DOCUMENT 2',Document._check_company)
+            for field in document._check_company:
+                field_to_check = getattr(self, field)
+                if (document.company and field_to_check and
+                        document.company != field_to_check[0].company):
+                    raise UserError(gettext(
+                    'papyrus_model.msg_cannot_change_company_%s' % field,
+                    document=document.number,
+                    model=field_to_check[0].rec_name))
+
 
     def scan_engines(self):
         super().scan_engines()
