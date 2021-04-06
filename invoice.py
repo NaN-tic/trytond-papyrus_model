@@ -17,6 +17,15 @@ class Invoice(metaclass=PoolMeta):
         super(Invoice, cls).__setup__()
         cls._check_modify_exclude += ['document']
 
+    @classmethod
+    def copy(cls, invoices, default=None):
+        if default is None:
+            default = {}
+        else:
+            default = default.copy()
+        default.setdefault('document', None)
+        return super(Invoice, cls).copy(invoices, default=default)
+
 
 class InvoiceDossier(Wizard):
     __name__ = 'invoice.dossier'

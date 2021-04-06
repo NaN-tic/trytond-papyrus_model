@@ -8,3 +8,12 @@ from trytond.model import fields
 class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
     document = fields.Many2One('papyrus.document', "Document")
+
+    @classmethod
+    def copy(cls, sales, default=None):
+        if default is None:
+            default = {}
+        else:
+            default = default.copy()
+        default.setdefault('document', None)
+        return super(Sale, cls).copy(sales, default=default)
