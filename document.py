@@ -426,11 +426,11 @@ class Document(metaclass=PoolMeta):
         record = super().get_record()
         if not record:
             if self.model_type == 'invoice' and self.invoice:
-                record, = self.invoice
+                record = self.invoice[0]
             elif self.model_type == 'sale' and self.sale:
-                record, = self.sale
+                record = self.sale[0]
             elif self.model_type == 'shipment_in' and self.shipment_in:
-                record, = self.shipment_in
+                record = self.shipment_in[0]
             else:
                 raise UserError(gettext('papyrus_model.'
                         'msg_cannot_process_without_related_record'))
