@@ -75,7 +75,7 @@ class Document(metaclass=PoolMeta):
     def __setup__(cls):
         super(Document, cls).__setup__()
         # Fields to check the company
-        cls._check_company = {'invoice','sale','shipment_in'}
+        cls._check_company = {'invoice', 'sale', 'shipment_in'}
 
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
@@ -156,16 +156,14 @@ class Document(metaclass=PoolMeta):
 
         with Transaction().set_user(0):
             document = Document(self.id)
-            print('DOCUMENT 1',document._check_company)
-            print('DOCUMENT 2',Document._check_company)
             for field in document._check_company:
                 field_to_check = getattr(self, field)
                 if (document.company and field_to_check and
                         document.company != field_to_check[0].company):
                     raise UserError(gettext(
-                    'papyrus_model.msg_cannot_change_company_%s' % field,
-                    document=document.number,
-                    model=field_to_check[0].rec_name))
+                        'papyrus_model.msg_cannot_change_company_%s' % field,
+                        document=document.number,
+                        model=field_to_check[0].rec_name))
 
 
     def scan_engines(self):
