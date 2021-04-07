@@ -9,8 +9,14 @@
         <record model="ir.message" id="msg_cannot_pending_with_related_record">
             <field name="text">Document "%(document)s" cannot move to "Pending" because "%(record)s" (%(model_type)s) is linked to it. You must remove or unlink the related record first.</field>
         </record>
-        <record model="ir.message" id="msg_cannot_change_company">
-            <field name="text">The company of the document "%(document)s" and invoice "%(invoice)s" do not match</field>
+        <record model="ir.message" id="msg_cannot_change_company_invoice">
+            <field name="text">The company of the document "%(document)s" and invoice "%(model)s" do not match</field>
+        </record>
+        <record model="ir.message" id="msg_cannot_change_company_sale">
+            <field name="text">The company of the document "%(document)s" and sale "%(model)s" do not match</field>
+        </record>
+        <record model="ir.message" id="msg_cannot_change_company_shipment_in">
+            <field name="text">The company of the document "%(document)s" and shipment "%(model)s" do not match</field>
         </record>
     </data>
 </tryton>

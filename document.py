@@ -56,7 +56,7 @@ class Document(metaclass=PoolMeta):
         size=1, add_remove=[('document', '=', None)], context={
             'type': 'in',
             }, states={
-            'invisible': Eval('model_type') != 'invoice',
+            'invisible': (Eval('model_type') != 'invoice'),
             }, depends=['model_type'])
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
         add_remove=[('document', '=', None)],
@@ -70,6 +70,12 @@ class Document(metaclass=PoolMeta):
             }, depends=['model_type'])
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
+
+    @classmethod
+    def __setup__(cls):
+        super(Document, cls).__setup__()
+        # Fields to check the company
+        cls._check_company = {'invoice', 'sale', 'shipment_in'}
 
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
@@ -145,12 +151,20 @@ class Document(metaclass=PoolMeta):
             document.validate_company()
 
     def validate_company(self):
-        if self.company and self.invoice:
-            if self.company != self.invoice[0].company:
-                raise UserError(gettext(
-                    'papyrus_model.msg_cannot_change_company',
-                    document=self.number,
-                    invoice=self.invoice[0].id))
+        pool = Pool()
+        Document = pool.get('papyrus.document')
+
+        with Transaction().set_user(0):
+            document = Document(self.id)
+            for field in document._check_company:
+                field_to_check = getattr(self, field)
+                if (document.company and field_to_check and
+                        document.company != field_to_check[0].company):
+                    raise UserError(gettext(
+                        'papyrus_model.msg_cannot_change_company_%s' % field,
+                        document=document.number,
+                        model=field_to_check[0].rec_name))
+
 
     def scan_engines(self):
         super().scan_engines()
