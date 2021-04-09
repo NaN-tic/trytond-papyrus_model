@@ -35,10 +35,20 @@ class InvoiceDossier(Wizard):
 
     def do_open_(self, action):
         pool = Pool()
-        SaleLine = pool.get('sale.line')
-        PurchaseLine = pool.get('purchase.line')
         Invoice = pool.get('account.invoice')
-        InvoiceLineStockMove = pool.get('account.invoice.line-stock.move')
+        try:
+            SaleLine = pool.get('sale.line')
+        except KeyError:
+            SaleLine = None
+        try:
+            PurchaseLine = pool.get('purchase.line')
+        except KeyError:
+            PurchaseLine = None
+        try:
+            InvoiceLineStockMove = pool.get('account.invoice.line-stock.move')
+        except KeyError:
+            InvoiceLineStockMove = None
+
         invoice = Invoice(Transaction().context['active_id'])
 
         resources = set()
@@ -47,23 +57,25 @@ class InvoiceDossier(Wizard):
         for line in invoice.lines:
             lines.append(line.id)
             if line.origin:
-                if isinstance(line.origin, PurchaseLine):
+                if PurchaseLine and isinstance(line.origin, PurchaseLine):
                     resources.add(str(line.origin.purchase))
-                if isinstance(line.origin, SaleLine):
+                if SaleLine and isinstance(line.origin, SaleLine):
                     resources.add(str(line.origin.sale))
 
-        invoice_stocks = InvoiceLineStockMove.search([
-            ('invoice_line', 'in', lines),
-            ])
-
-        for invoice_stock in invoice_stocks:
-            resources.add(str(invoice_stock.stock_move.shipment))
+        if InvoiceLineStockMove:
+            invoice_stocks = InvoiceLineStockMove.search([
+                ('invoice_line', 'in', lines),
+                ])
+            for invoice_stock in invoice_stocks:
+                shipment = invoice_stock.stock_move.shipment
+                if shipment:
+                    resources.add(str(shipment))
 
         sub_domain = []
         for resource in resources:
             sub_domain.append(resource)
 
-        domain = [["resource", "in", sub_domain]]
+        domain = [('resource', 'in', sub_domain)]
         action['pyson_domain'] = PYSONEncoder().encode(domain)
         return action, {}
 
