@@ -15,7 +15,7 @@ class Invoice(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(Invoice, cls).__setup__()
-        cls._check_modify_exclude += ['document']
+        cls._check_modify_exclude.add('document')
 
     @classmethod
     def copy(cls, invoices, default=None):
