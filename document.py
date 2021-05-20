@@ -4,6 +4,7 @@
 from decimal import Decimal
 from datetime import datetime
 from trytond.model import fields, ModelView, Workflow
+from trytond.config import config
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
@@ -32,6 +33,8 @@ MONTHS = (
     (11, ('novembre', 'noviembre', 'november')),
     (12, ('desembre', 'diciembre', 'december')),
     )
+
+available_model_types = config.get('papyrus', 'model_types', default='').split(',')
 
 class Queue(metaclass=PoolMeta):
     'Papyrus Queue'
@@ -235,15 +238,18 @@ class Document(metaclass=PoolMeta):
                     return True
             return False
 
-        if find_words('invoice', ['factura', 'invoice', 'abono']):
-            return
+        if 'invoice' in available_model_types:
+            if find_words('invoice', ['factura', 'invoice', 'abono']):
+                return
 
-        if find_words('shipment_in', ['albarán', 'albarà', 'albaran', 'albara',
-                    'shipment', 'delivery']):
-            return
+        if 'shipment_in' in available_model_types:
+            if find_words('shipment_in', ['albarán', 'albarà', 'albaran', 'albara',
+                        'shipment', 'delivery']):
+                return
 
-        if find_words('sale', ['pedido', 'comanda', 'order']):
-            return
+        if 'sale' in available_model_types:
+            if find_words('sale', ['pedido', 'comanda', 'order']):
+                return
 
     def guess_party(self, type_=None):
         pool = Pool()
