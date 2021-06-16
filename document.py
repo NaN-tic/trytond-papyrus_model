@@ -266,12 +266,13 @@ class Document(metaclass=PoolMeta):
 
         # Check type_ only if party_customer or party_supplier modules are
         # activated
+        domain = [('party.active', '=', True)]
         if type_ == 'customer' and hasattr(Party, 'customer'):
-            domain = [('party.customer', '=', True)]
+            domain += [('party.customer', '=', True)]
         elif type_ == 'supplier' and hasattr(Party, 'supplier'):
-            domain = [('party.supplier', '=', True)]
+            domain += [('party.supplier', '=', True)]
         else:
-            domain = []
+            domain += []
 
         companies = [x.party.id for x in Company.search([])]
         parties = {}
