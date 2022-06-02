@@ -53,7 +53,11 @@ class Document(metaclass=PoolMeta):
     'Papyrus Document'
     __name__ = 'papyrus.document'
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
-    party = fields.Function(fields.Many2One('party.party', 'Party'),
+    party = fields.Function(fields.Many2One('party.party', 'Party',
+            context={
+                'company': Eval('company'),
+            },
+            depends=['company']),
         'get_party', searcher='search_party')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
         size=1, add_remove=[('document', '=', None)], context={
