@@ -10,6 +10,18 @@
             <field name="name">queue_form</field>
         </record>
 
+        <record model="ir.rule.group" id="rule_group_papyrus_queue">
+            <field name="name">User in company</field>
+            <field name="model" search="[('model', '=', 'papyrus.queue')]"/>
+            <field name="global_p" eval="True"/>
+        </record>
+        <record model="ir.rule" id="rule_papyrus_queue1">
+            <field name="domain"
+                eval="[('company', 'in', Eval('companies', []))]"
+                pyson="1"/>
+            <field name="rule_group" ref="rule_group_papyrus_queue"/>
+        </record>
+
         <!-- papyrus.document -->
         <record model="ir.ui.view" id="document_view_form">
             <field name="model">papyrus.document</field>
@@ -20,6 +32,24 @@
             <field name="model">papyrus.document</field>
             <field name="inherit" ref="papyrus.papyrus_document_view_list"/>
             <field name="name">document_list</field>
+        </record>
+
+        <record model="ir.rule.group" id="rule_group_papyrus_document">
+            <field name="name">User in company</field>
+            <field name="model" search="[('model', '=', 'papyrus.document')]"/>
+            <field name="global_p" eval="True"/>
+        </record>
+        <record model="ir.rule" id="rule_papyrus_document1">
+            <field name="domain"
+                eval="[('company', 'in', Eval('companies', []))]"
+                pyson="1"/>
+            <field name="rule_group" ref="rule_group_papyrus_document"/>
+        </record>
+        <record model="ir.rule" id="rule_papyrus_document2">
+            <field name="domain"
+                eval="[('guessed_company', 'in', Eval('companies', []))]"
+                pyson="1"/>
+            <field name="rule_group" ref="rule_group_papyrus_document"/>
         </record>
     </data>
 </tryton>
