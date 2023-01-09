@@ -477,7 +477,7 @@ class Document(metaclass=PoolMeta):
             with_rec_name=False)
         invoice = Invoice(**defaults)
         invoice.type = 'in'
-        invoice.on_change_type()
+        invoice.journal = invoice.on_change_with_journal()
         return invoice
 
     def _get_sale(self):
