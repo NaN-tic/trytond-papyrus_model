@@ -387,7 +387,7 @@ class Document(metaclass=PoolMeta):
                 invoice.party = party
                 invoice.on_change_party()
             invoice.invoice_date = self.guess_date()
-            invoice.account = invoice.on_change_with_account()
+            invoice._update_account()
             invoice.document = self
             invoice.on_change_lines()
             invoice.save()
