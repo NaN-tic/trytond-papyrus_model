@@ -3,7 +3,6 @@
 # the full copyright notices and license terms.
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
-from trytond.transaction import Transaction
 from trytond.wizard import Wizard, StateAction
 from trytond.pyson import PYSONEncoder
 
@@ -35,7 +34,7 @@ class InvoiceDossier(Wizard):
 
     def do_open_(self, action):
         pool = Pool()
-        Invoice = pool.get('account.invoice')
+
         try:
             SaleLine = pool.get('sale.line')
         except KeyError:
@@ -49,7 +48,7 @@ class InvoiceDossier(Wizard):
         except KeyError:
             InvoiceLineStockMove = None
 
-        invoice = Invoice(Transaction().context['active_id'])
+        invoice = self.record
 
         resources = set()
         resources.add(str(invoice))
