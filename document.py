@@ -55,7 +55,7 @@ class Document(metaclass=PoolMeta):
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
     party = fields.Function(fields.Many2One('party.party', 'Party',
             context={
-                'company': Eval('company'),
+                'company': Eval('company', -1),
             },
             depends=['company']),
         'get_party', searcher='search_party')
