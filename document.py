@@ -69,12 +69,12 @@ class Document(metaclass=PoolMeta):
         add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'sale',
-            }, depends=['model_type'])
+            })
     shipment_in = fields.One2Many('stock.shipment.in', 'document',
         "Shipment In", size=1, add_remove=[('document', '=', None)],
         states={
             'invisible': Eval('model_type') != 'shipment_in',
-            }, depends=['model_type'])
+            })
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
