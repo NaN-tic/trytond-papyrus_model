@@ -64,7 +64,7 @@ class Document(metaclass=PoolMeta):
             'type': 'in',
             }, states={
             'invisible': (Eval('model_type') != 'invoice'),
-            }, depends=['model_type'])
+            })
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
         add_remove=[('document', '=', None)],
         states={
