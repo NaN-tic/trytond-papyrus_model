@@ -332,7 +332,7 @@ class Document(metaclass=PoolMeta):
                     pass
 
         for box in self.boxes:
-            date = parse_date(box.text.strip())
+            date = box.text and parse_date(box.text.strip())
             if date:
                 return date
 
