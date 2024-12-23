@@ -275,8 +275,6 @@ class Document(metaclass=PoolMeta):
             domain += [('party.customer', '=', True)]
         elif type_ == 'supplier' and hasattr(Party, 'supplier'):
             domain += [('party.supplier', '=', True)]
-        else:
-            domain += []
 
         companies = [x.party.id for x in Company.search([])]
         parties = {}
