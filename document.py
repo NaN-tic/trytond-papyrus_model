@@ -92,8 +92,8 @@ class Document(metaclass=PoolMeta):
             model_type = t.__get__(self, self)
         else:
             record = records[0]
-            model, = Model.search([('model', '=', record.__name__)], limit=1)
-            model_type = model.name
+            model, = Model.search([('name', '=', record.__name__)], limit=1)
+            model_type = model.string
         return model_type
 
     def get_party(self, name):
