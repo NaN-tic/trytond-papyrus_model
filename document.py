@@ -276,6 +276,13 @@ class Document(metaclass=PoolMeta):
         elif type_ == 'supplier' and hasattr(Party, 'supplier'):
             domain += [('party.supplier', '=', True)]
 
+        # party_company
+        if hasattr(Party, 'companies'):
+            domain += ['OR',
+                ('companies', 'in', []),
+                ('companies', 'in', [self.company.id]),
+                ]
+
         companies = [x.party.id for x in Company.search([])]
         parties = {}
         for identifier in Identifier.search(domain + [
