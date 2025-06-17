@@ -268,6 +268,9 @@ class Document(metaclass=PoolMeta):
             code = code.lower()
             return code
 
+        has_party_company = hasattr(Party, 'companies')
+        company_id= self.company.id
+
         # Check type_ only if party_customer or party_supplier modules are
         # activated
         domain = [('party.active', '=', True)]
@@ -277,11 +280,11 @@ class Document(metaclass=PoolMeta):
             domain += [('party.supplier', '=', True)]
 
         # party_company
-        if hasattr(Party, 'companies'):
-            domain += ['OR',
+        if has_party_company:
+            domain += [['OR',
                 ('companies', 'in', []),
-                ('companies', 'in', [self.company.id]),
-                ]
+                ('companies', 'in', [company_id]),
+                ]]
 
         companies = [x.party.id for x in Company.search([])]
         parties = {}
