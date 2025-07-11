@@ -1,5 +1,5 @@
 <data>
-    <xpath expr="/form/notebook/page[@id='other']/field[@name='origin']" position="after">
+    <xpath expr="/form/notebook/page[@id='other']/field[@name='shipping_date']" position="after">
         <label name="document"/>
         <field name="document"/>
     </xpath>
