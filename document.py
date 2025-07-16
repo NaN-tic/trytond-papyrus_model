@@ -55,14 +55,16 @@ class Document(metaclass=PoolMeta):
     model_type = fields.Selection(MODEL_TYPE, 'Model Type')
     party = fields.Function(fields.Many2One('party.party', 'Party',
             context={
-                'company': Eval('company', -1),
+                'company': Eval('document_company', -1),
             },
             depends=['company']),
         'get_party', searcher='search_party')
     invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
-        size=1, add_remove=[('document', '=', None)], context={
+        size=1, add_remove=[('document', '=', None)],
+        context={
             'type': 'in',
-            }, states={
+            'company': Eval('document_company', -1),
+        }, states={
             'invisible': (Eval('model_type') != 'invoice'),
             })
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
