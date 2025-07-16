@@ -146,7 +146,7 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def model_exists(cls, documents):
-        with Transaction().set_user(0):
+        with Transaction().set_user(0, set_context=True):
             for document in cls.browse([x.id for x in documents]):
                 for field in ('invoice', 'sale', 'shipment_in'):
                     records = getattr(document, field)
@@ -163,7 +163,7 @@ class Document(metaclass=PoolMeta):
         pool = Pool()
         Document = pool.get('papyrus.document')
 
-        with Transaction().set_user(0):
+        with Transaction().set_user(0, set_context=True):
             document = Document(self.id)
             for field in document._check_company:
                 field_to_check = getattr(self, field)
@@ -353,70 +353,70 @@ class Document(metaclass=PoolMeta):
 
         if not self.company or self.invoice:
             return
-        with Transaction().set_context(company=self.company.id):
-            party = self.guess_party('supplier')
-            if not party:
-                return
-            invoice = None
-            pending_lines = InvoiceLine.search([
-                    ('invoice', '=', None),
-                    ('party', '=', party),
-                    ('invoice_type', '=', 'in'),
-                    ('company', '=', self.company.id),
-                    ], limit=1)
-            if not pending_lines:
-                domain = [
-                    ('party', '=', party),
-                    ('type', '=', 'in'),
-                    ('untaxed_amount', '>', Decimal(0)),
-                    ('state', 'in', ['posted', 'paid']),
-                    ('company', '=', self.company.id),
-                    ]
-                last_invoices = Invoice.search(domain,
-                    order=[('invoice_date', 'DESC')], limit=5)
-                # Invoices that have at least one line with an origin are not
-                # elligible.
-                # Note that we cannot use a domain that looks like
-                # "('lines.origin', '=', None)" to pick the last_invoices
-                # because that would return invoices that have at least one
-                # line without origin, but the invoice may have other lines
-                # with origin and we do not want to duplicate those.
-                invalid_invoices = set(Invoice.search(domain + [
-                        ('lines.origin', '!=', None),
-                        ], order=[('invoice_date', 'DESC')], limit=5))
-                for last_invoice in last_invoices:
-                    if last_invoice not in invalid_invoices:
-                        invoice, = Invoice.copy([last_invoice], default={
-                                'reference': None,
-                                'invoice_date': None,
-                                })
-                        break
 
-            if not invoice:
-                invoice = self._get_invoice()
-                invoice.party = party
-                invoice.on_change_party()
-            invoice.invoice_date = self.guess_date()
-            invoice._update_account()
-            invoice.document = self
-            invoice.on_change_lines()
-            invoice.save()
-            self.guess_employee([('invoice.party', '=', party)])
+        party = self.guess_party('supplier')
+        if not party:
+            return
+        invoice = None
+        pending_lines = InvoiceLine.search([
+                ('invoice', '=', None),
+                ('party', '=', party),
+                ('invoice_type', '=', 'in'),
+                ('company', '=', self.company.id),
+                ], limit=1)
+        if not pending_lines:
+            domain = [
+                ('party', '=', party),
+                ('type', '=', 'in'),
+                ('untaxed_amount', '>', Decimal(0)),
+                ('state', 'in', ['posted', 'paid']),
+                ('company', '=', self.company.id),
+                ]
+            last_invoices = Invoice.search(domain,
+                order=[('invoice_date', 'DESC')], limit=5)
+            # Invoices that have at least one line with an origin are not
+            # elligible.
+            # Note that we cannot use a domain that looks like
+            # "('lines.origin', '=', None)" to pick the last_invoices
+            # because that would return invoices that have at least one
+            # line without origin, but the invoice may have other lines
+            # with origin and we do not want to duplicate those.
+            invalid_invoices = set(Invoice.search(domain + [
+                    ('lines.origin', '!=', None),
+                    ], order=[('invoice_date', 'DESC')], limit=5))
+            for last_invoice in last_invoices:
+                if last_invoice not in invalid_invoices:
+                    invoice, = Invoice.copy([last_invoice], default={
+                            'reference': None,
+                            'invoice_date': None,
+                            })
+                    break
+
+        if not invoice:
+            invoice = self._get_invoice()
+            invoice.party = party
+            invoice.on_change_party()
+        invoice.invoice_date = self.guess_date()
+        invoice._update_account()
+        invoice.document = self
+        invoice.on_change_lines()
+        invoice.save()
+        self.guess_employee([('invoice.party', '=', party)])
 
     def guess_sale(self):
         if not self.company or self.sale:
             return
-        with Transaction().set_context(company=self.company.id):
-            party = self.guess_party('customer')
-            if not party:
-                return
-            sale = self._get_sale()
-            sale.party = party
-            sale.on_change_party()
-            sale.sale_date = self.guess_date()
-            sale.document = self
-            sale.save()
-            self.guess_employee([('sale.party', '=', party)])
+
+        party = self.guess_party('customer')
+        if not party:
+            return
+        sale = self._get_sale()
+        sale.party = party
+        sale.on_change_party()
+        sale.sale_date = self.guess_date()
+        sale.document = self
+        sale.save()
+        self.guess_employee([('sale.party', '=', party)])
 
     def guess_shipment_in_warehouse(self, shipment):
         Move = Pool().get('stock.move')
@@ -440,21 +440,21 @@ class Document(metaclass=PoolMeta):
     def guess_shipment_in(self):
         if not self.company or self.shipment_in:
             return
-        with Transaction().set_context(company=self.company.id):
-            party = self.guess_party('supplier')
-            if not party:
-                return
-            shipment = self._get_shipment_in()
-            shipment.supplier = party
-            shipment.on_change_supplier()
+
+        party = self.guess_party('supplier')
+        if not party:
+            return
+        shipment = self._get_shipment_in()
+        shipment.supplier = party
+        shipment.on_change_supplier()
+        if not shipment.warehouse:
+            shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
             if not shipment.warehouse:
-                shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
-                if not shipment.warehouse:
-                    return
-            shipment.effective_date = self.guess_date()
-            shipment.document = self
-            shipment.save()
-            self.guess_employee([('shipment_in.supplier', '=', party)])
+                return
+        shipment.effective_date = self.guess_date()
+        shipment.document = self
+        shipment.save()
+        self.guess_employee([('shipment_in.supplier', '=', party)])
 
     def get_record(self):
         record = super().get_record()
