@@ -1,8 +1,8 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+import json
 from decimal import Decimal
-from datetime import datetime
 from trytond.model import fields, ModelView, Workflow
 from trytond.config import config
 from trytond.pool import Pool, PoolMeta
@@ -13,35 +13,28 @@ from trytond.i18n import gettext
 from trytond.model.fields.selection import TranslatedSelection
 from statistics import mode, StatisticsError
 
-MODEL_TYPE = [
-    (None, ''),
-    ('invoice', 'Invoice'),
-    ('sale', 'Sale'),
-    ('shipment_in', 'Shipment In'),
-    ]
-MONTHS = (
-    (1, ('gener', 'enero', 'january')),
-    (2, ('febrer', 'febrero', 'february')),
-    (3, ('març', 'marzo', 'march')),
-    (4, ('abril', 'april')),
-    (5, ('maig', 'mayo', 'may')),
-    (6, ('juny', 'junio', 'june')),
-    (7, ('juliol', 'julio', 'july')),
-    (8, ('agost', 'agosto', 'august')),
-    (9, ('setembre', 'septiembre', 'september')),
-    (10, ('octubre', 'october')),
-    (11, ('novembre', 'noviembre', 'november')),
-    (12, ('desembre', 'diciembre', 'december')),
-    )
+from . import tools
 
 available_model_types = config.get('papyrus', 'model_types', default='').split(',')
 
+
 class Queue(metaclass=PoolMeta):
-    'Papyrus Queue'
     __name__ = 'papyrus.queue'
-    model_type = fields.Selection(MODEL_TYPE, 'Model Type', states={
+    model_type = fields.Selection('_get_model_type', 'Model Type', states={
             'invisible': Eval('type') != 'document',
             })
+    llm_classifier = fields.Char('Classifier LLM')
+    llms = fields.Char('LLMs')
+    llm_pdf_engine = fields.Selection([
+            (None, ''),
+            ('mistral-ocr', 'Mistral OCR (best for scanned documents)'),
+            ('native', 'Native (best for born-digital PDFs)'),
+            ('pdf-text', 'PDF Text (balanced)'),
+            ], 'LLM PDF Engine')
+
+    @classmethod
+    def _get_model_type(cls):
+        return [(None, '')]
 
     def get_document(self, filename):
         document = super().get_document(filename)
@@ -50,41 +43,73 @@ class Queue(metaclass=PoolMeta):
 
 
 class Document(metaclass=PoolMeta):
-    'Papyrus Document'
     __name__ = 'papyrus.document'
-    model_type = fields.Selection(MODEL_TYPE, 'Model Type')
+    model_type = fields.Selection('_get_model_type', 'Model Type')
     party = fields.Function(fields.Many2One('party.party', 'Party',
             context={
                 'company': Eval('document_company', -1),
             },
             depends=['document_company']),
         'get_party', searcher='search_party')
-    invoice = fields.One2Many('account.invoice', 'document', "Account Invoice",
-        size=1, add_remove=[('document', '=', None)],
-        context={
-            'type': 'in',
-            'company': Eval('document_company', -1),
-        }, states={
-            'invisible': (Eval('model_type') != 'invoice'),
-        }, depends=['document_company', 'model_type'])
-    sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
-        add_remove=[('document', '=', None)],
-        states={
-            'invisible': Eval('model_type') != 'sale',
-            })
-    shipment_in = fields.One2Many('stock.shipment.in', 'document',
-        "Shipment In", size=1, add_remove=[('document', '=', None)],
-        states={
-            'invisible': Eval('model_type') != 'shipment_in',
-            })
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
-    guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
+    guessed_model_type = fields.Selection('_get_model_type', 'Guessed Model Type')
+
+    @classmethod
+    def _get_model_type(cls):
+        Queue = Pool().get('papyrus.queue')
+        return Queue._get_model_type()
 
     @classmethod
     def __setup__(cls):
         super(Document, cls).__setup__()
         # Fields to check the company
         cls._check_company = {'invoice', 'sale', 'shipment_in'}
+
+    def scan_engines(self):
+        super().scan_engines()
+        yield 'text'
+        if self.text and self.text.strip():
+            yield 'textboxes'
+        else:
+            yield 'tesseract'
+
+    def scan(self):
+        super().scan()
+        self.guess_company()
+        self.guess_model_type()
+        if self.model_type:
+            getattr(self, 'guess_%s' % self.model_type)()
+
+    def guess_model_types(self):
+        return {}
+
+    def guess_model_type_schema(self):
+        return {
+            'name': 'document_classification',
+            'strict': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'model_type': {
+                        'type': 'string',
+                        'enum': list(self.guess_model_types().keys()),
+                    }
+                },
+                'required': ['model_type']
+            }
+        }
+
+    def guess_model_type(self):
+        if self.model_type:
+            return
+        response = tools.llm(messages=self.guess_model_type_messages(),
+            model=self.queue.classifier_llm,
+            pdf_engine=self.queue.llm_pdf_engine,
+            schema=self.guess_model_type_schema(),
+            max_tokens=256,
+            )
+        response = json.loads(response)
+        self.model_type = response.get('model_type')
 
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
@@ -98,21 +123,51 @@ class Document(metaclass=PoolMeta):
             model_type = model.string
         return model_type
 
+    def guess_model_type_messages(self):
+        system = {
+            "role": "system",
+            "content": (
+                "You are an expert at classifying business documents "
+                "(invoices, orders, delivery notes, receipts). Return ONLY "
+                "JSON (no markdown) valid per the provided schema."
+            )
+        }
+        types = '\n'.join('- {key}: {value}' for key, value
+            in self.guess_model_types().items())
+        user = {
+            "role": "user",
+            "content": [{
+                    "type": "text",
+                    "text": (
+                        "Classify this document text and output STRICT JSON "
+                        "matching the schema. No extra text. Parse this "
+                        "business document and output STRICT JSON matching the "
+                        "schema. No extra text. Here're the document types:"
+                        f"\n\n{types}\n\n"
+                        ),
+                    }, {
+                    "type": "file",
+                    "file": {
+                        "filename": self.filename,
+                        "file_data": tools.to_url_data(self.data),
+                        }
+                    }],
+            }
+        return [system, user]
+
     def get_party(self, name):
-        if self.model_type == 'invoice' and self.invoice:
-            return self.invoice[0].party.id
-        elif self.model_type == 'sale' and self.sale:
-            return self.sale[0].party.id
-        elif self.model_type == 'shipment_in' and self.shipment_in:
-            return self.shipment_in[0].supplier.id
+        return
+
+    @classmethod
+    def _search_party(cls, clause):
+        return []
 
     @classmethod
     def search_party(cls, name, clause):
-        return ['OR',
-            ('invoice.party',) + tuple(clause[1:]),
-            ('sale.party',) + tuple(clause[1:]),
-            ('shipment_in.supplier',) + tuple(clause[1:]),
-            ]
+        clauses = cls._search_party(clause)
+        if not clauses:
+            return
+        return ['OR', *clauses]
 
     @classmethod
     def delete(cls, documents):
@@ -175,87 +230,12 @@ class Document(metaclass=PoolMeta):
                         model=field_to_check[0].rec_name))
 
 
-    def scan_engines(self):
-        super().scan_engines()
-        yield 'text'
-        if self.text and self.text.strip():
-            yield 'textboxes'
-        else:
-            yield 'tesseract'
-
-    def scan(self):
-        super().scan()
-        self.guess_company()
-        self.guess_model_type()
-        if self.model_type:
-            getattr(self, 'guess_%s' % self.model_type)()
-
     def guess_company(self):
         pool = Pool()
         Company = pool.get('company.company')
 
         if self.company:
             return
-
-        def normalize_code(code):
-            # Try to remove non-alphanumeric symbols
-            for char in '-. ,':
-                code = code.replace(char, '')
-            code = code.lower()
-            return code
-
-        identifiers = {}
-        for company in Company.search([]):
-            for identifier in company.party.identifiers:
-                if not identifier.code:
-                    continue
-                code = normalize_code(identifier.code)
-                identifiers[code] = company
-                if identifier.type == 'eu_vat':
-                    code = code[2:]
-                    identifiers[code] = company
-
-        for box in self.boxes:
-            text = box.text
-            if text is None:
-                continue
-            text = text.strip()
-            if not text:
-                continue
-
-            text = normalize_code(text)
-            if text in identifiers:
-                self.guessed_company = identifiers[text]
-                self.company = self.guessed_company
-                break
-
-    def guess_model_type(self):
-        if self.model_type:
-            return
-        if not self.text:
-            return
-
-        def find_words(type_, words):
-            text = self.text.lower()
-            for word in words:
-                if word in text:
-                    self.guessed_model_type = type_
-                    self.model_type = self.guessed_model_type
-                    return True
-            return False
-
-        if 'invoice' in available_model_types:
-            if find_words('invoice', ['factura', 'invoice', 'abono']):
-                return
-
-        if 'shipment_in' in available_model_types:
-            if find_words('shipment_in', ['albarán', 'albarà', 'albaran', 'albara',
-                        'shipment', 'delivery']):
-                return
-
-        if 'sale' in available_model_types:
-            if find_words('sale', ['pedido', 'comanda', 'order']):
-                return
 
     def guess_party(self, type_=None):
         pool = Pool()
@@ -310,41 +290,6 @@ class Document(metaclass=PoolMeta):
             text = normalize_code(text)
             if text in parties:
                 return parties[text]
-
-    def guess_date(self):
-        Date = Pool().get('ir.date')
-        year = Date().today().year
-        min_year = year - 1
-        max_year = year + 1
-
-        def parse_date(text):
-            for month, names in MONTHS:
-                for name in names:
-                    text = text.replace(name, str(month))
-
-            for month, names in MONTHS:
-                for name in names:
-                    # Frequently months are abbreviated to the first 3 letters
-                    # sometimes with a dot at the end
-                    text = text.replace(name[:3] + '.', str(month))
-                    text = text.replace(name[:3], str(month))
-
-            # Remove empty spaces
-            text = text.replace(' ', '')
-
-            for pattern in ('%d/%m/%Y', '%d/%m/%y', '%d-%m-%Y', '%d-%m-%y',
-                    '%d.%m.%Y', '%d.%m.%y'):
-                try:
-                    date = datetime.strptime(text, pattern)
-                    if date.year >= min_year and date.year <= max_year:
-                        return date.date()
-                except ValueError:
-                    pass
-
-        for box in self.boxes:
-            date = box.text and parse_date(box.text.strip())
-            if date:
-                return date
 
     def guess_invoice(self):
         pool = Pool()

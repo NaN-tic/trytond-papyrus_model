@@ -85,7 +85,6 @@ msgstr ""
 "(%(model_type)s) está vinculado a él. Primero debe eliminar o desvinular el "
 "registro relacionado."
 
-#, fuzzy
 msgctxt "model:ir.message,text:msg_cannot_pending_with_related_record"
 msgid ""
 "Document \"%(document)s\" cannot move to \"Pending\" because \"%(record)s\" "

@@ -3,6 +3,44 @@
 # the full copyright notices and license terms.
 from trytond.pool import PoolMeta
 from trytond.model import fields
+from trytond.pyson import Eval
+
+
+class Queue(metaclass=PoolMeta):
+    __name__ = 'papyrus.queue'
+
+    @classmethod
+    def _get_model_type(cls):
+        return super()._get_model_type() + [
+            ('sale', 'Sale'),
+            ]
+
+
+class Document(metaclass=PoolMeta):
+    __name__ = 'papyrus.document'
+    sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
+        add_remove=[('document', '=', None)],
+        states={
+            'invisible': Eval('model_type') != 'sale',
+            })
+
+    def get_party(self, name):
+        if self.model_type == 'sale' and self.sale:
+            return self.sale[0].party.id
+        return super().get_party(name)
+
+    @classmethod
+    def _search_party(cls, clause):
+        return super()._search_party() + [
+            ('sale.party',) + tuple(clause[1:]),
+            ]
+
+    def guess_model_types(self):
+        types = super().guess_model_types()
+        types.update({
+                'sale': 'Customer sales or sale orders',
+                })
+        return types
 
 
 class Sale(metaclass=PoolMeta):
