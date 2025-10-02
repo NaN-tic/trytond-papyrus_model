@@ -24,6 +24,11 @@ class Document(metaclass=PoolMeta):
             'invisible': Eval('model_type') != 'shipment_in',
             })
 
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls._check_company.add('shipment_in')
+
     def get_party(self, name):
         if self.model_type == 'shipment_in' and self.shipment_in:
             return self.shipment_in[0].supplier.id
@@ -55,4 +60,4 @@ class ShipmentIn(metaclass=PoolMeta):
         else:
             default = default.copy()
         default.setdefault('document', None)
-        return super(ShipmentIn, cls).copy(shipments, default=default)
+        return super().copy(shipments, default=default)

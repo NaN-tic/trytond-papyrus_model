@@ -1,7 +1,6 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
-import json
 from decimal import Decimal
 from trytond.model import fields, ModelView, Workflow
 from trytond.config import config
@@ -12,7 +11,6 @@ from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.model.fields.selection import TranslatedSelection
 from statistics import mode, StatisticsError
-
 from . import tools
 
 available_model_types = config.get('papyrus', 'model_types', default='').split(',')
@@ -53,6 +51,7 @@ class Document(metaclass=PoolMeta):
         'get_party', searcher='search_party')
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection('_get_model_type', 'Guessed Model Type')
+    extracted_data = fields.Text('Extracted Data', readonly=True)
 
     @classmethod
     def _get_model_type(cls):
@@ -61,9 +60,9 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def __setup__(cls):
-        super(Document, cls).__setup__()
+        super().__setup__()
         # Fields to check the company
-        cls._check_company = {'invoice', 'sale', 'shipment_in'}
+        cls._check_company = set()
 
     def scan_engines(self):
         super().scan_engines()
@@ -78,7 +77,8 @@ class Document(metaclass=PoolMeta):
         self.guess_company()
         self.guess_model_type()
         if self.model_type:
-            getattr(self, 'guess_%s' % self.model_type)()
+            guesser = getattr(self, 'guess_%s' % self.model_type)
+            guesser()
 
     def guess_model_types(self):
         return {}
@@ -103,12 +103,11 @@ class Document(metaclass=PoolMeta):
         if self.model_type:
             return
         response = tools.llm(messages=self.guess_model_type_messages(),
-            model=self.queue.classifier_llm,
+            model=self.queue.llm_classifier,
             pdf_engine=self.queue.llm_pdf_engine,
             schema=self.guess_model_type_schema(),
             max_tokens=256,
             )
-        response = json.loads(response)
         self.model_type = response.get('model_type')
 
     def get_model_type_name(self, records):
@@ -231,9 +230,6 @@ class Document(metaclass=PoolMeta):
 
 
     def guess_company(self):
-        pool = Pool()
-        Company = pool.get('company.company')
-
         if self.company:
             return
 
@@ -291,7 +287,7 @@ class Document(metaclass=PoolMeta):
             if text in parties:
                 return parties[text]
 
-    def guess_invoice(self):
+    def guess_invoiceXXXXXXXXXXXXXXXXXXXXXXXXX(self):
         pool = Pool()
         Invoice = pool.get('account.invoice')
         InvoiceLine = pool.get('account.invoice.line')
@@ -422,7 +418,7 @@ class Document(metaclass=PoolMeta):
                 obj = getattr(self, '_get_%s' % self.model_type)()
                 setattr(self, self.model_type, [obj])
 
-        for type_, _ in self.__class__.model_type.selection:
+        for type_, _ in self._get_model_type():
             if type_ and self.model_type != type_:
                 setattr(self, type_, [])
 

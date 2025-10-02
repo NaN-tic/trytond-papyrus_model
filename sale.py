@@ -24,6 +24,11 @@ class Document(metaclass=PoolMeta):
             'invisible': Eval('model_type') != 'sale',
             })
 
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls._check_company.add('sale')
+
     def get_party(self, name):
         if self.model_type == 'sale' and self.sale:
             return self.sale[0].party.id
@@ -54,4 +59,4 @@ class Sale(metaclass=PoolMeta):
         else:
             default = default.copy()
         default.setdefault('document', None)
-        return super(Sale, cls).copy(sales, default=default)
+        return super().copy(sales, default=default)
