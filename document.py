@@ -6,7 +6,7 @@ from datetime import datetime
 from trytond.model import fields, ModelView, Workflow
 from trytond.config import config
 from trytond.pool import Pool, PoolMeta
-from trytond.pyson import Eval
+from trytond.pyson import Bool, Eval
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
@@ -65,18 +65,21 @@ class Document(metaclass=PoolMeta):
             'type': 'in',
             'company': Eval('document_company', -1),
         }, states={
-            'invisible': (Eval('model_type') != 'invoice'),
+            'invisible': ((Eval('model_type') != 'invoice') | ~Bool(Eval('has_invoice', False))),
         }, depends=['document_company', 'model_type'])
+    has_invoice = fields.Function(fields.Boolean('Has Invoice'), 'get_has_document')
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
         add_remove=[('document', '=', None)],
         states={
-            'invisible': Eval('model_type') != 'sale',
+            'invisible': ((Eval('model_type') != 'sale') | ~Bool(Eval('has_sale', False))),
             })
+    has_sale = fields.Function(fields.Boolean('Has Sale'), 'get_has_document')
     shipment_in = fields.One2Many('stock.shipment.in', 'document',
         "Shipment In", size=1, add_remove=[('document', '=', None)],
         states={
-            'invisible': Eval('model_type') != 'shipment_in',
+            'invisible': ((Eval('model_type') != 'shipment_in') | ~Bool(Eval('has_shipment_in', False))),
             })
+    has_shipment_in = fields.Function(fields.Boolean('Has Shipment In'), 'get_has_document')
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection(MODEL_TYPE, 'Guessed Model Type')
 
@@ -97,6 +100,12 @@ class Document(metaclass=PoolMeta):
             model, = Model.search([('model', '=', record.__name__)], limit=1)
             model_type = model.name
         return model_type
+
+    def get_has_document(self, name):
+        if not name:
+            return False
+        document = name.replace('has_', '')
+        return True if getattr(self, document) else False
 
     def get_party(self, name):
         if self.model_type == 'invoice' and self.invoice:
