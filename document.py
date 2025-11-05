@@ -127,6 +127,15 @@ class Document(metaclass=PoolMeta):
         return model_type
 
     def guess_model_type_messages(self):
+        pool = Pool()
+        Company = pool.get('company.company')
+
+        def company_info(company):
+            res = company.party.name
+            if getattr(company.party, 'trade_name', None):
+                res += f" ({company.party.trade_name})"
+            return res
+
         system = {
             "role": "system",
             "content": (
@@ -137,6 +146,21 @@ class Document(metaclass=PoolMeta):
         }
         types = '\n'.join(f'- {key}: {value}' for key, value
             in self.guess_model_types().items())
+
+        if self.company:
+            info = company_info(self.company)
+            info = ("In order to understand the type of document take into "
+                "account that the company related to the document is: "
+                f"{info}")
+
+        else:
+            info = []
+            for company in Company.search([]):
+                info.append(company_info(company))
+            info = ' ; '.join(info)
+            info = ("In order to understand the type of document take into "
+                "account that possible companies in the system are: {info}")
+
         user = {
             "role": "user",
             "content": [{
@@ -145,7 +169,9 @@ class Document(metaclass=PoolMeta):
                         "Classify this document text and output STRICT JSON "
                         "matching the schema. No extra text. Parse this "
                         "business document and output STRICT JSON matching the "
-                        "schema. No extra text. Here're the document types:"
+                        "schema. No extra text. "
+                        f"{info}\n\n"
+                        "Here're the document types:"
                         f"\n\n{types}\n\n"
                         ),
                     }, {
