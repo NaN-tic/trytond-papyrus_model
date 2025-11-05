@@ -8,6 +8,7 @@ from trytond.wizard import Wizard, StateAction
 from trytond.pyson import PYSONEncoder, Eval
 from . import tools
 
+
 class Queue(metaclass=PoolMeta):
     __name__ = 'papyrus.queue'
 
@@ -208,9 +209,11 @@ class Document(metaclass=PoolMeta):
             invoice = self.invoice[0]
         else:
             invoice = Invoice()
-            invoice.type = 'in'
             invoice.document = self
+            invoice.type = 'in'
+            invoice.on_change_type()
             invoice.company = self.document_company
+            invoice.on_change_company()
 
         if not getattr(invoice, 'party', None):
             invoice.party = self.find_invoice_party()
@@ -218,13 +221,12 @@ class Document(metaclass=PoolMeta):
                 return
             invoice.on_change_party()
 
-        self.invoice = [invoice]
-        self.save()
+        invoice.save()
 
         if not getattr(invoice, 'number', None):
-            invoice.number = extracted_data['invoice_number']
+            invoice.reference = extracted_data['invoice_number']
         if not getattr(invoice, 'invoice_date', None):
-            invoice.invoice_date = extracted_data['issue_date']
+            invoice.invoice_date = tools.to_date(extracted_data['issue_date'])
 
         invoice.save()
 
@@ -237,20 +239,24 @@ class Document(metaclass=PoolMeta):
 
         extracted_data = json.loads(self.extracted_data)
         vat = extracted_data.get('seller', {}).get('vat')
-
         if vat:
+            vat = vat.replace(' ', '').replace('-', '')
             parties = Party.search([('identifiers.code', '=', vat)], limit=1)
             if parties:
                 return parties[0]
             parties = Party.search([('identifiers.code', '=', 'ES' + vat)],
                 limit=1)
-
-        name = extracted_data.get('seller', {}).get('name')
-        if name:
-            parties = Party.search([('name', '=', name)], limit=1)
             if parties:
                 return parties[0]
 
+        name = extracted_data.get('seller', {}).get('name')
+        if name:
+            parties = Party.search([('name', '=', name)])
+            if len(parties) == 1:
+                return parties[0]
+            parties = Party.search([('name', 'ilike', f'%{name}%')])
+            if len(parties) == 1:
+                return parties[0]
 
 
 class Invoice(metaclass=PoolMeta):
