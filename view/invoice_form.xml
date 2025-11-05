@@ -3,4 +3,9 @@
         <label name="document"/>
         <field name="document"/>
     </xpath>
+    <xpath expr="//notebook" position="inside">
+        <page name="papyrus_lines">
+            <field name="papyrus_lines" colspan="4"/>
+        </page>
+    </xpath>
 </data>

@@ -1,7 +1,7 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
-from trytond.pool import PoolMeta
+from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
 from trytond.pyson import Eval
 
@@ -36,7 +36,7 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def _search_party(cls, clause):
-        return super()._search_party() + [
+        return super()._search_party(clause) + [
             ('shipment_in.supplier',) + tuple(clause[1:]),
             ]
 
@@ -47,8 +47,44 @@ class Document(metaclass=PoolMeta):
                 })
         return types
 
+    def guess_shipment_in_warehouse(self, shipment):
+        Move = Pool().get('stock.move')
+
+        # Only if there are moves and all go to the same location
+        # we can guess the warehouse
+        moves = Move.search([
+                ('company', '=', self.company),
+                ('state', '=', 'draft'),
+                ('from_location', '=', shipment.supplier.supplier_location),
+                ('to_location.type', '=', 'storage'),
+                ])
+        if not moves:
+            return
+        location = moves[0].to_location
+        for move in moves:
+            if move.to_location != location:
+                return
+        return location.warehouse
+
     def guess_shipment_in(self):
-        pass
+        if not self.company or self.shipment_in:
+            return
+
+        party = self.guess_party('supplier')
+        if not party:
+            return
+        shipment = self._get_shipment_in()
+        shipment.supplier = party
+        shipment.on_change_supplier()
+        if not shipment.warehouse:
+            shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
+            if not shipment.warehouse:
+                return
+        shipment.effective_date = self.guess_date()
+        shipment.document = self
+        shipment.save()
+        self.guess_employee([('shipment_in.supplier', '=', party)])
+
 
 
 class ShipmentIn(metaclass=PoolMeta):

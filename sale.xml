@@ -1,5 +1,5 @@
 <tryton>
-    <data>
+    <data depends="sale">
         <record model="ir.ui.view" id="sale_view_form">
             <field name="model">sale.sale</field>
             <field name="inherit" ref="sale.sale_view_form"/>
@@ -9,6 +9,12 @@
             <field name="model">sale.sale</field>
             <field name="inherit" ref="sale.sale_view_tree"/>
             <field name="name">sale_tree</field>
+        </record>
+
+        <record model="ir.ui.view" id="sale_document_view_form">
+            <field name="model">papyrus.document</field>
+            <field name="inherit" ref="papyrus.papyrus_document_view_form"/>
+            <field name="name">sale_document_form</field>
         </record>
     </data>
 </tryton>

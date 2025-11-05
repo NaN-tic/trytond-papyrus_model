@@ -9,6 +9,7 @@ from trytond.modules.papyrus.tests import PapyrusCompanyTestMixin
 class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
     'Test PapyrusModel module'
     module = 'papyrus_model'
+    extras = ['account_invoice', 'sale', 'stock']
 
 
 del ModuleTestCase

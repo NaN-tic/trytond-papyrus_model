@@ -195,7 +195,7 @@ class Document(metaclass=PoolMeta):
     def search_party(cls, name, clause):
         clauses = cls._search_party(clause)
         if not clauses:
-            return
+            return []
         return ['OR', *clauses]
 
     @classmethod
@@ -237,6 +237,7 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def model_exists(cls, documents):
+        # TODO: Make it extensible
         with Transaction().set_user(0, set_context=True):
             for document in cls.browse([x.id for x in documents]):
                 for field in ('invoice', 'sale', 'shipment_in'):
@@ -396,44 +397,6 @@ class Document(metaclass=PoolMeta):
         sale.save()
         self.guess_employee([('sale.party', '=', party)])
 
-    def guess_shipment_in_warehouse(self, shipment):
-        Move = Pool().get('stock.move')
-
-        # Only if there are moves and all go to the same location
-        # we can guess the warehouse
-        moves = Move.search([
-                ('company', '=', self.company),
-                ('state', '=', 'draft'),
-                ('from_location', '=', shipment.supplier.supplier_location),
-                ('to_location.type', '=', 'storage'),
-                ])
-        if not moves:
-            return
-        location = moves[0].to_location
-        for move in moves:
-            if move.to_location != location:
-                return
-        return location.warehouse
-
-    def guess_shipment_in(self):
-        if not self.company or self.shipment_in:
-            return
-
-        party = self.guess_party('supplier')
-        if not party:
-            return
-        shipment = self._get_shipment_in()
-        shipment.supplier = party
-        shipment.on_change_supplier()
-        if not shipment.warehouse:
-            shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
-            if not shipment.warehouse:
-                return
-        shipment.effective_date = self.guess_date()
-        shipment.document = self
-        shipment.save()
-        self.guess_employee([('shipment_in.supplier', '=', party)])
-
     def get_record(self):
         record = super().get_record()
         if not record:
@@ -448,16 +411,16 @@ class Document(metaclass=PoolMeta):
                         'msg_cannot_process_without_related_record'))
         return record
 
-    @fields.depends('model_type', 'invoice', 'sale', 'shipment_in')
-    def on_change_model_type(self):
-        if self.model_type:
-            if not getattr(self, self.model_type):
-                obj = getattr(self, '_get_%s' % self.model_type)()
-                setattr(self, self.model_type, [obj])
-
-        for type_, _ in self._get_model_type():
-            if type_ and self.model_type != type_:
-                setattr(self, type_, [])
+    #@fields.depends('model_type', 'invoice', 'sale', 'shipment_in')
+    #def on_change_model_type(self):
+        #if self.model_type:
+            #if not getattr(self, self.model_type):
+                #obj = getattr(self, '_get_%s' % self.model_type)()
+                #setattr(self, self.model_type, [obj])
+#
+        #for type_, _ in self._get_model_type():
+            #if type_ and self.model_type != type_:
+                #setattr(self, type_, [])
 
     def _get_invoice(self):
         Invoice = Pool().get('account.invoice')

@@ -5,7 +5,7 @@ import json
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.wizard import Wizard, StateAction
-from trytond.pyson import PYSONEncoder, Eval
+from trytond.pyson import PYSONEncoder, Eval, Bool
 from . import tools
 
 
@@ -42,7 +42,7 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def _search_party(cls, clause):
-        return super()._search_party() + [
+        return super()._search_party(clause) + [
             ('invoice.party',) + tuple(clause[1:]),
             ]
 
@@ -180,17 +180,18 @@ class Document(metaclass=PoolMeta):
     def guess_invoice(self):
         pool = Pool()
         Invoice = pool.get('account.invoice')
+        PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
         if self.model_type != 'invoice':
             return
 
         if self.extracted_data:
-            extracted_data = json.loads(self.extracted_data)
+            data = json.loads(self.extracted_data)
         else:
             llms = (self.queue.llms or '').split(' ')
             for llm in llms:
                 try:
-                    extracted_data = tools.llm(
+                    data = tools.llm(
                         messages=self.guess_invoice_messages(),
                         model=llm,
                         pdf_engine=self.queue.llm_pdf_engine,
@@ -198,7 +199,7 @@ class Document(metaclass=PoolMeta):
                 except Exception as e:
                     print(f'Error extracting invoice data with {llm}: {e}')
                     continue
-                self.extracted_data = json.dumps(extracted_data, indent=4)
+                self.extracted_data = json.dumps(data, indent=4)
                 self.save()
                 break
             else:
@@ -216,7 +217,7 @@ class Document(metaclass=PoolMeta):
             invoice.on_change_company()
 
         if not getattr(invoice, 'party', None):
-            invoice.party = self.find_invoice_party()
+            invoice.party = self.find_party(data.get('seller', {}))
             if not invoice.party:
                 return
             invoice.on_change_party()
@@ -224,21 +225,36 @@ class Document(metaclass=PoolMeta):
         invoice.save()
 
         if not getattr(invoice, 'number', None):
-            invoice.reference = extracted_data['invoice_number']
+            invoice.reference = data['invoice_number']
         if not getattr(invoice, 'invoice_date', None):
-            invoice.invoice_date = tools.to_date(extracted_data['issue_date'])
+            invoice.invoice_date = tools.to_date(data['issue_date'])
 
+        lines = []
+        for item in data.get('line_items', []):
+            line = PapyrusInvoiceLine()
+            line.product_code = item.get('product_code')
+            line.description = item.get('description')
+            line.quantity = item.get('quantity')
+            line.unit_price = item.get('unit_price')
+            line.discount_rate = item.get('discount')
+            taxes = item.get('tax_rate')
+            if taxes is not None:
+                line.taxes = str(taxes)
+            line.subtotal = item.get('line_total_excl_tax')
+            lines.append(line)
+
+        PapyrusInvoiceLine.find_product(lines)
+        invoice.papyrus_lines = lines
         invoice.save()
 
-    def find_invoice_party(self):
+    def find_party(self, data):
         pool = Pool()
         Party = pool.get('party.party')
 
-        if not self.extracted_data:
+        if not data:
             return
 
-        extracted_data = json.loads(self.extracted_data)
-        vat = extracted_data.get('seller', {}).get('vat')
+        vat = data.get('vat')
         if vat:
             vat = vat.replace(' ', '').replace('-', '')
             parties = Party.search([('identifiers.code', '=', vat)], limit=1)
@@ -249,7 +265,7 @@ class Document(metaclass=PoolMeta):
             if parties:
                 return parties[0]
 
-        name = extracted_data.get('seller', {}).get('name')
+        name = data.get('name')
         if name:
             parties = Party.search([('name', '=', name)])
             if len(parties) == 1:
@@ -262,7 +278,10 @@ class Document(metaclass=PoolMeta):
 class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
     document = fields.Many2One('papyrus.document', "Document")
-    papyrus_lines = fields.One2Many('papyrus.invoice.line', 'invoice', 'Papyrus Lines')
+    papyrus_lines = fields.One2Many('papyrus.invoice.line', 'invoice',
+        'Papyrus Lines', states={
+            'invisible': ~Bool(Eval('papyrus_lines')),
+            })
 
     @classmethod
     def __setup__(cls):
@@ -284,9 +303,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     # TODO: Ideally we should remove the line when both the invoice and the document
     # are deleted
-    document = fields.Many2One('papyrus.document', 'Document',
-        ondelete='CASCADE')
-    invoice = fields.Many2One('account.invoice', 'Invoice', ondelete='SET NULL')
+    invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
+        ondelete='SET NULL')
     product_code = fields.Char('Product Code')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
@@ -297,6 +315,35 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     product = fields.Many2One('product.product', 'Product')
     invoice_line = fields.Many2One('account.invoice.line', 'Invoice Line',
         ondelete='SET NULL')
+
+    @classmethod
+    def find_product(cls, lines):
+        pool = Pool()
+        Product = pool.get('product.product')
+
+        to_search = []
+        for line in lines:
+            if line.product_code:
+                to_search.append(line.product_code)
+            if line.description:
+                to_search.append(line.description)
+        products = set(Product.search([('code', 'in', to_search)]))
+        products |= set(Product.search([('name', 'in', to_search)]))
+        products = Product.browse(products)
+        by_code = {x.code: x for x in products}
+        by_name = {x.name: x for x in products}
+        for line in lines:
+            product = None
+            if line.product_code:
+                product = by_code.get(line.product_code)
+            if not product and line.description:
+                product = by_name.get(line.description)
+            if not product and line.description:
+                product = by_code.get(line.description)
+            if not product and line.product_code:
+                product = by_name.get(line.product_code)
+            if product:
+                line.product = product
 
 
 class InvoiceDossier(Wizard):
