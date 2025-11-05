@@ -43,9 +43,12 @@ class Document(metaclass=PoolMeta):
     def guess_model_types(self):
         types = super().guess_model_types()
         types.update({
-                'sale': 'Customer sales or sale orders',
+                'sale': 'Customer sales or sale orders. Take into account that customer documents may refer to them as purchase orders because their purchase is our sale.',
                 })
         return types
+
+    def guess_sale(self):
+        pass
 
 
 class Sale(metaclass=PoolMeta):

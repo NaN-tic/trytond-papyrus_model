@@ -47,6 +47,8 @@ class Document(metaclass=PoolMeta):
                 })
         return types
 
+    def guess_shipment_in(self):
+        pass
 
 
 class ShipmentIn(metaclass=PoolMeta):
