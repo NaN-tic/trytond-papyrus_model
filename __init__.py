@@ -4,6 +4,7 @@ from trytond.pool import Pool
 from . import document
 from . import invoice
 from . import sale
+from . import purchase
 from . import stock
 
 
@@ -32,3 +33,8 @@ def register():
         sale.Document,
         sale.Sale,
         module=module, type_='model', depends=['sale'])
+    Pool.register(
+        purchase.Queue,
+        purchase.Document,
+        purchase.Purchase,
+        module=module, type_='model', depends=['purchase'])
