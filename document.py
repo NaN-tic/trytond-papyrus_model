@@ -3,7 +3,6 @@
 # the full copyright notices and license terms.
 from decimal import Decimal
 from trytond.model import fields, ModelView, Workflow
-from trytond.config import config
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
@@ -12,8 +11,6 @@ from trytond.i18n import gettext
 from trytond.model.fields.selection import TranslatedSelection
 from statistics import mode, StatisticsError
 from . import tools
-
-available_model_types = config.get('papyrus', 'model_types', default='').split(',')
 
 
 class Queue(metaclass=PoolMeta):
