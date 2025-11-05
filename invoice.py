@@ -188,13 +188,21 @@ class Document(metaclass=PoolMeta):
         else:
             llms = (self.queue.llms or '').split(' ')
             for llm in llms:
-                extracted_data = tools.llm(
-                    messages=self.guess_invoice_messages(),
-                    model=llm,
-                    pdf_engine=self.queue.llm_pdf_engine,
-                    schema=self.guess_invoice_schema())
-            self.extracted_data = json.dumps(extracted_data)
-            self.save()
+                try:
+                    extracted_data = tools.llm(
+                        messages=self.guess_invoice_messages(),
+                        model=llm,
+                        pdf_engine=self.queue.llm_pdf_engine,
+                        schema=self.guess_invoice_schema())
+                except Exception as e:
+                    print(f'Error extracting invoice data with {llm}: {e}')
+                    continue
+                self.extracted_data = json.dumps(extracted_data, indent=4)
+                self.save()
+                break
+            else:
+                print('All LLMs failed to extract invoice data.')
+                return
 
         if self.invoice:
             invoice = self.invoice[0]
