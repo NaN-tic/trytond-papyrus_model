@@ -135,7 +135,7 @@ class Document(metaclass=PoolMeta):
                 "JSON (no markdown) valid per the provided schema."
             )
         }
-        types = '\n'.join('- {key}: {value}' for key, value
+        types = '\n'.join(f'- {key}: {value}' for key, value
             in self.guess_model_types().items())
         user = {
             "role": "user",
