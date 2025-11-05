@@ -200,6 +200,13 @@ class Document(metaclass=PoolMeta):
                     document=document.rec_name,
                     record=records[0].rec_name,
                     model_type=model_type_name))
+
+        for document in documents:
+            document.model_type = None
+            document.guessed_company = None
+            document.guessed_model_type = None
+            document.extracted_data = None
+        cls.save(documents)
         super().pending(documents)
 
     @classmethod
