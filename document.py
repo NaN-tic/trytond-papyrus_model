@@ -108,9 +108,9 @@ class Document(metaclass=PoolMeta):
                     schema=self.guess_model_type_schema(),
                     max_tokens=256,
                     )
-            except Exception as e:
-                continue
+            except tools.LLMError as e:
                 print('Error classifying document with LLM %s: %s' % (llm, e))
+                continue
             self.model_type = response.get('model_type')
             break
 
