@@ -99,13 +99,20 @@ class Document(metaclass=PoolMeta):
     def guess_model_type(self):
         if self.model_type:
             return
-        response = tools.llm(messages=self.guess_model_type_messages(),
-            model=self.queue.llm_classifier,
-            pdf_engine=self.queue.llm_pdf_engine,
-            schema=self.guess_model_type_schema(),
-            max_tokens=256,
-            )
-        self.model_type = response.get('model_type')
+        llms = (self.queue.llm_classifier or '').split(' ')
+        for llm in llms:
+            try:
+                response = tools.llm(messages=self.guess_model_type_messages(),
+                    model=llm,
+                    pdf_engine=self.queue.llm_pdf_engine,
+                    schema=self.guess_model_type_schema(),
+                    max_tokens=256,
+                    )
+            except Exception as e:
+                continue
+                print('Error classifying document with LLM %s: %s' % (llm, e))
+            self.model_type = response.get('model_type')
+            break
 
     def get_model_type_name(self, records):
         Model = Pool().get('ir.model')
