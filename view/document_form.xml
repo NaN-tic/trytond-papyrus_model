@@ -10,10 +10,8 @@
         <field name="shipment_in" mode="form,tree" colspan="4"/>
     </xpath>
     <xpath expr="/form/notebook/page[@id='image']" position="after">
-        <page name="extracted_data" string="Extracted Data">
-            <group>
-                <field name="extracted_data" nolabel="1" colspan="4" widget="text" options="{'no_buttons': True}" style="height: 300px;"/>
-            </group>
+        <page name="extracted_data">
+            <field name="extracted_data" colspan="4" widget="text" height="300"/>
         </page>
     </xpath>
 </data>
