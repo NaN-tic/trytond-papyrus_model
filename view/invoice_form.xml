@@ -5,6 +5,18 @@
     </xpath>
     <xpath expr="//notebook" position="inside">
         <page name="papyrus_lines">
+            <group id="papyrus_untaxed_amount" colspan="2" col="5">
+                <label name="papyrus_untaxed_amount"/>
+                <field name="papyrus_untaxed_amount"/>
+                <field name="papyrus_untaxed_amount_matches"/>
+                <label name="papyrus_lines_untaxed_amount"/>
+                <field name="papyrus_lines_untaxed_amount"/>
+            </group>
+            <group id="papyrus_total_amount" colspan="2" col="3">
+                <label name="papyrus_total_amount"/>
+                <field name="papyrus_total_amount"/>
+                <field name="papyrus_total_amount_matches"/>
+            </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>
     </xpath>

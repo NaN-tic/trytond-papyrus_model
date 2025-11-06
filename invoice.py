@@ -1,11 +1,12 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+from decimal import Decimal
 import json
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.wizard import Wizard, StateAction
-from trytond.pyson import PYSONEncoder, Eval, Bool
+from trytond.pyson import PYSONEncoder, Eval, Bool, If
 from . import tools
 
 
@@ -224,28 +225,62 @@ class Document(metaclass=PoolMeta):
 
         invoice.save()
 
-        if not getattr(invoice, 'number', None):
+        if not invoice.reference:
             invoice.reference = data['invoice_number']
-        if not getattr(invoice, 'invoice_date', None):
+        if not invoice.invoice_date:
             invoice.invoice_date = tools.to_date(data['issue_date'])
+        if not invoice.papyrus_untaxed_amount:
+            invoice.papyrus_untaxed_amount = tools.to_decimal(
+                data['totals']['subtotal'])
+        if not invoice.papyrus_total_amount:
+            invoice.papyrus_total_amount = tools.to_decimal(
+                data['totals']['total'])
 
         lines = []
         for item in data.get('line_items', []):
             line = PapyrusInvoiceLine()
             line.product_code = item.get('product_code')
             line.description = item.get('description')
-            line.quantity = item.get('quantity')
-            line.unit_price = item.get('unit_price')
-            line.discount_rate = item.get('discount')
+            line.quantity = tools.to_decimal(item.get('quantity'))
+            line.unit_price = tools.to_decimal(item.get('unit_price'))
+            line.discount_rate = tools.to_decimal(item.get('discount'))
             taxes = item.get('tax_rate')
             if taxes is not None:
                 line.taxes = str(taxes)
-            line.subtotal = item.get('line_total_excl_tax')
+            line.amount = tools.to_decimal(item.get('line_total_excl_tax'))
+            line.product = None
+            line.invoice_line = None
             lines.append(line)
 
-        PapyrusInvoiceLine.find_product(lines)
+        PapyrusInvoiceLine.find_product(invoice.party, lines)
         invoice.papyrus_lines = lines
+        self.create_lines_from_papyrus_lines(invoice)
         invoice.save()
+
+    def create_lines_from_papyrus_lines(self, invoice):
+        pool = Pool()
+        InvoiceLine = pool.get('account.invoice.line')
+
+        digits = InvoiceLine.unit_price.digits[1]
+        exp = Decimal(str(10.0 ** -digits))
+
+        for papyrus_line in invoice.papyrus_lines:
+            if papyrus_line.invoice_line:
+                continue
+            if not papyrus_line.product:
+                continue
+            line = InvoiceLine()
+            line.invoice = invoice
+            line.product = papyrus_line.product
+            line.on_change_product()
+            line.description = papyrus_line.description
+            line.quantity = papyrus_line.quantity
+            unit_price = papyrus_line.unit_price
+            if papyrus_line.discount_rate:
+                unit_price *= (Decimal('100')
+                    - papyrus_line.discount_rate) / Decimal('100')
+            line.unit_price = unit_price.quantize(exp)
+            papyrus_line.invoice_line = line
 
     def find_party(self, data):
         pool = Pool()
@@ -278,10 +313,39 @@ class Document(metaclass=PoolMeta):
 class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
     document = fields.Many2One('papyrus.document', "Document")
+    papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount', states={
+            'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
+            })
+    papyrus_untaxed_amount_matches = fields.Function(fields.Boolean(
+            'Papyrus Untaxed Amount Matches', states={
+                'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
+                }), 'get_papyrus_untaxed_amount_matches')
+    papyrus_lines_untaxed_amount = fields.Function(fields.Numeric(
+            'Papyrus Lines Untaxed Amount', states={
+                'invisible': Bool(Eval('papyrus_untaxed_amount_matches')),
+                }), 'get_papyrus_lines_untaxed_amount')
+    papyrus_total_amount = fields.Numeric('Papyrus Total Amount', states={
+            'invisible': ~Bool(Eval('papyrus_total_amount')),
+            })
+    papyrus_total_amount_matches = fields.Function(fields.Boolean(
+            'Papyrus Total Amount Matches', states={
+                'invisible': ~Bool(Eval('papyrus_total_amount')),
+                }), 'get_papyrus_total_amount_matches')
     papyrus_lines = fields.One2Many('papyrus.invoice.line', 'invoice',
         'Papyrus Lines', states={
             'invisible': ~Bool(Eval('papyrus_lines')),
             })
+
+    def get_papyrus_untaxed_amount_matches(self, name):
+        if not isinstance(self.papyrus_untaxed_amount, Decimal):
+            return False
+        return self.papyrus_lines_untaxed_amount == self.papyrus_untaxed_amount
+
+    def get_papyrus_total_amount_matches(self, name):
+        return False
+
+    def get_papyrus_lines_untaxed_amount(self, name):
+        return sum([x.amount for x in self.papyrus_lines if x.amount])
 
     @classmethod
     def __setup__(cls):
@@ -301,25 +365,61 @@ class Invoice(metaclass=PoolMeta):
 class PapyrusInvoiceLine(ModelSQL, ModelView):
     __name__ = 'papyrus.invoice.line'
 
-    # TODO: Ideally we should remove the line when both the invoice and the document
-    # are deleted
     invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
-        ondelete='SET NULL')
+        ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
     discount_rate = fields.Numeric('Discount (%)')
     taxes = fields.Char('Taxes')
-    subtotal = fields.Numeric('Subtotal')
+    amount = fields.Numeric('Amount')
+    amount_matches = fields.Function(fields.Boolean('Amount Matches'),
+            'get_amount_matches')
     product = fields.Many2One('product.product', 'Product')
     invoice_line = fields.Many2One('account.invoice.line', 'Invoice Line',
         ondelete='SET NULL')
+    invoice_line_matches = fields.Function(fields.Boolean('Invoice Line Matches'),
+            'get_invoice_line_matches')
+
+    def get_amount_matches(self, name):
+        if (not isinstance(self.quantity, Decimal)
+                or not isinstance(self.unit_price, Decimal)
+                or not isinstance(self.amount, Decimal)):
+            return False
+        unit_price = self.unit_price
+        if self.discount_rate:
+            unit_price *= (Decimal('100') - self.discount_rate) / Decimal('100')
+        amount = self.quantity * unit_price
+        return self.amount == amount
+
+    def get_invoice_line_matches(self, name):
+        if not self.invoice_line:
+            return False
+        matches = True
+        if self.quantity is not None:
+            matches &= self.invoice_line.quantity == self.quantity
+        if self.unit_price is not None:
+            matches &= self.invoice_line.unit_price == self.unit_price
+        return matches
 
     @classmethod
-    def find_product(cls, lines):
+    def view_attributes(cls):
+        return super().view_attributes() + [
+            ('/tree/field[@name="amount"]',
+                'visual', If(Eval('amount_matches', False), 'success', 'danger')),
+            ('/tree/field[@name="invoice_line"]',
+                'visual', If(Eval('invoice_line_matches', False), 'success', 'danger')),
+            ]
+
+    @classmethod
+    def find_product(cls, party, lines):
         pool = Pool()
         Product = pool.get('product.product')
+        try:
+            ProductSupplier = pool.get('purchase.product_supplier')
+        except KeyError:
+            ProductSupplier = None
 
         to_search = []
         for line in lines:
@@ -327,11 +427,33 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 to_search.append(line.product_code)
             if line.description:
                 to_search.append(line.description)
-        products = set(Product.search([('code', 'in', to_search)]))
-        products |= set(Product.search([('name', 'in', to_search)]))
-        products = Product.browse(products)
+        products = Product.search([('code', 'in', to_search)])
         by_code = {x.code: x for x in products}
+        products = Product.search([('name', 'in', to_search)])
         by_name = {x.name: x for x in products}
+
+        if ProductSupplier:
+            psuppliers = ProductSupplier.search([
+                    ('party', '=', party),
+                    ('code', 'in', to_search),
+                    ])
+            for psupplier in psuppliers:
+                if psupplier.code:
+                    if psupplier.product:
+                        by_code[psupplier.code] = psupplier.product
+                    elif psupplier.template.products:
+                        by_code[psupplier.code] = psupplier.template.products[0]
+            psuppliers = ProductSupplier.search([
+                    ('party', '=', party),
+                    ('name', 'in', to_search),
+                    ])
+            for psupplier in psuppliers:
+                if psupplier.name:
+                    if psupplier.product:
+                        by_name[psupplier.name] = psupplier.product
+                    elif psupplier.template.products:
+                        by_name[psupplier.name] = psupplier.template.products[0]
+
         for line in lines:
             product = None
             if line.product_code:
@@ -344,6 +466,25 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 product = by_name.get(line.product_code)
             if product:
                 line.product = product
+                continue
+
+            psuppliers = ProductSupplier.search([
+                    ('party', '=', party),
+                    ('code', 'ilike', line.product_code),
+                    ], limit=1)
+            if psuppliers:
+                psupplier, = psuppliers
+                if psupplier.product:
+                    line.product = psupplier.product
+                elif psupplier.template.products:
+                    line.product = psupplier.template.products[0]
+                continue
+
+            ps = Product.search([('code', 'ilike', line.product_code)],
+                limit=1)
+            if ps:
+                line.product, = ps
+                continue
 
 
 class InvoiceDossier(Wizard):

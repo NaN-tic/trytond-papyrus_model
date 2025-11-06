@@ -63,11 +63,16 @@ class Document(metaclass=PoolMeta):
 
     def scan_engines(self):
         super().scan_engines()
-        yield 'text'
-        if self.text and self.text.strip():
-            yield 'textboxes'
-        else:
-            yield 'tesseract'
+        return []
+        # TODO: We should make it configurable per queue
+        # but it makes no sense to have all engines enabled
+        # right now
+
+        #yield 'text'
+        #if self.text and self.text.strip():
+        #    yield 'textboxes'
+        #else:
+        #    yield 'tesseract'
 
     def scan(self):
         super().scan()

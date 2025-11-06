@@ -1,4 +1,5 @@
 import base64
+from decimal import Decimal
 import json
 import logging
 import requests
@@ -103,3 +104,18 @@ def to_date(value):
     except ValueError:
         print(f"Failed to parse date: {value}")
         return None
+
+def to_decimal(value, exp='0.000001'):
+    res = None
+    if isinstance(value, (int, float)):
+        res = Decimal(value)
+    elif isinstance(value, str):
+        try:
+            res = Decimal(value)
+        except:
+            res = None
+
+    if res:
+        res = res.quantize(Decimal(exp))
+    return res
+
