@@ -255,6 +255,8 @@ class Document(metaclass=PoolMeta):
             line.quantity = tools.to_decimal(item.get('quantity'))
             line.unit_price = tools.to_decimal(item.get('unit_price'))
             line.discount_rate = tools.to_decimal(item.get('discount'))
+            if line.discount_rate:
+                line.discount_rate = abs(line.discount_rate)
             taxes = item.get('tax_rate')
             if taxes is not None:
                 line.taxes = str(taxes)
