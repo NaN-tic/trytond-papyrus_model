@@ -4,6 +4,8 @@
         <field name="document"/>
     </xpath>
     <xpath expr="/form/notebook" position="inside">
-        <field name="papyrus_lines" colspan="4"/>
+        <page name="papyrus_lines">
+            <field name="papyrus_lines" colspan="4"/>
+        </page>
     </xpath>
 </data>

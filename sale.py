@@ -22,12 +22,11 @@ class Queue(metaclass=PoolMeta):
 class Document(metaclass=PoolMeta):
     __name__ = 'papyrus.document'
     sale = fields.One2Many('sale.sale', 'document', "Sale", size=1,
-        add_remove=[('document', '=', None)],
-        context={
+        add_remove=[('document', '=', None)], context={
             'company': Eval('document_company', -1),
-        }, states={
+            }, states={
             'invisible': (Eval('model_type') != 'sale'),
-        }, depends=['document_company', 'model_type'])
+            }, depends=['document_company', 'model_type'])
 
     @classmethod
     def __setup__(cls):
