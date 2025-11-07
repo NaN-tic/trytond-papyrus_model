@@ -8,7 +8,6 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
-from trytond.model.fields.selection import TranslatedSelection
 from statistics import mode, StatisticsError
 from . import tools
 
@@ -40,6 +39,7 @@ class Queue(metaclass=PoolMeta):
 class Document(metaclass=PoolMeta):
     __name__ = 'papyrus.document'
     model_type = fields.Selection('_get_model_type', 'Model Type')
+    model_type_string = model_type.translated('model_type')
     party = fields.Function(fields.Many2One('party.party', 'Party',
             context={
                 'company': Eval('document_company', -1),
@@ -118,18 +118,6 @@ class Document(metaclass=PoolMeta):
                 continue
             self.model_type = response.get('model_type')
             break
-
-    def get_model_type_name(self, records):
-        Model = Pool().get('ir.model')
-
-        if self.model_type:
-            t = TranslatedSelection('model_type')
-            model_type = t.__get__(self, self)
-        else:
-            record = records[0]
-            model, = Model.search([('name', '=', record.__name__)], limit=1)
-            model_type = model.string
-        return model_type
 
     def get_company_info(self):
         pool = Pool()
@@ -213,13 +201,11 @@ class Document(metaclass=PoolMeta):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
-            model_type_name = document.get_model_type_name(records)
-
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_delete_with_related_record',
                     document=document.rec_name,
                     record=records[0].rec_name,
-                    model_type=model_type_name))
+                    model_type=document.model_type_string))
         super().delete(documents)
 
     @classmethod
@@ -229,13 +215,11 @@ class Document(metaclass=PoolMeta):
         exists = cls.model_exists(documents)
         if exists:
             records, document = exists
-            model_type_name = document.get_model_type_name(records)
-
             raise UserError(gettext('papyrus_model.'
                     'msg_cannot_pending_with_related_record',
                     document=document.rec_name,
                     record=records[0].rec_name,
-                    model_type=model_type_name))
+                    model_type=document.model_type_string))
 
         for document in documents:
             document.model_type = None
