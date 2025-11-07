@@ -131,7 +131,7 @@ class Document(metaclass=PoolMeta):
             model_type = model.string
         return model_type
 
-    def guess_model_type_messages(self):
+    def get_company_info(self):
         pool = Pool()
         Company = pool.get('company.company')
 
@@ -141,6 +141,15 @@ class Document(metaclass=PoolMeta):
                 res += f" ({company.party.trade_name})"
             return res
 
+        if self.company:
+            return company_info(self.company)
+
+        info = []
+        for company in Company.search([]):
+            info.append(company_info(company))
+        return ' ; '.join(info)
+
+    def guess_model_type_messages(self):
         system = {
             "role": "system",
             "content": (
@@ -153,16 +162,12 @@ class Document(metaclass=PoolMeta):
             in self.guess_model_types().items())
 
         if self.company:
-            info = company_info(self.company)
+            info = self.get_company_info()
             info = ("In order to understand the type of document take into "
                 "account that the company related to the document is: "
                 f"{info}")
-
         else:
-            info = []
-            for company in Company.search([]):
-                info.append(company_info(company))
-            info = ' ; '.join(info)
+            info = self.get_company_info()
             info = ("In order to understand the type of document take into "
                 "account that possible companies in the system are: {info}")
 

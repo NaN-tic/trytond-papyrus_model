@@ -55,18 +55,21 @@ class Document(metaclass=PoolMeta):
         return types
 
     def guess_sale_messages(self):
+        info = self.get_company_info()
         system = {
             "role": "system",
             "content": (
                 "You are an expert at extracting structured data from sale "
-                "order documents. Return ONLY JSON (no markdown) valid per the "
-                "provided schema. Use numbers for monetary/quantitative "
-                "fields; use null when unknown. Extract seller/buyer info "
-                "(names, VAT/tax ID, address, email, phone), document number, "
-                "dates, currency, line items (codes, descriptions, quantities, "
-                "unit prices, discounts, taxes, line totals), and totals."
-            )
-        }
+                f"order documents where the seller is {info}. Return ONLY JSON "
+                "(no markdown) valid per the provided schema. Use numbers for "
+                "monetary/quantitative fields; use null when unknown. Extract "
+                "seller/buyer info (names, VAT/tax ID, address, email, "
+                "phone), document number, dates, currency, line items "
+                "(codes, descriptions, quantities, unit prices, discounts, "
+                "taxes, line totals), and totals."
+                )
+            }
+
         user = {
             "role": "user",
             "content": [{
