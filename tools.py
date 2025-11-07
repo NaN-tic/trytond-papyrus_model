@@ -13,6 +13,19 @@ logger = logging.getLogger(__name__)
 API_KEY = config.get('openrouter', 'api_key')
 
 
+def convert_nulls(obj):
+    'In some cases, x-ai/grok-4-fast will return ":null" instead of null'
+    'Recursively convert ":null" to None in dicts and lists'
+    if isinstance(obj, dict):
+        return {k: convert_nulls(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_nulls(i) for i in obj]
+    elif obj == ':null':
+        return None
+    else:
+        return obj
+
+
 class LLMError(Exception):
     pass
 
@@ -84,7 +97,7 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
         raise LLMError(f"Unexpected message content format from assistant: {content}")
 
     try:
-        return json.loads(content)
+        return convert_nulls(json.loads(content))
     except json.JSONDecodeError as e:
         logger.error(f'Response:\n{content}')
         raise LLMError(f"Failed to parse JSON response: {e.msg}\nContent: {content}")
