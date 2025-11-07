@@ -112,11 +112,13 @@ def to_url_data(binary, mimetype=None):
     return f"data:{mimetype};base64,{b64}"
 
 def to_date(value):
+    if not value:
+        return
     try:
         return datetime.strptime(value, '%Y-%m-%d').date()
     except ValueError:
         print(f"Failed to parse date: {value}")
-        return None
+        return
 
 def to_decimal(value, exp='0.000001'):
     res = None

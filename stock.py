@@ -364,7 +364,8 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         if self.discount_rate:
             unit_price *= (Decimal('100') - self.discount_rate) / Decimal('100')
         amount = self.quantity * unit_price
-        return self.amount == amount
+        exp = Decimal('0.01')
+        return self.amount.quantize(exp) == amount.quantize(exp)
 
     def get_move_matches(self, name):
         if not self.move:

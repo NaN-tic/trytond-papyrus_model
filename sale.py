@@ -277,6 +277,7 @@ class Document(metaclass=PoolMeta):
             line.on_change_product()
             line.description = papyrus_line.description
             line.quantity = papyrus_line.quantity
+            line.on_change_quantity()
             unit_price = papyrus_line.unit_price
             if papyrus_line.discount_rate:
                 unit_price *= (Decimal('100')
@@ -388,7 +389,8 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         if self.discount_rate:
             unit_price *= (Decimal('100') - self.discount_rate) / Decimal('100')
         amount = self.quantity * unit_price
-        return self.amount == amount
+        exp = Decimal('0.01')
+        return self.amount.quantize(exp) == amount.quantize(exp)
 
     def get_sale_line_matches(self, name):
         if not self.sale_line:
