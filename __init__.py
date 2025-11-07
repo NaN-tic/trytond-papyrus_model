@@ -27,11 +27,13 @@ def register():
         stock.Queue,
         stock.Document,
         stock.ShipmentIn,
+        stock.PapyrusShipmentInLine,
         module=module, type_='model', depends=['stock'])
     Pool.register(
         sale.Queue,
         sale.Document,
         sale.Sale,
+        sale.PapyrusSaleLine,
         module=module, type_='model', depends=['sale'])
     Pool.register(
         purchase.Queue,
