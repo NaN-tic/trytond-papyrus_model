@@ -51,7 +51,15 @@ class Document(metaclass=PoolMeta):
         return types
 
     def guess_shipment_in_warehouse(self, shipment):
-        Move = Pool().get('stock.move')
+        pool = Pool()
+        Move = pool.get('stock.move')
+        Location = pool.get('stock.location')
+
+        warehouses = Location.search([
+                ('type', '=', 'warehouse'),
+                ])
+        if len(warehouses) == 1:
+            return warehouses[0]
 
         # Only if there are moves and all go to the same location
         # we can guess the warehouse
@@ -195,6 +203,7 @@ class Document(metaclass=PoolMeta):
 
     def guess_shipment_in(self):
         pool = Pool()
+        Currency = pool.get('currency.currency')
         ShipmentIn = pool.get('stock.shipment.in')
         PapyrusShipmentInLine = pool.get('papyrus.shipment.in.line')
 
@@ -235,10 +244,11 @@ class Document(metaclass=PoolMeta):
                 return
             shipment.on_change_supplier()
 
-        if not shipment.warehouse:
+        if not getattr(shipment, 'warehouse', None):
             shipment.warehouse = self.guess_shipment_in_warehouse(shipment)
             if not shipment.warehouse:
                 return
+            shipment.on_change_warehouse()
 
         shipment.save()
 
@@ -267,10 +277,16 @@ class Document(metaclass=PoolMeta):
 
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
         shipment.papyrus_lines = lines
-        self.create_moves_from_papyrus_lines(shipment)
+        currencies = Currency.search([('code', '=', data.get('currency'))],
+            limit=1)
+        if currencies:
+            currency, = currencies
+        else:
+            currency = self.company.currency
+        self.create_moves_from_papyrus_lines(shipment, currency)
         shipment.save()
 
-    def create_moves_from_papyrus_lines(self, shipment):
+    def create_moves_from_papyrus_lines(self, shipment, currency):
         pool = Pool()
         Move = pool.get('stock.move')
 
@@ -282,11 +298,15 @@ class Document(metaclass=PoolMeta):
             move = Move()
             move.shipment = shipment
             move.product = papyrus_line.product
+            move.on_change_product()
             move.quantity = papyrus_line.quantity
             move.from_location = shipment.supplier.supplier_location
             move.to_location = shipment.warehouse.input_location
             move.company = shipment.company
-            move.unit_price = papyrus_line.unit_price or Decimal(0)
+            # TODO: Use correct UoM conversion
+            move.unit_price = (papyrus_line.unit_price or Decimal(0)).quantize(
+                Decimal('0.0001'))
+            move.currency = currency
             papyrus_line.move = move
 
     def find_party(self, data):
