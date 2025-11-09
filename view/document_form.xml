@@ -2,11 +2,11 @@
 <!-- The COPYRIGHT file at the top level of this repository contains the full
      copyright notices and license terms. -->
 <data>
-    <xpath expr="/form/notebook/page[@id='image']/group[@id='extra']" position="inside">
+    <xpath expr="//child[@id='extra']" position="inside">
         <label name="model_type"/>
         <field name="model_type"/>
     </xpath>
-    <xpath expr="/form/notebook/page[@id='image']" position="after">
+    <xpath expr="//page[@id='image']" position="after">
         <page name="extracted_data">
             <field name="extracted_data" colspan="4" widget="text" height="300"/>
         </page>
