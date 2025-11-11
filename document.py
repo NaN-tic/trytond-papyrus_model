@@ -401,6 +401,9 @@ class Document(metaclass=PoolMeta):
         invoice.document = self
         invoice.on_change_lines()
         invoice.save()
+        # reset SII keys
+        if hasattr(Invoice, 'reset_sii_keys'):
+            Invoice.reset_sii_keys([invoice])
         self.guess_employee([('invoice.party', '=', party)])
 
     def guess_sale(self):
