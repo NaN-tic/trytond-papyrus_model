@@ -402,6 +402,7 @@ class Document(metaclass=PoolMeta):
         invoice.on_change_lines()
         invoice.save()
         self.guess_employee([('invoice.party', '=', party)])
+        return invoice
 
     def guess_sale(self):
         if not self.company or self.sale:
