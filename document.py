@@ -1,6 +1,7 @@
 # This file is part papyrus module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains
 # the full copyright notices and license terms.
+import json
 from decimal import Decimal
 from trytond.model import fields, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
@@ -75,12 +76,20 @@ class Document(metaclass=PoolMeta):
         #    yield 'tesseract'
 
     def scan(self):
+        if Transaction().context.get('papyrus_reinspect'):
+            self.extracted_data = None
         super().scan()
         self.guess_company()
         self.guess_model_type()
         if self.model_type:
             guesser = getattr(self, 'guess_%s' % self.model_type)
             guesser()
+
+    @classmethod
+    def amounts_match(cls, first, second):
+        if not isinstance(first, Decimal) or not isinstance(second, Decimal):
+            return False
+        return abs(first - second) <= Decimal('0.01')
 
     def guess_model_types(self):
         return {}
@@ -97,14 +106,15 @@ class Document(metaclass=PoolMeta):
                         'enum': list(self.guess_model_types().keys()),
                     }
                 },
-                'required': ['model_type']
+                'required': ['model_type'],
+                'additionalProperties': False,
             }
         }
 
     def guess_model_type(self):
         if self.model_type:
             return
-        llms = (self.queue.llm_classifier or '').split(' ')
+        llms = (self.queue.llm_classifier or '').split()
         for llm in llms:
             try:
                 response = tools.llm(messages=self.guess_model_type_messages(),
@@ -114,10 +124,12 @@ class Document(metaclass=PoolMeta):
                     max_tokens=256,
                     )
             except tools.LLMError as e:
-                print('Error classifying document with LLM %s: %s' % (llm, e))
+                tools.logger.error(
+                    'Error classifying document %s with LLM %s: %s',
+                    self.id, llm, e)
                 continue
             self.model_type = response.get('model_type')
-            break
+            return
 
     def get_company_info(self):
         pool = Pool()
@@ -133,7 +145,8 @@ class Document(metaclass=PoolMeta):
             return company_info(self.company)
 
         info = []
-        for company in Company.search([]):
+        companies = Company.search([])
+        for company in companies:
             info.append(company_info(company))
         return ' ; '.join(info)
 
@@ -157,7 +170,7 @@ class Document(metaclass=PoolMeta):
         else:
             info = self.get_company_info()
             info = ("In order to understand the type of document take into "
-                "account that possible companies in the system are: {info}")
+                f"account that possible companies in the system are: {info}")
 
         user = {
             "role": "user",
@@ -181,6 +194,29 @@ class Document(metaclass=PoolMeta):
                     }],
             }
         return [system, user]
+
+    def extract_data_with_llm(self, kind, messages, schema, max_tokens=None):
+        if self.extracted_data:
+            return json.loads(self.extracted_data)
+
+        llms = (self.queue.llms or '').split()
+        for llm in llms:
+            try:
+                data = tools.llm(messages=messages, model=llm,
+                    pdf_engine=self.queue.llm_pdf_engine, schema=schema,
+                    max_tokens=max_tokens)
+            except Exception as exc:
+                tools.logger.error(
+                    'Error extracting %s data for document %s with LLM %s: %s',
+                    kind, self.id, llm, exc)
+                continue
+            self.extracted_data = json.dumps(data, indent=4)
+            self.save()
+            return data
+
+        tools.logger.error(
+            'All LLMs failed extracting %s data for document %s (models=%s)',
+            kind, self.id, ', '.join(llms))
 
     def get_party(self, name):
         return
@@ -298,10 +334,11 @@ class Document(metaclass=PoolMeta):
 
         companies = [x.party.id for x in Company.search([])]
         parties = {}
-        for identifier in Identifier.search(domain + [
-                    ('party', 'not in', companies),
-                    ('type', 'in', Party.tax_identifier_types()),
-                    ]):
+        identifiers = Identifier.search(domain + [
+            ('party', 'not in', companies),
+            ('type', 'in', Party.tax_identifier_types()),
+            ])
+        for identifier in identifiers:
             code = normalize_code(identifier.code)
             parties[code] = identifier.party
             if identifier.type == 'eu_vat':

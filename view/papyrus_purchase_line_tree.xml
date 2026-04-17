@@ -1,5 +1,5 @@
 <tree editable="1">
-    <field name="shipment"/>
+    <field name="purchase"/>
     <field name="product_code"/>
     <field name="external_code" optional="0"/>
     <field name="description"/>
@@ -10,6 +10,6 @@
     <field name="discount_rate" optional="1"/>
     <field name="taxes" optional="1"/>
     <field name="product" optional="0"/>
-    <field name="move" optional="1"/>
-    <field name="move_matches" tree_invisible="1"/>
+    <field name="purchase_line" optional="1"/>
+    <field name="purchase_line_matches" tree_invisible="1"/>
 </tree>

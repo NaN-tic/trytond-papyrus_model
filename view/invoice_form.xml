@@ -1,10 +1,12 @@
 <data>
-    <xpath expr="//page[@id='info']/field[@name='cancel_move']" position="after">
-        <label name="document"/>
-        <field name="document"/>
-    </xpath>
     <xpath expr="//notebook" position="inside">
         <page name="papyrus_lines">
+            <group id="papyrus_info" colspan="4" col="4">
+                <label name="document"/>
+                <field name="document"/>
+                <label name="papyrus_name"/>
+                <field name="papyrus_name"/>
+            </group>
             <group id="papyrus_untaxed_amount" colspan="2" col="5">
                 <label name="papyrus_untaxed_amount"/>
                 <field name="papyrus_untaxed_amount"/>
@@ -16,6 +18,9 @@
                 <label name="papyrus_total_amount"/>
                 <field name="papyrus_total_amount"/>
                 <field name="papyrus_total_amount_matches"/>
+            </group>
+            <group id="papyrus_line_actions" colspan="4" col="2">
+                <button name="create_lines"/>
             </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>

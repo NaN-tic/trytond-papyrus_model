@@ -17,6 +17,12 @@
             <field name="name">stock_document_form</field>
         </record>
 
+        <record model="ir.model.button" id="shipment_in_create_lines_button">
+            <field name="name">create_lines</field>
+            <field name="string">Create Moves</field>
+            <field name="model">stock.shipment.in</field>
+        </record>
+
         <record model="ir.ui.view" id="papyrus_shipment_in_line_form">
             <field name="model">papyrus.shipment.in.line</field>
             <field name="type">form</field>

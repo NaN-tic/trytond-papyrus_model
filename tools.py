@@ -29,6 +29,7 @@ def convert_nulls(obj):
 class LLMError(Exception):
     pass
 
+
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
         referer='trytond', title=None):
 
@@ -42,14 +43,30 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
     payload = {
         "model": model or 'openrouter/auto',
         "messages": messages,
-        "max_tokens": max_tokens or 1_800_000,
-        "plugins": [{
-            "id": "file-parser",
-            "pdf": {
-                "engine": pdf_engine
-                }
-            }]
         }
+    if max_tokens is not None:
+        payload['max_tokens'] = max_tokens
+    has_file = False
+    for message in messages or []:
+        if not isinstance(message, dict):
+            continue
+        content = message.get('content')
+        if not isinstance(content, list):
+            continue
+        if any(isinstance(part, dict) and part.get('type') == 'file'
+                for part in content):
+            has_file = True
+            break
+    if has_file:
+        plugin = {'id': 'file-parser'}
+        if pdf_engine in {'mistral-ocr', 'native', 'cloudflare-ai', 'pdf-text'}:
+            plugin['pdf'] = {
+                'engine': pdf_engine,
+                }
+        elif pdf_engine:
+            logger.warning('Unsupported pdf engine %r, using provider default',
+                pdf_engine)
+        payload['plugins'] = [plugin]
     if schema:
         payload["response_format"] = {
             "type": "json_schema",
@@ -62,7 +79,7 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
 
     for retry in range(3):
         try:
-            logger.debug('Sending to OpenRouter:', p)
+            logger.debug('Sending to OpenRouter: %s', p)
             response = requests.post(url, headers=headers, json=payload, timeout=120)
             logger.debug('Got response!')
             if response.status_code == 200:
@@ -79,7 +96,7 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
 
     try:
         data = response.json()
-    except:
+    except Exception:
         raise LLMError(f"Error converting to json server's response: {response.text}")
 
     try:
@@ -87,7 +104,7 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
     except Exception:
         raise LLMError(f"Malformed OpenRouter response: {json.dumps(data)[:1000]}")
 
-    logger.debug('Tokens consumed:', data.get('usage', {}))
+    logger.debug('Tokens consumed: %s', data.get('usage', {}))
 
     if isinstance(content, list):
         content = ''.join([c.get("text", "") for c in content if isinstance(c, dict) and "text" in c])
@@ -105,11 +122,12 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
 def to_url_data(binary, mimetype=None):
     if not mimetype:
         try:
-           mimetype = Magic(mime=True).from_buffer(binary)
+            mimetype = Magic(mime=True).from_buffer(binary)
         except TypeError:
             mimetype = None
     b64 = base64.b64encode(binary).decode('utf-8')
     return f"data:{mimetype};base64,{b64}"
+
 
 def to_date(value):
     if not value:
@@ -120,17 +138,25 @@ def to_date(value):
         print(f"Failed to parse date: {value}")
         return
 
+
 def to_decimal(value, exp='0.000001'):
-    res = None
-    if isinstance(value, (int, float)):
-        res = Decimal(value)
+    if value is None:
+        return None
+
+    if isinstance(value, Decimal):
+        res = value
+    elif isinstance(value, (int, float)):
+        # Use str to avoid binary float artifacts in Decimal conversion.
+        res = Decimal(str(value))
     elif isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
         try:
             res = Decimal(value)
-        except:
-            res = None
+        except Exception:
+            return None
+    else:
+        return None
 
-    if res:
-        res = res.quantize(Decimal(exp))
-    return res
-
+    return res.quantize(Decimal(exp))

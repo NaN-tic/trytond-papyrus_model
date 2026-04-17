@@ -18,5 +18,41 @@
         <record model="ir.message" id="msg_cannot_change_company_shipment_in">
             <field name="text">The company of the document "%(document)s" and shipment "%(model)s" do not match</field>
         </record>
+        <record model="ir.message" id="msg_cannot_create_lines_with_unmatched_products">
+            <field name="text">Document "%(document)s" still has %(total)s lines without product. Match or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines tab) before creating final lines.</field>
+        </record>
+        <record model="ir.message" id="msg_invoice_line_not_found">
+            <field name="text">No invoice line candidate was found.</field>
+        </record>
+        <record model="ir.message" id="msg_invoice_line_missing_product">
+            <field name="text">No product is assigned, so no invoice line can be matched.</field>
+        </record>
+        <record model="ir.message" id="msg_purchase_line_not_found">
+            <field name="text">No purchase line candidate was found.</field>
+        </record>
+        <record model="ir.message" id="msg_purchase_line_missing_product">
+            <field name="text">No product is assigned, so no purchase line can be matched.</field>
+        </record>
+        <record model="ir.message" id="msg_sale_line_not_found">
+            <field name="text">No sale line candidate was found.</field>
+        </record>
+        <record model="ir.message" id="msg_sale_line_missing_product">
+            <field name="text">No product is assigned, so no sale line can be matched.</field>
+        </record>
+        <record model="ir.message" id="msg_move_not_found">
+            <field name="text">No stock move candidate was found.</field>
+        </record>
+        <record model="ir.message" id="msg_move_missing_product">
+            <field name="text">No product is assigned, so no move can be matched.</field>
+        </record>
+        <record model="ir.message" id="msg_mismatch_product">
+            <field name="text">Product mismatch</field>
+        </record>
+        <record model="ir.message" id="msg_mismatch_quantity">
+            <field name="text">Quantity mismatch</field>
+        </record>
+        <record model="ir.message" id="msg_mismatch_unit_price">
+            <field name="text">Unit price mismatch</field>
+        </record>
     </data>
 </tryton>

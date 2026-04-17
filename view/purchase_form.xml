@@ -1,14 +1,15 @@
+<?xml version="1.0"?>
 <data>
     <xpath expr="/form/notebook" position="inside">
-        <page name="papyrus_lines">
+        <page string="Papyrus" id="papyrus">
             <group id="papyrus_info" colspan="4" col="4">
                 <label name="document"/>
                 <field name="document"/>
                 <label name="papyrus_name"/>
                 <field name="papyrus_name"/>
             </group>
-            <group id="papyrus_line_actions" colspan="4" col="2">
-                <button name="create_lines"/>
+            <group id="papyrus_buttons" colspan="4" col="4">
+                <button name="create_lines" string="Create Lines"/>
             </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>

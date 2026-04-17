@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<data>
+    <xpath expr="//field[@name='model_type']" position="after">
+        <field name="purchase" mode="form,tree" colspan="4"/>
+    </xpath>
+</data>

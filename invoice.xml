@@ -17,6 +17,12 @@
             <field name="name">invoice_document_form</field>
         </record>
 
+        <record model="ir.model.button" id="invoice_create_lines_button">
+            <field name="name">create_lines</field>
+            <field name="string">Create Lines</field>
+            <field name="model">account.invoice</field>
+        </record>
+
         <record model="ir.action.wizard" id="act_open_dossier">
             <field name="name">Invoice Dossier</field>
             <field name="wiz_name">invoice.dossier</field>

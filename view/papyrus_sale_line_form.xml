@@ -3,6 +3,8 @@
     <field name="sale"/>
     <label name="product_code"/>
     <field name="product_code"/>
+    <label name="external_code"/>
+    <field name="external_code"/>
     <label name="description"/>
     <field name="description"/>
     <label name="quantity"/>
@@ -21,4 +23,3 @@
     <label name="sale_line"/>
     <field name="sale_line"/>
 </form>
-

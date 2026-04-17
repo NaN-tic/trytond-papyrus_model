@@ -1,10 +1,15 @@
 <data>
-    <xpath expr="/form/notebook/page[@id='other']" position="inside">
-        <label name="document"/>
-        <field name="document"/>
-    </xpath>
     <xpath expr="/form/notebook" position="inside">
         <page name="papyrus_lines">
+            <group id="papyrus_info" colspan="4" col="4">
+                <label name="document"/>
+                <field name="document"/>
+                <label name="papyrus_name"/>
+                <field name="papyrus_name"/>
+            </group>
+            <group id="papyrus_line_actions" colspan="4" col="2">
+                <button name="create_lines"/>
+            </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>
     </xpath>

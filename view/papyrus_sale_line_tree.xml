@@ -1,6 +1,7 @@
-<tree>
+<tree editable="1">
     <field name="sale"/>
     <field name="product_code"/>
+    <field name="external_code" optional="0"/>
     <field name="description"/>
     <field name="quantity"/>
     <field name="unit_price"/>

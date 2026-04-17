@@ -15,6 +15,7 @@ def register():
         document.Document,
         module=module, type_='model')
     Pool.register(
+        invoice.Party,
         invoice.Queue,
         invoice.Document,
         invoice.Invoice,
@@ -39,4 +40,5 @@ def register():
         purchase.Queue,
         purchase.Document,
         purchase.Purchase,
+        purchase.PapyrusPurchaseLine,
         module=module, type_='model', depends=['purchase'])
