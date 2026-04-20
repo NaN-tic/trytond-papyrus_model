@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<data>
+    <xpath expr="/form/notebook/page[@id='accounting']/field[@name='supplier_payment_term']" position="after">
+        <label name="papyrus_group_lines_by_tax"/>
+        <field name="papyrus_group_lines_by_tax"/>
+    </xpath>
+</data>

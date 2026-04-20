@@ -2,5 +2,11 @@
     <xpath expr="/form/field[@name='scheduler']" position="after">
         <label name="model_type"/>
         <field name="model_type"/>
+        <label name="llm_classifier"/>
+        <field name="llm_classifier"/>
+        <label name="llm_pdf_engine"/>
+        <field name="llm_pdf_engine"/>
+        <label name="llms"/>
+        <field name="llms"/>
     </xpath>
 </data>
