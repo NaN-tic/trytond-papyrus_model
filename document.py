@@ -61,6 +61,8 @@ class Document(metaclass=PoolMeta):
         super().__setup__()
         # Fields to check the company
         cls._check_company = set()
+        # Fields to check whether the document is already linked
+        cls._check_model_exists = set()
 
     def scan_engines(self):
         super().scan_engines()
@@ -267,10 +269,9 @@ class Document(metaclass=PoolMeta):
 
     @classmethod
     def model_exists(cls, documents):
-        # TODO: Make it extensible
         with Transaction().set_user(0, set_context=True):
             for document in cls.browse([x.id for x in documents]):
-                for field in ('invoice', 'purchase', 'sale', 'shipment_in'):
+                for field in document._check_model_exists:
                     records = getattr(document, field)
                     if records:
                         return records, document

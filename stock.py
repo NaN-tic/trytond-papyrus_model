@@ -35,6 +35,7 @@ class Document(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls._check_company.add('shipment_in')
+        cls._check_model_exists.add('shipment_in')
 
     def get_party(self, name):
         if self.model_type == 'shipment_in' and self.shipment_in:
