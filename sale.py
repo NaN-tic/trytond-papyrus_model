@@ -36,6 +36,7 @@ class Document(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls._check_company.add('sale')
+        cls._check_model_exists.add('sale')
 
     def get_party(self, name):
         if self.model_type == 'sale' and self.sale:

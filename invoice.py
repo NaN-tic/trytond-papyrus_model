@@ -45,6 +45,7 @@ class Document(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls._check_company.add('invoice')
+        cls._check_model_exists.add('invoice')
 
     def get_party(self, name):
         if self.model_type == 'invoice' and self.invoice:
