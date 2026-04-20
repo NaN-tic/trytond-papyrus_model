@@ -1,5 +1,5 @@
 <data>
     <xpath expr="/tree" position="inside">
-        <field name="document"/>
+        <field name="document" optional="1"/>
     </xpath>
 </data>

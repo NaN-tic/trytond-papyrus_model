@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<form col="4">
+    <label name="purchase"/>
+    <field name="purchase"/>
+    <label name="product_code"/>
+    <field name="product_code"/>
+    <label name="external_code"/>
+    <field name="external_code"/>
+    <label name="description"/>
+    <field name="description"/>
+    <label name="quantity"/>
+    <field name="quantity"/>
+    <label name="unit_price"/>
+    <field name="unit_price"/>
+    <label name="discount_rate"/>
+    <field name="discount_rate"/>
+    <label name="taxes"/>
+    <field name="taxes"/>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="product"/>
+    <field name="product"/>
+    <label name="purchase_line"/>
+    <field name="purchase_line"/>
+</form>

@@ -1,5 +1,5 @@
 <tryton>
-    <data>
+    <data depends="stock">
         <record model="ir.ui.view" id="shipment_in_view_form">
             <field name="model">stock.shipment.in</field>
             <field name="inherit" ref="stock.shipment_in_view_form"/>
@@ -9,6 +9,29 @@
             <field name="model">stock.shipment.in</field>
             <field name="inherit" ref="stock.shipment_in_view_tree"/>
             <field name="name">shipment_in_tree</field>
+        </record>
+
+        <record model="ir.ui.view" id="stock_document_view_form">
+            <field name="model">papyrus.document</field>
+            <field name="inherit" ref="papyrus.papyrus_document_view_form"/>
+            <field name="name">stock_document_form</field>
+        </record>
+
+        <record model="ir.model.button" id="shipment_in_create_lines_button">
+            <field name="name">create_lines</field>
+            <field name="string">Create Moves</field>
+            <field name="model">stock.shipment.in</field>
+        </record>
+
+        <record model="ir.ui.view" id="papyrus_shipment_in_line_form">
+            <field name="model">papyrus.shipment.in.line</field>
+            <field name="type">form</field>
+            <field name="name">papyrus_shipment_in_line_form</field>
+        </record>
+        <record model="ir.ui.view" id="papyrus_shipment_in_line_tree">
+            <field name="model">papyrus.shipment.in.line</field>
+            <field name="type">tree</field>
+            <field name="name">papyrus_shipment_in_line_tree</field>
         </record>
     </data>
 </tryton>
