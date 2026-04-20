@@ -1,6 +1,7 @@
 <form col="6">
     <label name="invoice"/>
     <field name="invoice"/>
+    <newline/>
     <label name="product_code"/>
     <field name="product_code"/>
     <label name="external_code"/>
