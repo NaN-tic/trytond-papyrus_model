@@ -439,7 +439,9 @@ class Document(metaclass=PoolMeta):
                 record = self.shipment_in[0]
             else:
                 raise UserError(gettext('papyrus_model.'
-                        'msg_cannot_process_without_related_record'))
+                        'msg_cannot_process_without_related_record',
+                        document=self.rec_name,
+                        model_type=self.model_type_string))
         return record
 
     #@fields.depends('model_type', 'invoice', 'sale', 'shipment_in')

@@ -4,7 +4,7 @@
             <field name="text">Document "%(document)s" cannot be removed because "%(record)s" (%(model_type)s) is linked to it. You must remove or unlink the related record first.</field>
         </record>
         <record model="ir.message" id="msg_cannot_process_without_related_record">
-            <field name="text">If you have a model type selected, you cannot process the document without creating the related model.</field>
+            <field name="text">Document "%(document)s" has model type "%(model_type)s" but no related record has been created yet.</field>
         </record>
         <record model="ir.message" id="msg_cannot_pending_with_related_record">
             <field name="text">Document "%(document)s" cannot move to "Pending" because "%(record)s" (%(model_type)s) is linked to it. You must remove or unlink the related record first.</field>
@@ -22,37 +22,19 @@
             <field name="text">Document "%(document)s" still has %(total)s lines without product. Match or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines tab) before creating final lines.</field>
         </record>
         <record model="ir.message" id="msg_invoice_line_not_found">
-            <field name="text">No invoice line candidate was found.</field>
+            <field name="text">No invoice line candidate was found for "%(line)s" in invoice "%(invoice)s".</field>
         </record>
         <record model="ir.message" id="msg_invoice_line_missing_product">
-            <field name="text">No product is assigned, so no invoice line can be matched.</field>
-        </record>
-        <record model="ir.message" id="msg_purchase_line_not_found">
-            <field name="text">No purchase line candidate was found.</field>
-        </record>
-        <record model="ir.message" id="msg_purchase_line_missing_product">
-            <field name="text">No product is assigned, so no purchase line can be matched.</field>
-        </record>
-        <record model="ir.message" id="msg_sale_line_not_found">
-            <field name="text">No sale line candidate was found.</field>
-        </record>
-        <record model="ir.message" id="msg_sale_line_missing_product">
-            <field name="text">No product is assigned, so no sale line can be matched.</field>
-        </record>
-        <record model="ir.message" id="msg_move_not_found">
-            <field name="text">No stock move candidate was found.</field>
-        </record>
-        <record model="ir.message" id="msg_move_missing_product">
-            <field name="text">No product is assigned, so no move can be matched.</field>
+            <field name="text">No product is assigned to "%(line)s" in invoice "%(invoice)s", so no invoice line can be matched.</field>
         </record>
         <record model="ir.message" id="msg_mismatch_product">
-            <field name="text">Product mismatch</field>
+            <field name="text">Product mismatch: Papyrus "%(papyrus)s" vs Invoice Line "%(invoice)s"</field>
         </record>
         <record model="ir.message" id="msg_mismatch_quantity">
-            <field name="text">Quantity mismatch</field>
+            <field name="text">Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
         </record>
         <record model="ir.message" id="msg_mismatch_unit_price">
-            <field name="text">Unit price mismatch</field>
+            <field name="text">Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
         </record>
     </data>
 </tryton>

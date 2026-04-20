@@ -646,15 +646,22 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         invoice_line = getattr(self, 'invoice_line', None)
         if not invoice_line:
             if getattr(self, 'product', None):
-                return gettext('papyrus_model.msg_invoice_line_not_found')
-            return gettext('papyrus_model.msg_invoice_line_missing_product')
+                return gettext('papyrus_model.msg_invoice_line_not_found',
+                    line=self.rec_name, invoice=self.invoice.rec_name)
+            return gettext('papyrus_model.msg_invoice_line_missing_product',
+                line=self.rec_name, invoice=self.invoice.rec_name)
         issues = []
         product = getattr(self, 'product', None)
         if product is not None and invoice_line.product != product:
-            issues.append(gettext('papyrus_model.msg_mismatch_product'))
+            issues.append(gettext('papyrus_model.msg_mismatch_product',
+                    papyrus=product.rec_name,
+                    invoice=(invoice_line.product.rec_name
+                        if invoice_line.product else '')))
         quantity = getattr(self, 'quantity', None)
         if quantity is not None and invoice_line.quantity != quantity:
-            issues.append(gettext('papyrus_model.msg_mismatch_quantity'))
+            issues.append(gettext('papyrus_model.msg_mismatch_quantity',
+                    papyrus=quantity,
+                    invoice=invoice_line.quantity))
         unit_price = getattr(self, 'unit_price', None)
         discount_rate = getattr(self, 'discount_rate', None)
         if unit_price is not None and discount_rate:
@@ -662,7 +669,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         if (unit_price is not None
                 and not Document.amounts_match(invoice_line.unit_price,
                     unit_price)):
-            issues.append(gettext('papyrus_model.msg_mismatch_unit_price'))
+            issues.append(gettext('papyrus_model.msg_mismatch_unit_price',
+                    papyrus=unit_price,
+                    invoice=invoice_line.unit_price))
         return ', '.join(issues)
 
     @classmethod
