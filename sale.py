@@ -261,8 +261,8 @@ class Document(metaclass=PoolMeta):
         if currency_code:
             currencies = Currency.search([('code', '=', currency_code)],
                 limit=1)
-            if currencies and sale.currency != currencies[0]:
-                sale.currency = currencies[0]
+            if currencies:
+                sale.currency, = currencies
 
         sale.save()
 
@@ -543,44 +543,6 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         ondelete='SET NULL')
     sale_line_matches = fields.Function(fields.Boolean('Sale Line Matches'),
             'get_sale_line_matches')
-
-    @classmethod
-    def create(cls, vlist):
-        lines = super().create(vlist)
-        for line in lines:
-            sale = line.sale
-            if (not sale.document
-                    or not sale.papyrus_untaxed_amount_matches):
-                continue
-            if any(not getattr(x, 'sale_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in sale.papyrus_lines):
-                continue
-            sale.document.create_sale_lines_from_papyrus_lines(sale)
-            sale.save()
-        return lines
-
-    @classmethod
-    def write(cls, *args):
-        super().write(*args)
-        lines = []
-        actions = iter(args)
-        for records, values in zip(actions, actions):
-            if not {'product', 'quantity', 'unit_price', 'discount_rate',
-                    'amount'}.intersection(values):
-                continue
-            lines.extend(records)
-        for line in lines:
-            sale = line.sale
-            if (not sale.document
-                    or not sale.papyrus_untaxed_amount_matches):
-                continue
-            if any(not getattr(x, 'sale_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in sale.papyrus_lines):
-                continue
-            sale.document.create_sale_lines_from_papyrus_lines(sale)
-            sale.save()
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')

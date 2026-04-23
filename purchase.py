@@ -260,8 +260,8 @@ class Document(metaclass=PoolMeta):
         if currency_code:
             currencies = Currency.search([('code', '=', currency_code)],
                 limit=1)
-            if currencies and purchase.currency != currencies[0]:
-                purchase.currency = currencies[0]
+            if currencies:
+                purchase.currency, = currencies
 
         if not getattr(purchase, 'warehouse', None):
             if getattr(self.document_company, 'purchase_warehouse', None):
@@ -512,44 +512,6 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         ondelete='SET NULL')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
-
-    @classmethod
-    def create(cls, vlist):
-        lines = super().create(vlist)
-        for line in lines:
-            purchase = line.purchase
-            if not purchase.document:
-                continue
-            if any(not getattr(x, 'purchase_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in purchase.papyrus_lines):
-                continue
-            purchase.document.create_purchase_lines_from_papyrus_lines(
-                purchase)
-            purchase.save()
-        return lines
-
-    @classmethod
-    def write(cls, *args):
-        super().write(*args)
-        lines = []
-        actions = iter(args)
-        for records, values in zip(actions, actions):
-            if not {'product', 'quantity', 'unit_price', 'discount_rate',
-                    'amount'}.intersection(values):
-                continue
-            lines.extend(records)
-        for line in lines:
-            purchase = line.purchase
-            if not purchase.document:
-                continue
-            if any(not getattr(x, 'purchase_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in purchase.papyrus_lines):
-                continue
-            purchase.document.create_purchase_lines_from_papyrus_lines(
-                purchase)
-            purchase.save()
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
