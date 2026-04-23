@@ -218,6 +218,7 @@ class Document(metaclass=PoolMeta):
 
     def guess_purchase(self):
         pool = Pool()
+        Currency = pool.get('currency.currency')
         Purchase = pool.get('purchase.purchase')
         PapyrusPurchaseLine = pool.get('papyrus.purchase.line')
 
@@ -254,6 +255,13 @@ class Document(metaclass=PoolMeta):
                     self.id, seller.get('name'), seller.get('vat'))
                 return
             purchase.on_change_party()
+
+        currency_code = (data.get('currency') or '').upper()
+        if currency_code:
+            currencies = Currency.search([('code', '=', currency_code)],
+                limit=1)
+            if currencies:
+                purchase.currency, = currencies
 
         if not getattr(purchase, 'warehouse', None):
             if getattr(self.document_company, 'purchase_warehouse', None):
