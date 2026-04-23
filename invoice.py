@@ -234,6 +234,7 @@ class Document(metaclass=PoolMeta):
 
     def guess_invoice(self):
         pool = Pool()
+        Currency = pool.get('currency.currency')
         Invoice = pool.get('account.invoice')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
@@ -272,6 +273,13 @@ class Document(metaclass=PoolMeta):
                     self.id, seller.get('name'), seller.get('vat'))
                 return
             invoice.on_change_party()
+
+        currency_code = (data.get('currency') or '').upper()
+        if currency_code:
+            currencies = Currency.search([('code', '=', currency_code)],
+                limit=1)
+            if currencies and invoice.currency != currencies[0]:
+                invoice.currency = currencies[0]
 
         invoice.save()
 
@@ -606,6 +614,44 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             'get_invoice_line_matches')
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        for line in lines:
+            invoice = line.invoice
+            if (not invoice.document
+                    or not invoice.papyrus_untaxed_amount_matches):
+                continue
+            if any(not getattr(x, 'invoice_line', None)
+                    and not getattr(x, 'product', None)
+                    for x in invoice.papyrus_lines):
+                continue
+            invoice.document.create_invoice_lines_from_papyrus_lines(invoice)
+            invoice.save()
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        super().write(*args)
+        lines = []
+        actions = iter(args)
+        for records, values in zip(actions, actions):
+            if not {'product', 'quantity', 'unit_price', 'discount_rate',
+                    'amount'}.intersection(values):
+                continue
+            lines.extend(records)
+        for line in lines:
+            invoice = line.invoice
+            if (not invoice.document
+                    or not invoice.papyrus_untaxed_amount_matches):
+                continue
+            if any(not getattr(x, 'invoice_line', None)
+                    and not getattr(x, 'product', None)
+                    for x in invoice.papyrus_lines):
+                continue
+            invoice.document.create_invoice_lines_from_papyrus_lines(invoice)
+            invoice.save()
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
