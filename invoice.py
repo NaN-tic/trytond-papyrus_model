@@ -234,6 +234,7 @@ class Document(metaclass=PoolMeta):
 
     def guess_invoice(self):
         pool = Pool()
+        Currency = pool.get('currency.currency')
         Invoice = pool.get('account.invoice')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
@@ -272,6 +273,13 @@ class Document(metaclass=PoolMeta):
                     self.id, seller.get('name'), seller.get('vat'))
                 return
             invoice.on_change_party()
+
+        currency_code = (data.get('currency') or '').upper()
+        if currency_code:
+            currencies = Currency.search([('code', '=', currency_code)],
+                limit=1)
+            if currencies:
+                invoice.currency, = currencies
 
         invoice.save()
 
