@@ -615,44 +615,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
 
-    @classmethod
-    def create(cls, vlist):
-        lines = super().create(vlist)
-        for line in lines:
-            invoice = line.invoice
-            if (not invoice.document
-                    or not invoice.papyrus_untaxed_amount_matches):
-                continue
-            if any(not getattr(x, 'invoice_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in invoice.papyrus_lines):
-                continue
-            invoice.document.create_invoice_lines_from_papyrus_lines(invoice)
-            invoice.save()
-        return lines
-
-    @classmethod
-    def write(cls, *args):
-        super().write(*args)
-        lines = []
-        actions = iter(args)
-        for records, values in zip(actions, actions):
-            if not {'product', 'quantity', 'unit_price', 'discount_rate',
-                    'amount'}.intersection(values):
-                continue
-            lines.extend(records)
-        for line in lines:
-            invoice = line.invoice
-            if (not invoice.document
-                    or not invoice.papyrus_untaxed_amount_matches):
-                continue
-            if any(not getattr(x, 'invoice_line', None)
-                    and not getattr(x, 'product', None)
-                    for x in invoice.papyrus_lines):
-                continue
-            invoice.document.create_invoice_lines_from_papyrus_lines(invoice)
-            invoice.save()
-
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
         quantity = getattr(self, 'quantity', None)
