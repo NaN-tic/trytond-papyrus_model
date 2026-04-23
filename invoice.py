@@ -278,8 +278,8 @@ class Document(metaclass=PoolMeta):
         if currency_code:
             currencies = Currency.search([('code', '=', currency_code)],
                 limit=1)
-            if currencies and invoice.currency != currencies[0]:
-                invoice.currency = currencies[0]
+            if currencies:
+                invoice.currency, = currencies
 
         invoice.save()
 
