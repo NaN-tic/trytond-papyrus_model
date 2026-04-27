@@ -170,6 +170,7 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
         purchase.on_change_company()
         purchase.party = party
         purchase.on_change_party()
+        purchase.invoice_method = 'fulfillment'
         purchase.save()
         return purchase
 
