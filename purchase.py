@@ -95,14 +95,16 @@ class Document(metaclass=PoolMeta):
                         "Parse this business document and output STRICT JSON "
                         "matching the schema. No extra text."
                         ),
-                    }, {
+                    }],
+            }
+        if self.data is not None:
+            user["content"].append({
                     "type": "file",
                     "file": {
                         "filename": self.filename,
                         "file_data": tools.to_url_data(self.data),
                         }
-                    }],
-            }
+                    })
         return [system, user]
 
     def guess_purchase_schema(self):
