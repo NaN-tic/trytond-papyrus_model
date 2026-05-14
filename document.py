@@ -187,14 +187,16 @@ class Document(metaclass=PoolMeta):
                         "Here're the document types:"
                         f"\n\n{types}\n\n"
                         ),
-                    }, {
+                    }],
+            }
+        if self.data is not None:
+            user["content"].append({
                     "type": "file",
                     "file": {
                         "filename": self.filename,
                         "file_data": tools.to_url_data(self.data),
                         }
-                    }],
-            }
+                    })
         return [system, user]
 
     def extract_data_with_llm(self, kind, messages, schema, max_tokens=None):
