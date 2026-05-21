@@ -1,10 +1,53 @@
 #
+# SPDX-FileCopyrightText: 2026 albert
 msgid ""
-msgstr "Content-Type: text/plain; charset=utf-8\n"
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Last-Translator: albert\n"
+"PO-Revision-Date: 2026-05-21 13:50+0200\n"
+"Project-Id-Version: \n"
+"Language-Team: Catalan <>\n"
+"Language: ca_ES\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Lokalize 25.04.0\n"
 
 msgctxt "field:account.invoice,document:"
 msgid "Document"
 msgstr "Documento"
+
+msgctxt "field:account.invoice,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Líneas Papyrus"
+
+msgctxt "field:account.invoice,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "Base imponible de líneas Papyrus"
+
+msgctxt "field:account.invoice,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Nombre Papyrus"
+
+msgctxt "field:account.invoice,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "Total Papyrus"
+
+msgctxt "field:account.invoice,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "El total Papyrus coincide"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "Base imponible Papyrus"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "La base imponible Papyrus coincide"
+
+msgctxt "field:papyrus.document,extracted_data:"
+msgid "Extracted Data"
+msgstr "Datos extraídos"
 
 msgctxt "field:papyrus.document,guessed_company:"
 msgid "Guessed Company"
@@ -26,73 +69,265 @@ msgctxt "field:papyrus.document,party:"
 msgid "Party"
 msgstr "Tercero"
 
-msgctxt "field:papyrus.document,sale:"
-msgid "Sale"
-msgstr "Venta"
-
 msgctxt "field:papyrus.document,purchase:"
 msgid "Purchase"
 msgstr "Compra"
+
+msgctxt "field:papyrus.document,sale:"
+msgid "Sale"
+msgstr "Venta"
 
 msgctxt "field:papyrus.document,shipment_in:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
 
+msgctxt "field:papyrus.invoice.line,amount:"
+msgid "Amount"
+msgstr "Importe"
+
+msgctxt "field:papyrus.invoice.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "El importe coincide"
+
+msgctxt "field:papyrus.invoice.line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:papyrus.invoice.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.invoice.line,external_code:"
+msgid "External Code"
+msgstr "Código externo"
+
+msgctxt "field:papyrus.invoice.line,invoice:"
+msgid "Invoice"
+msgstr "Factura"
+
+msgctxt "field:papyrus.invoice.line,invoice_line:"
+msgid "Invoice Line"
+msgstr "Línea de factura"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_issue:"
+msgid "Invoice Line Issue"
+msgstr "Incidencia línea factura"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_matches:"
+msgid "Invoice Line Matches"
+msgstr "La línea de factura coincide"
+
+msgctxt "field:papyrus.invoice.line,product:"
+msgid "Product"
+msgstr "Producto"
+
+msgctxt "field:papyrus.invoice.line,product_code:"
+msgid "Product Code"
+msgstr "Código de producto"
+
+msgctxt "field:papyrus.invoice.line,quantity:"
+msgid "Quantity"
+msgstr "Cantidad"
+
+msgctxt "field:papyrus.invoice.line,taxes:"
+msgid "Taxes"
+msgstr "Impuestos"
+
+msgctxt "field:papyrus.invoice.line,unit_price:"
+msgid "Unit Price"
+msgstr "Precio unitario"
+
+msgctxt "field:papyrus.purchase.line,amount:"
+msgid "Amount"
+msgstr "Importe"
+
+msgctxt "field:papyrus.purchase.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "El importe coincide"
+
+msgctxt "field:papyrus.purchase.line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:papyrus.purchase.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.purchase.line,external_code:"
+msgid "External Code"
+msgstr "Código externo"
+
+msgctxt "field:papyrus.purchase.line,product:"
+msgid "Product"
+msgstr "Producto"
+
+msgctxt "field:papyrus.purchase.line,product_code:"
+msgid "Product Code"
+msgstr "Código de producto"
+
+msgctxt "field:papyrus.purchase.line,purchase:"
+msgid "Purchase"
+msgstr "Compra"
+
+msgctxt "field:papyrus.purchase.line,purchase_line:"
+msgid "Purchase Line"
+msgstr "Línea de compra"
+
+msgctxt "field:papyrus.purchase.line,purchase_line_matches:"
+msgid "Purchase Line Matches"
+msgstr "La línea de compra coincide"
+
+msgctxt "field:papyrus.purchase.line,quantity:"
+msgid "Quantity"
+msgstr "Cantidad"
+
+msgctxt "field:papyrus.purchase.line,taxes:"
+msgid "Taxes"
+msgstr "Impuestos"
+
+msgctxt "field:papyrus.purchase.line,unit_price:"
+msgid "Unit Price"
+msgstr "Precio unitario"
+
+msgctxt "field:papyrus.queue,llm_classifier:"
+msgid "Classifier LLM"
+msgstr "Clasificador LLM"
+
+msgctxt "field:papyrus.queue,llm_pdf_engine:"
+msgid "LLM PDF Engine"
+msgstr "Motor PDF de LLM"
+
+msgctxt "field:papyrus.queue,llms:"
+msgid "LLMs"
+msgstr "LLMs"
+
 msgctxt "field:papyrus.queue,model_type:"
 msgid "Model Type"
 msgstr "Tipo de modelo"
 
-msgctxt "field:sale.sale,document:"
-msgid "Document"
-msgstr "Documento"
+msgctxt "field:papyrus.sale.line,amount:"
+msgid "Amount"
+msgstr "Importe"
+
+msgctxt "field:papyrus.sale.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "El importe coincide"
+
+msgctxt "field:papyrus.sale.line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:papyrus.sale.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.sale.line,external_code:"
+msgid "External Code"
+msgstr "Código externo"
+
+msgctxt "field:papyrus.sale.line,product:"
+msgid "Product"
+msgstr "Producto"
+
+msgctxt "field:papyrus.sale.line,product_code:"
+msgid "Product Code"
+msgstr "Código de producto"
+
+msgctxt "field:papyrus.sale.line,quantity:"
+msgid "Quantity"
+msgstr "Cantidad"
+
+msgctxt "field:papyrus.sale.line,sale:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "field:papyrus.sale.line,sale_line:"
+msgid "Sale Line"
+msgstr "Línea de venta"
+
+msgctxt "field:papyrus.sale.line,sale_line_matches:"
+msgid "Sale Line Matches"
+msgstr "La línea de venta coincide"
+
+msgctxt "field:papyrus.sale.line,taxes:"
+msgid "Taxes"
+msgstr "Impuestos"
+
+msgctxt "field:papyrus.sale.line,unit_price:"
+msgid "Unit Price"
+msgstr "Precio unitario"
+
+msgctxt "field:papyrus.shipment.in.line,amount:"
+msgid "Amount"
+msgstr "Importe"
+
+msgctxt "field:papyrus.shipment.in.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "El importe coincide"
+
+msgctxt "field:papyrus.shipment.in.line,description:"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "field:papyrus.shipment.in.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.shipment.in.line,external_code:"
+msgid "External Code"
+msgstr "Código externo"
+
+msgctxt "field:papyrus.shipment.in.line,move:"
+msgid "Move"
+msgstr "Movimiento"
+
+msgctxt "field:papyrus.shipment.in.line,move_matches:"
+msgid "Move Matches"
+msgstr "El movimiento coincide"
+
+msgctxt "field:papyrus.shipment.in.line,product:"
+msgid "Product"
+msgstr "Producto"
+
+msgctxt "field:papyrus.shipment.in.line,product_code:"
+msgid "Product Code"
+msgstr "Código de producto"
+
+msgctxt "field:papyrus.shipment.in.line,quantity:"
+msgid "Quantity"
+msgstr "Cantidad"
+
+msgctxt "field:papyrus.shipment.in.line,shipment:"
+msgid "Shipment"
+msgstr "Albarán"
+
+msgctxt "field:papyrus.shipment.in.line,taxes:"
+msgid "Taxes"
+msgstr "Impuestos"
+
+msgctxt "field:papyrus.shipment.in.line,unit_price:"
+msgid "Unit Price"
+msgstr "Precio unitario"
+
+msgctxt "field:party.party,papyrus_group_lines_by_tax:"
+msgid "Papyrus Group Lines by Tax"
+msgstr "Agrupar líneas Papyrus por impuesto"
 
 msgctxt "field:purchase.purchase,document:"
 msgid "Document"
 msgstr "Documento"
 
-msgctxt "field:stock.shipment.in,document:"
-msgid "Document"
-msgstr "Documento"
-
-msgctxt "field:account.invoice,papyrus_name:"
-msgid "Papyrus Name"
-msgstr "Nombre Papyrus"
-
-msgctxt "field:account.invoice,papyrus_lines:"
+msgctxt "field:purchase.purchase,papyrus_lines:"
 msgid "Papyrus Lines"
 msgstr "Líneas Papyrus"
-
-msgctxt "field:account.invoice,papyrus_lines_untaxed_amount:"
-msgid "Papyrus Lines Untaxed Amount"
-msgstr "Base imponible de líneas Papyrus"
-
-msgctxt "field:account.invoice,papyrus_total_amount:"
-msgid "Papyrus Total Amount"
-msgstr "Total Papyrus"
-
-msgctxt "field:account.invoice,papyrus_total_amount_matches:"
-msgid "Papyrus Total Amount Matches"
-msgstr "El total Papyrus coincide"
-
-msgctxt "field:account.invoice,papyrus_untaxed_amount:"
-msgid "Papyrus Untaxed Amount"
-msgstr "Base imponible Papyrus"
-
-msgctxt "field:account.invoice,papyrus_untaxed_amount_matches:"
-msgid "Papyrus Untaxed Amount Matches"
-msgstr "La base imponible Papyrus coincide"
 
 msgctxt "field:purchase.purchase,papyrus_name:"
 msgid "Papyrus Name"
 msgstr "Nombre Papyrus"
 
-msgctxt "field:purchase.purchase,papyrus_lines:"
-msgid "Papyrus Lines"
-msgstr "Líneas Papyrus"
-
-msgctxt "field:sale.sale,papyrus_name:"
-msgid "Papyrus Name"
-msgstr "Nombre Papyrus"
+msgctxt "field:sale.sale,document:"
+msgid "Document"
+msgstr "Documento"
 
 msgctxt "field:sale.sale,papyrus_lines:"
 msgid "Papyrus Lines"
@@ -101,6 +336,10 @@ msgstr "Líneas Papyrus"
 msgctxt "field:sale.sale,papyrus_lines_untaxed_amount:"
 msgid "Papyrus Lines Untaxed Amount"
 msgstr "Base imponible de líneas Papyrus"
+
+msgctxt "field:sale.sale,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Nombre Papyrus"
 
 msgctxt "field:sale.sale,papyrus_total_amount:"
 msgid "Papyrus Total Amount"
@@ -118,257 +357,17 @@ msgctxt "field:sale.sale,papyrus_untaxed_amount_matches:"
 msgid "Papyrus Untaxed Amount Matches"
 msgstr "La base imponible Papyrus coincide"
 
-msgctxt "field:stock.shipment.in,papyrus_name:"
-msgid "Papyrus Name"
-msgstr "Nombre Papyrus"
+msgctxt "field:stock.shipment.in,document:"
+msgid "Document"
+msgstr "Documento"
 
 msgctxt "field:stock.shipment.in,papyrus_lines:"
 msgid "Papyrus Lines"
 msgstr "Líneas Papyrus"
 
-msgctxt "field:party.party,papyrus_group_lines_by_tax:"
-msgid "Papyrus Group Lines by Tax"
-msgstr "Agrupar líneas Papyrus por impuesto"
-
-msgctxt "field:papyrus.invoice.line,invoice:"
-msgid "Invoice"
-msgstr "Factura"
-
-msgctxt "field:papyrus.invoice.line,product_code:"
-msgid "Product Code"
-msgstr "Código de producto"
-
-msgctxt "field:papyrus.invoice.line,external_code:"
-msgid "External Code"
-msgstr "Código externo"
-
-msgctxt "field:papyrus.invoice.line,description:"
-msgid "Description"
-msgstr "Descripción"
-
-msgctxt "field:papyrus.invoice.line,quantity:"
-msgid "Quantity"
-msgstr "Cantidad"
-
-msgctxt "field:papyrus.invoice.line,unit_price:"
-msgid "Unit Price"
-msgstr "Precio unitario"
-
-msgctxt "field:papyrus.invoice.line,discount_rate:"
-msgid "Discount (%)"
-msgstr "Descuento (%)"
-
-msgctxt "field:papyrus.invoice.line,taxes:"
-msgid "Taxes"
-msgstr "Impuestos"
-
-msgctxt "field:papyrus.invoice.line,amount:"
-msgid "Amount"
-msgstr "Importe"
-
-msgctxt "field:papyrus.invoice.line,amount_matches:"
-msgid "Amount Matches"
-msgstr "El importe coincide"
-
-msgctxt "field:papyrus.invoice.line,product:"
-msgid "Product"
-msgstr "Producto"
-
-msgctxt "field:papyrus.invoice.line,invoice_line:"
-msgid "Invoice Line"
-msgstr "Línea de factura"
-
-msgctxt "field:papyrus.invoice.line,invoice_line_matches:"
-msgid "Invoice Line Matches"
-msgstr "La línea de factura coincide"
-
-msgctxt "field:papyrus.invoice.line,invoice_line_issue:"
-msgid "Invoice Line Issue"
-msgstr "Incidencia línea factura"
-
-msgctxt "field:papyrus.purchase.line,purchase:"
-msgid "Purchase"
-msgstr "Compra"
-
-msgctxt "field:papyrus.purchase.line,product_code:"
-msgid "Product Code"
-msgstr "Código de producto"
-
-msgctxt "field:papyrus.purchase.line,external_code:"
-msgid "External Code"
-msgstr "Código externo"
-
-msgctxt "field:papyrus.purchase.line,description:"
-msgid "Description"
-msgstr "Descripción"
-
-msgctxt "field:papyrus.purchase.line,quantity:"
-msgid "Quantity"
-msgstr "Cantidad"
-
-msgctxt "field:papyrus.purchase.line,unit_price:"
-msgid "Unit Price"
-msgstr "Precio unitario"
-
-msgctxt "field:papyrus.purchase.line,discount_rate:"
-msgid "Discount (%)"
-msgstr "Descuento (%)"
-
-msgctxt "field:papyrus.purchase.line,taxes:"
-msgid "Taxes"
-msgstr "Impuestos"
-
-msgctxt "field:papyrus.purchase.line,amount:"
-msgid "Amount"
-msgstr "Importe"
-
-msgctxt "field:papyrus.purchase.line,amount_matches:"
-msgid "Amount Matches"
-msgstr "El importe coincide"
-
-msgctxt "field:papyrus.purchase.line,product:"
-msgid "Product"
-msgstr "Producto"
-
-msgctxt "field:papyrus.purchase.line,purchase_line:"
-msgid "Purchase Line"
-msgstr "Línea de compra"
-
-msgctxt "field:papyrus.purchase.line,purchase_line_matches:"
-msgid "Purchase Line Matches"
-msgstr "La línea de compra coincide"
-
-msgctxt "field:papyrus.purchase.line,purchase_line_issue:"
-msgid "Purchase Line Issue"
-msgstr "Incidencia línea compra"
-
-msgctxt "field:papyrus.sale.line,sale:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "field:papyrus.sale.line,product_code:"
-msgid "Product Code"
-msgstr "Código de producto"
-
-msgctxt "field:papyrus.sale.line,external_code:"
-msgid "External Code"
-msgstr "Código externo"
-
-msgctxt "field:papyrus.sale.line,description:"
-msgid "Description"
-msgstr "Descripción"
-
-msgctxt "field:papyrus.sale.line,quantity:"
-msgid "Quantity"
-msgstr "Cantidad"
-
-msgctxt "field:papyrus.sale.line,unit_price:"
-msgid "Unit Price"
-msgstr "Precio unitario"
-
-msgctxt "field:papyrus.sale.line,discount_rate:"
-msgid "Discount (%)"
-msgstr "Descuento (%)"
-
-msgctxt "field:papyrus.sale.line,taxes:"
-msgid "Taxes"
-msgstr "Impuestos"
-
-msgctxt "field:papyrus.sale.line,amount:"
-msgid "Amount"
-msgstr "Importe"
-
-msgctxt "field:papyrus.sale.line,amount_matches:"
-msgid "Amount Matches"
-msgstr "El importe coincide"
-
-msgctxt "field:papyrus.sale.line,product:"
-msgid "Product"
-msgstr "Producto"
-
-msgctxt "field:papyrus.sale.line,sale_line:"
-msgid "Sale Line"
-msgstr "Línea de venta"
-
-msgctxt "field:papyrus.sale.line,sale_line_matches:"
-msgid "Sale Line Matches"
-msgstr "La línea de venta coincide"
-
-msgctxt "field:papyrus.sale.line,sale_line_issue:"
-msgid "Sale Line Issue"
-msgstr "Incidencia línea venta"
-
-msgctxt "field:papyrus.shipment.in.line,shipment:"
-msgid "Shipment"
-msgstr "Albarán"
-
-msgctxt "field:papyrus.shipment.in.line,product_code:"
-msgid "Product Code"
-msgstr "Código de producto"
-
-msgctxt "field:papyrus.shipment.in.line,external_code:"
-msgid "External Code"
-msgstr "Código externo"
-
-msgctxt "field:papyrus.shipment.in.line,description:"
-msgid "Description"
-msgstr "Descripción"
-
-msgctxt "field:papyrus.shipment.in.line,quantity:"
-msgid "Quantity"
-msgstr "Cantidad"
-
-msgctxt "field:papyrus.shipment.in.line,unit_price:"
-msgid "Unit Price"
-msgstr "Precio unitario"
-
-msgctxt "field:papyrus.shipment.in.line,discount_rate:"
-msgid "Discount (%)"
-msgstr "Descuento (%)"
-
-msgctxt "field:papyrus.shipment.in.line,taxes:"
-msgid "Taxes"
-msgstr "Impuestos"
-
-msgctxt "field:papyrus.shipment.in.line,amount:"
-msgid "Amount"
-msgstr "Importe"
-
-msgctxt "field:papyrus.shipment.in.line,amount_matches:"
-msgid "Amount Matches"
-msgstr "El importe coincide"
-
-msgctxt "field:papyrus.shipment.in.line,product:"
-msgid "Product"
-msgstr "Producto"
-
-msgctxt "field:papyrus.shipment.in.line,move:"
-msgid "Move"
-msgstr "Movimiento"
-
-msgctxt "field:papyrus.shipment.in.line,move_matches:"
-msgid "Move Matches"
-msgstr "El movimiento coincide"
-
-msgctxt "field:papyrus.shipment.in.line,move_issue:"
-msgid "Move Issue"
-msgstr "Incidencia movimiento"
-
-msgctxt "model:ir.model.button,string:invoice_create_lines_button"
-msgid "Create Lines"
-msgstr "Crear líneas"
-
-msgctxt "model:ir.model.button,string:sale_create_lines_button"
-msgid "Create Lines"
-msgstr "Crear líneas"
-
-msgctxt "model:ir.model.button,string:purchase_create_lines_button"
-msgid "Create Lines"
-msgstr "Crear líneas"
-
-msgctxt "model:ir.model.button,string:shipment_in_create_lines_button"
-msgid "Create Moves"
-msgstr "Crear movimientos"
+msgctxt "field:stock.shipment.in,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Nombre Papyrus"
 
 msgctxt "model:ir.action,name:act_open_dossier"
 msgid "Invoice Dossier"
@@ -379,13 +378,13 @@ msgid ""
 "The company of the document \"%(document)s\" and invoice \"%(model)s\" do "
 "not match"
 msgstr ""
-"La empresa del documento \"%(document)s\" y de la factura \"%(model)s\" no"
-" coinciden"
+"La empresa del documento \"%(document)s\" y de la factura \"%(model)s\" no "
+"coinciden"
 
 msgctxt "model:ir.message,text:msg_cannot_change_company_sale"
 msgid ""
-"The company of the document \"%(document)s\" and sale \"%(model)s\" do "
-"not match"
+"The company of the document \"%(document)s\" and sale \"%(model)s\" do not "
+"match"
 msgstr ""
 "La empresa del documento \"%(document)s\" y de la venta \"%(model)s\" no "
 "coinciden"
@@ -401,57 +400,13 @@ msgstr ""
 msgctxt "model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
 msgid ""
 "Document \"%(document)s\" still has %(total)s lines without product. Match "
-"or fill products in the related record (Invoice/Sale/Shipment, Papyrus "
-"Lines tab) before creating final lines."
+"or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines"
+" tab) before creating final lines."
 msgstr ""
 "El documento \"%(document)s\" todavía tiene %(total)s líneas sin producto. "
 "Relacione o complete los productos en el registro relacionado "
 "(factura/venta/albarán, pestaña Líneas Papyrus) antes de crear las líneas "
 "finales."
-
-msgctxt "model:ir.message,text:msg_invoice_line_not_found"
-msgid "No invoice line candidate was found."
-msgstr "No se ha encontrado ninguna línea de factura candidata."
-
-msgctxt "model:ir.message,text:msg_invoice_line_missing_product"
-msgid "No product is assigned, so no invoice line can be matched."
-msgstr "No hay ningún producto asignado, por lo que no se puede relacionar ninguna línea de factura."
-
-msgctxt "model:ir.message,text:msg_purchase_line_not_found"
-msgid "No purchase line candidate was found."
-msgstr "No se ha encontrado ninguna línea de compra candidata."
-
-msgctxt "model:ir.message,text:msg_purchase_line_missing_product"
-msgid "No product is assigned, so no purchase line can be matched."
-msgstr "No hay ningún producto asignado, por lo que no se puede relacionar ninguna línea de compra."
-
-msgctxt "model:ir.message,text:msg_sale_line_not_found"
-msgid "No sale line candidate was found."
-msgstr "No se ha encontrado ninguna línea de venta candidata."
-
-msgctxt "model:ir.message,text:msg_sale_line_missing_product"
-msgid "No product is assigned, so no sale line can be matched."
-msgstr "No hay ningún producto asignado, por lo que no se puede relacionar ninguna línea de venta."
-
-msgctxt "model:ir.message,text:msg_move_not_found"
-msgid "No stock move candidate was found."
-msgstr "No se ha encontrado ningún movimiento de stock candidato."
-
-msgctxt "model:ir.message,text:msg_move_missing_product"
-msgid "No product is assigned, so no move can be matched."
-msgstr "No hay ningún producto asignado, por lo que no se puede relacionar ningún movimiento."
-
-msgctxt "model:ir.message,text:msg_mismatch_product"
-msgid "Product mismatch"
-msgstr "El producto no coincide"
-
-msgctxt "model:ir.message,text:msg_mismatch_quantity"
-msgid "Quantity mismatch"
-msgstr "La cantidad no coincide"
-
-msgctxt "model:ir.message,text:msg_mismatch_unit_price"
-msgid "Unit price mismatch"
-msgstr "El precio unitario no coincide"
 
 msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
 msgid ""
@@ -475,23 +430,91 @@ msgstr ""
 
 msgctxt "model:ir.message,text:msg_cannot_process_without_related_record"
 msgid ""
-"If you have a model type selected, you cannot process the document without "
-"creating the related model."
+"Document \"%(document)s\" has model type \"%(model_type)s\" but no related "
+"record has been created yet."
 msgstr ""
-"Si tiene seleccionado un tipo de modelo, no puede procesar el documento sin "
-"crear el modelo relacionado."
+"El documento \"%(document)s\" tiene el tipo de modelo \"%(model_type)s\", "
+"pero aún no se ha creado ningún registro relacionado."
+
+msgctxt "model:ir.message,text:msg_invoice_line_missing_product"
+msgid ""
+"No product is assigned to \"%(line)s\" in invoice \"%(invoice)s\", so no "
+"invoice line can be matched."
+msgstr ""
+"No se ha asignado ningún producto a \"%(line)s\" en la factura "
+"\"%(invoice)s\", por lo que no se puede encontrar ninguna línea de factura "
+"coincidente."
+
+msgctxt "model:ir.message,text:msg_invoice_line_not_found"
+msgid ""
+"No invoice line candidate was found for \"%(line)s\" in invoice "
+"\"%(invoice)s\"."
+msgstr ""
+"No se encontró ninguna línea de factura candidata para \"%(line)s\" en la "
+"factura \"%(invoice)s\"."
+
+msgctxt "model:ir.message,text:msg_mismatch_product"
+msgid ""
+"Product mismatch: Papyrus \"%(papyrus)s\" vs Invoice Line \"%(invoice)s\""
+msgstr ""
+"Discrepancia de producto: Papyrus \"%(papyrus)s\" vs Línea de factura "
+"\"%(invoice)s\""
+
+msgctxt "model:ir.message,text:msg_mismatch_quantity"
+msgid "Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr ""
+"Discrepancia de cantidad: Papyrus %(papyrus)s vs %(invoice)s de línea de factu"
+"ra"
+
+msgctxt "model:ir.message,text:msg_mismatch_unit_price"
+msgid "Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr ""
+"Discrepancia en el precio unitario: %(papyrus)s vs %(invoice)s de la "
+"línea de factura"
+
+msgctxt "model:ir.model.button,string:invoice_create_lines_button"
+msgid "Create Lines"
+msgstr "Crear líneas"
+
+msgctxt "model:ir.model.button,string:purchase_create_lines_button"
+msgid "Create Lines"
+msgstr "Crear líneas"
+
+msgctxt "model:ir.model.button,string:sale_create_lines_button"
+msgid "Create Lines"
+msgstr "Crear líneas"
+
+msgctxt "model:ir.model.button,string:shipment_in_create_lines_button"
+msgid "Create Moves"
+msgstr "Crear movimientos"
+
+msgctxt "model:papyrus.invoice.line,string:"
+msgid "Papyrus Invoice Line"
+msgstr "Línea de factura Papyrus"
+
+msgctxt "model:papyrus.purchase.line,string:"
+msgid "Papyrus Purchase Line"
+msgstr "Línea de compra Papyrus"
+
+msgctxt "model:papyrus.sale.line,string:"
+msgid "Papyrus Sale Line"
+msgstr "Línea de venta Papyrus"
+
+msgctxt "model:papyrus.shipment.in.line,string:"
+msgid "Papyrus Shipment In Line"
+msgstr "Línea de albarán de proveedor Papyrus"
 
 msgctxt "selection:papyrus.document,guessed_model_type:"
 msgid "Invoice"
 msgstr "Factura"
 
 msgctxt "selection:papyrus.document,guessed_model_type:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "selection:papyrus.document,guessed_model_type:"
 msgid "Purchase"
 msgstr "Compra"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Sale"
+msgstr "Venta"
 
 msgctxt "selection:papyrus.document,guessed_model_type:"
 msgid "Shipment In"
@@ -502,29 +525,49 @@ msgid "Invoice"
 msgstr "Factura"
 
 msgctxt "selection:papyrus.document,model_type:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "selection:papyrus.document,model_type:"
 msgid "Purchase"
 msgstr "Compra"
 
 msgctxt "selection:papyrus.document,model_type:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "selection:papyrus.document,model_type:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Mistral OCR (best for scanned documents)"
+msgstr "Mistral OCR (ideal para documentos escaneados)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Native (best for born-digital PDFs)"
+msgstr "Nativo (ideal para PDFs digitales)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "PDF Text (balanced)"
+msgstr "Texto PDF (equilibrado)"
 
 msgctxt "selection:papyrus.queue,model_type:"
 msgid "Invoice"
 msgstr "Factura"
 
 msgctxt "selection:papyrus.queue,model_type:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "selection:papyrus.queue,model_type:"
 msgid "Purchase"
 msgstr "Compra"
 
 msgctxt "selection:papyrus.queue,model_type:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "selection:papyrus.queue,model_type:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
+
+msgctxt "view:purchase.purchase:"
+msgid "Create Lines"
+msgstr "Crear líneas"
+
+msgctxt "view:purchase.purchase:"
+msgid "Papyrus"
+msgstr "Papyrus"
