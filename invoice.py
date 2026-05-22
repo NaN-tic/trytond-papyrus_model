@@ -465,6 +465,8 @@ class Document(metaclass=PoolMeta):
                 papyrus_line.invoice_line = line
         if to_update:
             InvoiceLine.save(to_update)
+        if to_save or to_update:
+            invoice.on_change_lines()
 
 
 class Invoice(metaclass=PoolMeta):
