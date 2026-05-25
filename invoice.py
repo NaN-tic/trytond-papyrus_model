@@ -4,6 +4,8 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
+from sql import Null
+from sql.functions import Upper
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.wizard import Wizard, StateAction
@@ -398,29 +400,48 @@ class Document(metaclass=PoolMeta):
                 if parties:
                     return parties[0]
 
-        name = (data.get('name') or '').strip()
+        name = (data.get('name') or '').strip().upper()
         if not name:
             return
-        papyrus_name = name.upper()
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        for domain in ([('papyrus_name', '=', papyrus_name)],
-                [('papyrus_name', 'ilike', f'%{papyrus_name}%')]):
-            invoices = Invoice.search(domain + [
-                    ('party', '!=', None),
-                    ('invoice_date', '>=', cutoff.isoformat()),
-                    ], order=[('invoice_date', 'DESC'), ('id', 'DESC')],
+        invoice_table = Invoice.__table__()
+        cursor = Transaction().connection.cursor()
+        database = Transaction().database
+        tools.create_similarity()
+        papyrus_similarity = tools.Similarity(
+            Upper(database.unaccent(invoice_table.papyrus_name)),
+            Upper(database.unaccent(name)))
+        query = invoice_table.select(
+            invoice_table.party, papyrus_similarity,
+            where=((invoice_table.papyrus_name != Null)
+                & (invoice_table.party != Null)
+                & (invoice_table.invoice_date >= cutoff.isoformat())
+                & (papyrus_similarity >= 0.4)),
+            order_by=[papyrus_similarity.desc, invoice_table.invoice_date.desc,
+                invoice_table.id.desc])
+        cursor.execute(*query)
+        papyrus_party = None
+        papyrus_similarity = 0
+        for party_id, score in cursor.fetchall():
+            parties = Party.search(role_domain + [('id', '=', party_id)],
                 limit=1)
-            if invoices and (not role_domain
-                    or getattr(invoices[0].party, 'supplier', False)):
-                return invoices[0].party
-        for domain in ([('name', '=', name)] + role_domain,
-                [('name', 'ilike', f'%{name}%')] + role_domain):
-            parties = Party.search(domain)
-            if len(parties) == 1:
-                return parties[0]
-        return tools.find_party_by_similarity(name, role_domain)
+            if parties:
+                papyrus_party = parties[0]
+                papyrus_similarity = float(score)
+                break
+        if papyrus_similarity == 1:
+            return papyrus_party
+
+        party, party_similarity = tools.find_party_by_similarity(name,
+            role_domain)
+        party_similarity = party_similarity or 0
+        if party_similarity == 1:
+            return party
+        if papyrus_similarity >= party_similarity:
+            return papyrus_party
+        return party
 
     def create_invoice_lines_from_papyrus_lines(self, invoice):
         pool = Pool()

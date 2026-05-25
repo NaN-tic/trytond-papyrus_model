@@ -5,8 +5,9 @@ import logging
 import requests
 from datetime import datetime
 from magic import Magic
+from sql import Null
 from sql.conditionals import Greatest
-from sql.functions import Function, Lower
+from sql.functions import Function, Upper
 
 from trytond import backend
 from trytond.config import config
@@ -66,35 +67,37 @@ def create_similarity():
 def find_party_by_similarity(text, role_domain=None):
     Party = Pool().get('party.party')
     role_domain = role_domain or []
-    party_table = Party.__table__()
+    table = Party.__table__()
     cursor = Transaction().connection.cursor()
     database = Transaction().database
 
     if not text:
-        return
+        return None, None
 
     create_similarity()
     text = text.strip()
     similarity = Similarity(
-        Lower(database.unaccent(party_table.name)),
-        Lower(database.unaccent(text)))
+        Upper(database.unaccent(table.name)),
+        Upper(database.unaccent(text)))
     if hasattr(Party, 'trade_name'):
         similarity = Greatest(similarity,
             Similarity(
-                Lower(database.unaccent(party_table.trade_name)),
-                Lower(database.unaccent(text))))
+                Upper(database.unaccent(table.trade_name)),
+                Upper(database.unaccent(text))))
 
-    where = similarity >= 0.4
-
-    query = party_table.select(
-        party_table.id, similarity,
+    where = ((table.name != Null)
+        & (table.id != Null)
+        & (similarity >= 0.4))
+    query = table.select(
+        table.id, similarity,
         where=where,
-        order_by=[similarity.desc, party_table.id.desc])
+        order_by=[similarity.desc, table.id.desc])
     cursor.execute(*query)
-    for party_id, _similarity in cursor.fetchall():
+    for party_id, score in cursor.fetchall():
         parties = Party.search(role_domain + [('id', '=', party_id)], limit=1)
         if parties:
-            return parties[0]
+            return parties[0], float(score)
+    return None, None
 
 
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
