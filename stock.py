@@ -366,19 +366,15 @@ class Document(metaclass=PoolMeta):
                 if parties:
                     return parties[0]
 
-        name = (data.get('name') or '').strip().upper()
+        name = (data.get('name') or '').strip()
         if not name:
             return
-        for domain in ([('name', '=', name)] + role_domain,
-                [('name', 'ilike', f'%{name}%')] + role_domain):
-            parties = Party.search(domain)
-            if len(parties) == 1:
-                return parties[0]
+        papyrus_name = name.upper()
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        for domain in ([('papyrus_name', '=', name)],
-                [('papyrus_name', 'ilike', f'%{name}%')]):
+        for domain in ([('papyrus_name', '=', papyrus_name)],
+                [('papyrus_name', 'ilike', f'%{papyrus_name}%')]):
             shipments = ShipmentIn.search(domain + [
                     ('supplier', '!=', None),
                     ('effective_date', '>=', cutoff.isoformat()),
@@ -387,6 +383,12 @@ class Document(metaclass=PoolMeta):
             if shipments and (not role_domain
                     or getattr(shipments[0].supplier, 'supplier', False)):
                 return shipments[0].supplier
+        for domain in ([('name', '=', name)] + role_domain,
+                [('name', 'ilike', f'%{name}%')] + role_domain):
+            parties = Party.search(domain)
+            if len(parties) == 1:
+                return parties[0]
+        return tools.find_party_by_similarity(name, role_domain)
 
     def create_moves_from_papyrus_lines(self, shipment, currency):
         pool = Pool()

@@ -5,12 +5,22 @@ import logging
 import requests
 from datetime import datetime
 from magic import Magic
+from sql.conditionals import Greatest
+from sql.functions import Function, Lower
 
+from trytond import backend
 from trytond.config import config
+from trytond.pool import Pool
+from trytond.transaction import Transaction
 
 logger = logging.getLogger(__name__)
 
 API_KEY = config.get('openrouter', 'api_key')
+
+
+class Similarity(Function):
+    __slots__ = ()
+    _function = 'SIMILARITY'
 
 
 def convert_nulls(obj):
@@ -28,6 +38,63 @@ def convert_nulls(obj):
 
 class LLMError(Exception):
     pass
+
+
+def create_similarity():
+    conn = Transaction().connection
+    if backend.name == 'sqlite':
+        def trigram_similarity(a, b):
+            if a is None or b is None:
+                return None
+            a = str(a).lower()
+            b = str(b).lower()
+            if len(a) < 3 or len(b) < 3:
+                return 1.0 if a == b else 0.0
+
+            def trigrams(s):
+                return {s[i:i + 3] for i in range(len(s) - 2)}
+
+            ta = trigrams(a)
+            tb = trigrams(b)
+            union = ta | tb
+            if not union:
+                return 0.0
+            return len(ta & tb) / len(union)
+        conn.create_function('similarity', 2, trigram_similarity)
+
+
+def find_party_by_similarity(text, role_domain=None):
+    Party = Pool().get('party.party')
+    role_domain = role_domain or []
+    party_table = Party.__table__()
+    cursor = Transaction().connection.cursor()
+    database = Transaction().database
+
+    if not text:
+        return
+
+    create_similarity()
+    text = text.strip()
+    similarity = Similarity(
+        Lower(database.unaccent(party_table.name)),
+        Lower(database.unaccent(text)))
+    if hasattr(Party, 'trade_name'):
+        similarity = Greatest(similarity,
+            Similarity(
+                Lower(database.unaccent(party_table.trade_name)),
+                Lower(database.unaccent(text))))
+
+    where = similarity >= 0.4
+
+    query = party_table.select(
+        party_table.id, similarity,
+        where=where,
+        order_by=[similarity.desc, party_table.id.desc])
+    cursor.execute(*query)
+    for party_id, _similarity in cursor.fetchall():
+        parties = Party.search(role_domain + [('id', '=', party_id)], limit=1)
+        if parties:
+            return parties[0]
 
 
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
