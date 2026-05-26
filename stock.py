@@ -7,8 +7,6 @@ from decimal import Decimal
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
-from trytond.exceptions import UserError
-from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
 
@@ -86,12 +84,14 @@ class Document(metaclass=PoolMeta):
         return location.warehouse
 
     def guess_shipment_in_messages(self):
+        info = self.get_company_info()
         system = {
             "role": "system",
             "content": (
                 "You are an expert at extracting structured data from incoming "
-                "shipment documents. Return ONLY JSON (no markdown) valid per the "
-                "provided schema. Use numbers for monetary/quantitative "
+                "shipment documents where the seller is the supplier and the "
+                f"buyer is {info}. Return ONLY JSON (no markdown) valid per "
+                "the provided schema. Use numbers for monetary/quantitative "
                 "fields; use null when unknown. Extract seller/buyer info "
                 "(names, VAT/tax ID, address, email, phone), document number, "
                 "dates, currency, line items (codes, descriptions, quantities, "
@@ -242,7 +242,6 @@ class Document(metaclass=PoolMeta):
 
     def guess_shipment_in(self):
         pool = Pool()
-        Currency = pool.get('currency.currency')
         ShipmentIn = pool.get('stock.shipment.in')
         PapyrusShipmentInLine = pool.get('papyrus.shipment.in.line')
 
@@ -295,7 +294,6 @@ class Document(metaclass=PoolMeta):
             shipment.reference = data['shipment_number']
         if not shipment.effective_date:
             shipment.effective_date = tools.to_date(data['issue_date'])
-        seller = data.get('seller', {})
         seller_name = (seller.get('name') or '').strip().upper()
         if seller_name:
             shipment.papyrus_name = seller_name
@@ -327,19 +325,6 @@ class Document(metaclass=PoolMeta):
             lines.append(line)
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
         shipment.papyrus_lines = lines
-        currency_code = (data.get('currency') or '').upper()
-        currencies = []
-        if currency_code:
-            currencies = Currency.search([('code', '=', currency_code)],
-                limit=1)
-        if currencies:
-            currency, = currencies
-        else:
-            currency = ((shipment.company and shipment.company.currency)
-                or (self.company and self.company.currency))
-            if not currency:
-                return
-        self.create_moves_from_papyrus_lines(shipment, currency)
         shipment.save()
 
     def find_shipment_in_party_from_data(self, data, extracted_data=None):
@@ -386,41 +371,6 @@ class Document(metaclass=PoolMeta):
             return papyrus_party
         return party
 
-    def create_moves_from_papyrus_lines(self, shipment, currency):
-        pool = Pool()
-        Move = pool.get('stock.move')
-
-        to_save = []
-        papyrus_lines = []
-
-        for papyrus_line in getattr(shipment, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'move', None):
-                continue
-            product = getattr(papyrus_line, 'product', None)
-            if not product:
-                continue
-            move = Move()
-            move.shipment = shipment
-            move.product = product
-            move.on_change_product()
-            move.quantity = getattr(papyrus_line, 'quantity', None)
-            move.from_location = shipment.supplier.supplier_location
-            move.to_location = shipment.warehouse.input_location
-            move.company = shipment.company
-            # TODO: Use correct UoM conversion
-            unit_price = getattr(papyrus_line, 'unit_price', None)
-            move.unit_price = (unit_price or Decimal(0)).quantize(
-                Decimal('0.0001'))
-            move.currency = currency
-            to_save.append(move)
-            papyrus_lines.append(papyrus_line)
-
-        if to_save:
-            Move.save(to_save)
-            for papyrus_line, move in zip(papyrus_lines, to_save):
-                papyrus_line.move = move
-
-
 class ShipmentIn(metaclass=PoolMeta):
     __name__ = 'stock.shipment.in'
     document = fields.Many2One('papyrus.document', "Document")
@@ -434,7 +384,7 @@ class ShipmentIn(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls._buttons.update({
-                'create_lines': {
+                'sync_moves': {
                     'invisible': ~Bool(Eval('papyrus_lines')),
                     'depends': ['papyrus_lines'],
                     },
@@ -442,28 +392,21 @@ class ShipmentIn(metaclass=PoolMeta):
 
     @classmethod
     @ModelView.button
-    def create_lines(cls, shipments):
+    def sync_moves(cls, shipments):
+        Move = Pool().get('stock.move')
+        to_save = []
+
         for shipment in shipments:
-            pending = [line for line in getattr(shipment, 'papyrus_lines', [])
-                if (not getattr(line, 'move', None)
-                    and not getattr(line, 'product', None))]
-            if pending:
-                raise UserError(gettext('papyrus_model.'
-                        'msg_cannot_create_lines_with_unmatched_products',
-                        document=shipment.rec_name,
-                        total=len(pending)))
+            for papyrus_line in getattr(shipment, 'papyrus_lines', []):
+                move = getattr(papyrus_line, 'move', None)
+                if not move:
+                    continue
+                if move.shipment != shipment:
+                    move.shipment = shipment
+                    to_save.append(move)
 
-            if not shipment.document:
-                continue
-
-            currency = shipment.company and shipment.company.currency
-            if not currency:
-                raise UserError(
-                    'Shipment has no company currency; cannot create moves.')
-
-            shipment.document.create_moves_from_papyrus_lines(
-                shipment, currency)
-            shipment.save()
+        if to_save:
+            Move.save(to_save)
 
     @classmethod
     def copy(cls, shipments, default=None):

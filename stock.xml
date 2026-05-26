@@ -17,9 +17,9 @@
             <field name="name">stock_document_form</field>
         </record>
 
-        <record model="ir.model.button" id="shipment_in_create_lines_button">
-            <field name="name">create_lines</field>
-            <field name="string">Create Moves</field>
+        <record model="ir.model.button" id="shipment_in_sync_moves_button">
+            <field name="name">sync_moves</field>
+            <field name="string">Synchronize Moves</field>
             <field name="model">stock.shipment.in</field>
         </record>
 
