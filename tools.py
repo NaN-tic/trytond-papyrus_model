@@ -5,7 +5,6 @@ import logging
 import requests
 from datetime import datetime
 from magic import Magic
-from sql import Null
 from sql.conditionals import Greatest
 from sql.functions import Function, Upper
 
@@ -85,9 +84,7 @@ def find_party_by_similarity(text, role_domain=None):
                 Upper(database.unaccent(table.trade_name)),
                 Upper(database.unaccent(text))))
 
-    where = ((table.name != Null)
-        & (table.id != Null)
-        & (similarity >= 0.4))
+    where = similarity >= 0.4
     query = table.select(
         table.id, similarity,
         where=where,

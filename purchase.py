@@ -4,7 +4,6 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
-from sql import Null
 from sql.functions import Upper
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
@@ -354,8 +353,7 @@ class Document(metaclass=PoolMeta):
         papyrus_similarity = tools.Similarity(
             Upper(database.unaccent(purchase_table.papyrus_name)),
             Upper(database.unaccent(name)))
-        where = ((purchase_table.papyrus_name != Null)
-            & (purchase_table.purchase_date >= cutoff.isoformat())
+        where = ((purchase_table.purchase_date >= cutoff.isoformat())
             & (papyrus_similarity >= 0.4))
         if 'supplier' in Party._fields:
             where &= party_table.supplier == True
@@ -375,8 +373,6 @@ class Document(metaclass=PoolMeta):
             if parties:
                 papyrus_party = parties[0]
                 papyrus_similarity = float(papyrus_similarity)
-            else:
-                papyrus_similarity = 0
         if papyrus_similarity == 1:
             return papyrus_party
 
