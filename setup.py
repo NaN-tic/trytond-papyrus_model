@@ -11,6 +11,7 @@ MODULE = 'papyrus_model'
 PREFIX = 'nantic'
 MODULE2PREFIX = {
     'papyrus': 'nantic',
+    'widgets': 'nantic',
 }
 
 
@@ -46,6 +47,7 @@ for dep in info.get('depends', []):
     if not re.match(r'(ir|res)(\W|$)', dep):
         prefix = MODULE2PREFIX.get(dep, 'trytond')
         requires.append(get_require_version('%s_%s' % (prefix, dep)))
+requires.append(get_require_version('nantic_widgets'))
 requires.append(get_require_version('trytond'))
 
 tests_require = [

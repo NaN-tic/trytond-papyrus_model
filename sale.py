@@ -4,7 +4,6 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
-from sql.functions import Upper
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
@@ -316,7 +315,6 @@ class Document(metaclass=PoolMeta):
 
     def find_sale_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
-        Sale = Pool().get('sale.sale')
         role_domain = [('customer', '=', True)] if 'customer' in Party._fields else []
 
         if not data:
@@ -344,36 +342,11 @@ class Document(metaclass=PoolMeta):
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        sale_table = Sale.__table__()
-        party_table = Party.__table__()
-        join = sale_table.join(
-            party_table, condition=party_table.id == sale_table.party)
-        cursor = Transaction().connection.cursor()
-        database = Transaction().database
-        tools.create_similarity()
-        papyrus_similarity = tools.Similarity(
-            Upper(database.unaccent(sale_table.papyrus_name)),
-            Upper(database.unaccent(name)))
-        where = ((sale_table.sale_date >= cutoff.isoformat())
-            & (papyrus_similarity >= 0.4))
-        if 'customer' in Party._fields:
-            where &= party_table.customer == True
-        query = join.select(
-            party_table.id, papyrus_similarity,
-            where=where,
-            order_by=[papyrus_similarity.desc, sale_table.sale_date.desc,
-                sale_table.id.desc],
-            limit=1)
-        cursor.execute(*query)
-        papyrus_party = None
-        papyrus_similarity = 0
-        row = cursor.fetchone()
-        if row:
-            party_id, papyrus_similarity = row
-            parties = Party.search([('id', '=', party_id)], limit=1)
-            if parties:
-                papyrus_party = parties[0]
-                papyrus_similarity = float(papyrus_similarity)
+        papyrus_party, papyrus_similarity = (
+            tools.find_party_by_related_field_similarity(
+                'sale.sale', name, cutoff, 'customer',
+                related_party_field='party',
+                related_date_field='sale_date'))
         if papyrus_similarity == 1:
             return papyrus_party
 

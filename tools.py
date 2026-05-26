@@ -6,21 +6,15 @@ import requests
 from datetime import datetime
 from magic import Magic
 from sql.conditionals import Greatest
-from sql.functions import Function, Upper
-
-from trytond import backend
+from sql.functions import Upper
 from trytond.config import config
 from trytond.pool import Pool
 from trytond.transaction import Transaction
+from trytond.modules.widgets.tools import Similarity, create_similarity
 
 logger = logging.getLogger(__name__)
 
 API_KEY = config.get('openrouter', 'api_key')
-
-
-class Similarity(Function):
-    __slots__ = ()
-    _function = 'SIMILARITY'
 
 
 def convert_nulls(obj):
@@ -40,27 +34,7 @@ class LLMError(Exception):
     pass
 
 
-def create_similarity():
-    conn = Transaction().connection
-    if backend.name == 'sqlite':
-        def trigram_similarity(a, b):
-            if a is None or b is None:
-                return None
-            a = str(a).lower()
-            b = str(b).lower()
-            if len(a) < 3 or len(b) < 3:
-                return 1.0 if a == b else 0.0
-
-            def trigrams(s):
-                return {s[i:i + 3] for i in range(len(s) - 2)}
-
-            ta = trigrams(a)
-            tb = trigrams(b)
-            union = ta | tb
-            if not union:
-                return 0.0
-            return len(ta & tb) / len(union)
-        conn.create_function('similarity', 2, trigram_similarity)
+SIMILARITY_THRESHOLD = 0.4
 
 
 def find_party_by_similarity(text, role_domain=None):
@@ -84,7 +58,7 @@ def find_party_by_similarity(text, role_domain=None):
                 Upper(database.unaccent(table.trade_name)),
                 Upper(database.unaccent(text))))
 
-    where = similarity >= 0.4
+    where = similarity >= SIMILARITY_THRESHOLD
     query = table.select(
         table.id, similarity,
         where=where,
@@ -95,6 +69,53 @@ def find_party_by_similarity(text, role_domain=None):
         if parties:
             return parties[0], float(score)
     return None, None
+
+
+def find_party_by_related_field_similarity(model_name, text, cutoff, role_field,
+        related_party_field='party', related_text_field='papyrus_name',
+        related_date_field=None):
+    pool = Pool()
+    Model = pool.get(model_name)
+    Party = pool.get('party.party')
+    table = Model.__table__()
+    party_table = Party.__table__()
+    join = table.join(
+        party_table, condition=party_table.id == getattr(table,
+            related_party_field))
+    cursor = Transaction().connection.cursor()
+    database = Transaction().database
+
+    if not text:
+        return None, 0
+
+    create_similarity()
+    text = text.strip()
+    similarity = Similarity(
+        Upper(database.unaccent(getattr(table, related_text_field))),
+        Upper(database.unaccent(text)))
+    where = similarity >= SIMILARITY_THRESHOLD
+    if related_date_field and cutoff:
+        where &= getattr(table, related_date_field) >= cutoff.isoformat()
+    if role_field in Party._fields:
+        where &= getattr(party_table, role_field) == True
+
+    query = join.select(
+        party_table.id, similarity,
+        where=where,
+        order_by=[similarity.desc]
+        + ([getattr(table, related_date_field).desc]
+            if related_date_field else [])
+        + [table.id.desc],
+        limit=1)
+    cursor.execute(*query)
+    row = cursor.fetchone()
+    if not row:
+        return None, 0
+    party_id, similarity = row
+    parties = Party.search([('id', '=', party_id)], limit=1)
+    if not parties:
+        return None, 0
+    return parties[0], float(similarity)
 
 
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
