@@ -34,9 +34,6 @@ class LLMError(Exception):
     pass
 
 
-SIMILARITY_THRESHOLD = 0.4
-
-
 def find_party_by_similarity(text, role_domain=None):
     Party = Pool().get('party.party')
     role_domain = role_domain or []
@@ -58,7 +55,7 @@ def find_party_by_similarity(text, role_domain=None):
                 Upper(database.unaccent(table.trade_name)),
                 Upper(database.unaccent(text))))
 
-    where = similarity >= SIMILARITY_THRESHOLD
+    where = similarity >= 0.4
     query = table.select(
         table.id, similarity,
         where=where,
@@ -93,7 +90,7 @@ def find_party_by_related_field_similarity(model_name, text, cutoff, role_field,
     similarity = Similarity(
         Upper(database.unaccent(getattr(table, related_text_field))),
         Upper(database.unaccent(text)))
-    where = similarity >= SIMILARITY_THRESHOLD
+    where = similarity >= 0.4
     if related_date_field and cutoff:
         where &= getattr(table, related_date_field) >= cutoff.isoformat()
     if role_field in Party._fields:
