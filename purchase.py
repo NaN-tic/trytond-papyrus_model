@@ -341,17 +341,15 @@ class Document(metaclass=PoolMeta):
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        papyrus_party, papyrus_similarity = (
-            tools.find_party_by_related_field_similarity(
-                'purchase.purchase', name, cutoff, 'supplier',
-                related_party_field='party',
-                related_date_field='purchase_date'))
+        papyrus_party, papyrus_similarity = tools.find_party_by_similarity(
+            name, model_name='purchase.purchase', role_field='supplier',
+            related_party_field='party', related_date_field='purchase_date',
+            cutoff=cutoff)
         if papyrus_similarity == 1:
             return papyrus_party
 
         party, party_similarity = tools.find_party_by_similarity(name,
             role_domain)
-        party_similarity = party_similarity or 0
         if party_similarity == 1:
             return party
         if papyrus_similarity >= party_similarity:
