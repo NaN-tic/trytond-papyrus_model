@@ -34,51 +34,14 @@ class LLMError(Exception):
     pass
 
 
-def find_party_by_similarity(text, role_domain=None):
-    Party = Pool().get('party.party')
-    role_domain = role_domain or []
-    table = Party.__table__()
-    cursor = Transaction().connection.cursor()
-    database = Transaction().database
-
-    if not text:
-        return None, None
-
-    create_similarity()
-    text = text.strip()
-    similarity = Similarity(
-        Upper(database.unaccent(table.name)),
-        Upper(database.unaccent(text)))
-    if hasattr(Party, 'trade_name'):
-        similarity = Greatest(similarity,
-            Similarity(
-                Upper(database.unaccent(table.trade_name)),
-                Upper(database.unaccent(text))))
-
-    where = similarity >= 0.4
-    query = table.select(
-        table.id, similarity,
-        where=where,
-        order_by=[similarity.desc, table.id.desc])
-    cursor.execute(*query)
-    for party_id, score in cursor.fetchall():
-        parties = Party.search(role_domain + [('id', '=', party_id)], limit=1)
-        if parties:
-            return parties[0], float(score)
-    return None, None
-
-
-def find_party_by_related_field_similarity(model_name, text, cutoff, role_field,
-        related_party_field='party', related_text_field='papyrus_name',
-        related_date_field=None):
+def find_party_by_similarity(text, role_domain=None, model_name='party.party',
+        role_field=None, related_party_field='id', related_text_field='name',
+        related_date_field=None, cutoff=None, extra_text_field=None):
     pool = Pool()
     Model = pool.get(model_name)
     Party = pool.get('party.party')
+    role_domain = role_domain or []
     table = Model.__table__()
-    party_table = Party.__table__()
-    join = table.join(
-        party_table, condition=party_table.id == getattr(table,
-            related_party_field))
     cursor = Transaction().connection.cursor()
     database = Transaction().database
 
@@ -90,12 +53,34 @@ def find_party_by_related_field_similarity(model_name, text, cutoff, role_field,
     similarity = Similarity(
         Upper(database.unaccent(getattr(table, related_text_field))),
         Upper(database.unaccent(text)))
+    if extra_text_field and hasattr(Model, extra_text_field):
+        similarity = Greatest(similarity,
+            Similarity(
+                Upper(database.unaccent(getattr(table, extra_text_field))),
+                Upper(database.unaccent(text))))
+
     where = similarity >= 0.4
     if related_date_field and cutoff:
         where &= getattr(table, related_date_field) >= cutoff.isoformat()
-    if role_field in Party._fields:
-        where &= getattr(party_table, role_field) == True
+    if model_name == 'party.party':
+        query = table.select(
+            table.id, similarity,
+            where=where,
+            order_by=[similarity.desc, table.id.desc])
+        cursor.execute(*query)
+        for party_id, score in cursor.fetchall():
+            parties = Party.search(role_domain + [('id', '=', party_id)],
+                limit=1)
+            if parties:
+                return parties[0], float(score)
+        return None, 0
 
+    party_table = Party.__table__()
+    join = table.join(
+        party_table, condition=party_table.id == getattr(table,
+            related_party_field))
+    if role_field and role_field in Party._fields:
+        where &= getattr(party_table, role_field) == True
     query = join.select(
         party_table.id, similarity,
         where=where,
@@ -108,11 +93,11 @@ def find_party_by_related_field_similarity(model_name, text, cutoff, role_field,
     row = cursor.fetchone()
     if not row:
         return None, 0
-    party_id, similarity = row
-    parties = Party.search([('id', '=', party_id)], limit=1)
+    party_id, score = row
+    parties = Party.search(role_domain + [('id', '=', party_id)], limit=1)
     if not parties:
         return None, 0
-    return parties[0], float(similarity)
+    return parties[0], float(score)
 
 
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
