@@ -5,8 +5,12 @@ import logging
 import requests
 from datetime import datetime
 from magic import Magic
-
+from sql.conditionals import Greatest
+from sql.functions import Upper
 from trytond.config import config
+from trytond.pool import Pool
+from trytond.transaction import Transaction
+from trytond.modules.widgets.tools import Similarity, create_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +32,75 @@ def convert_nulls(obj):
 
 class LLMError(Exception):
     pass
+
+
+def find_party_by_similarity(text, role_domain=None, model_name='party.party',
+        role_field=None, related_party_field='id', related_date_field=None,
+        cutoff=None):
+    pool = Pool()
+    Model = pool.get(model_name)
+    Party = pool.get('party.party')
+    role_domain = role_domain or []
+    table = Model.__table__()
+    cursor = Transaction().connection.cursor()
+    database = Transaction().database
+
+    if not text:
+        return None, 0
+
+    create_similarity()
+    text = text.strip()
+    related_text_field = (
+        'name' if model_name == 'party.party' else 'papyrus_name')
+    extra_text_field = 'trade_name' if model_name == 'party.party' else None
+    similarity = Similarity(
+        Upper(database.unaccent(getattr(table, related_text_field))),
+        Upper(database.unaccent(text)))
+    if extra_text_field and hasattr(Model, extra_text_field):
+        similarity = Greatest(similarity,
+            Similarity(
+                Upper(database.unaccent(getattr(table, extra_text_field))),
+                Upper(database.unaccent(text))))
+
+    where = similarity >= 0.4
+    if related_date_field and cutoff:
+        where &= getattr(table, related_date_field) >= cutoff.isoformat()
+    if model_name == 'party.party':
+        query = table.select(
+            table.id, similarity,
+            where=where,
+            order_by=[similarity.desc, table.id.desc])
+        cursor.execute(*query)
+        for party_id, score in cursor.fetchall():
+            parties = Party.search(role_domain + [('id', '=', party_id)],
+                limit=1)
+            if parties:
+                return parties[0], float(score)
+        return None, 0
+
+    party_table = Party.__table__()
+    join = table.join(
+        party_table, condition=party_table.id == getattr(table,
+            related_party_field))
+    if role_field and role_field in Party._fields:
+        where &= getattr(party_table, role_field) == True
+    query = join.select(
+        party_table.id, similarity,
+        where=where,
+        order_by=[similarity.desc]
+        + ([getattr(table, related_date_field).desc]
+            if related_date_field else [])
+        + [table.id.desc],
+        limit=1)
+    cursor.execute(*query)
+    row = cursor.fetchone()
+    if not row:
+        return None, 0
+    party_id, score = row
+    parties = Party.search(role_domain + [('id', '=', party_id)], limit=1)
+    if not parties:
+        return None, 0
+    return parties[0], float(score)
 
 
 def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,

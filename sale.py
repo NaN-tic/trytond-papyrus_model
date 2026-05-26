@@ -315,7 +315,6 @@ class Document(metaclass=PoolMeta):
 
     def find_sale_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
-        Sale = Pool().get('sale.sale')
         role_domain = [('customer', '=', True)] if 'customer' in Party._fields else []
 
         if not data:
@@ -340,24 +339,23 @@ class Document(metaclass=PoolMeta):
         name = (data.get('name') or '').strip().upper()
         if not name:
             return
-        for domain in ([('name', '=', name)] + role_domain,
-                [('name', 'ilike', f'%{name}%')] + role_domain):
-            parties = Party.search(domain)
-            if len(parties) == 1:
-                return parties[0]
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        for domain in ([('papyrus_name', '=', name)],
-                [('papyrus_name', 'ilike', f'%{name}%')]):
-            sales = Sale.search(domain + [
-                    ('party', '!=', None),
-                    ('sale_date', '>=', cutoff.isoformat()),
-                    ], order=[('sale_date', 'DESC'), ('id', 'DESC')],
-                limit=1)
-            if sales and (not role_domain
-                    or getattr(sales[0].party, 'customer', False)):
-                return sales[0].party
+        papyrus_party, papyrus_similarity = tools.find_party_by_similarity(
+            name, model_name='sale.sale', role_field='customer',
+            related_party_field='party', related_date_field='sale_date',
+            cutoff=cutoff)
+        if papyrus_similarity == 1:
+            return papyrus_party
+
+        party, party_similarity = tools.find_party_by_similarity(name,
+            role_domain)
+        if party_similarity == 1:
+            return party
+        if papyrus_similarity >= party_similarity:
+            return papyrus_party
+        return party
 
     def create_sale_lines_from_papyrus_lines(self, sale):
         pool = Pool()
