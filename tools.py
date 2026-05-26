@@ -35,8 +35,8 @@ class LLMError(Exception):
 
 
 def find_party_by_similarity(text, role_domain=None, model_name='party.party',
-        role_field=None, related_party_field='id', related_text_field=None,
-        related_date_field=None, cutoff=None, extra_text_field=None):
+        role_field=None, related_party_field='id', related_date_field=None,
+        cutoff=None):
     pool = Pool()
     Model = pool.get(model_name)
     Party = pool.get('party.party')
@@ -50,11 +50,9 @@ def find_party_by_similarity(text, role_domain=None, model_name='party.party',
 
     create_similarity()
     text = text.strip()
-    if related_text_field is None:
-        related_text_field = (
-            'name' if model_name == 'party.party' else 'papyrus_name')
-    if extra_text_field is None and model_name == 'party.party':
-        extra_text_field = 'trade_name'
+    related_text_field = (
+        'name' if model_name == 'party.party' else 'papyrus_name')
+    extra_text_field = 'trade_name' if model_name == 'party.party' else None
     similarity = Similarity(
         Upper(database.unaccent(getattr(table, related_text_field))),
         Upper(database.unaccent(text)))
