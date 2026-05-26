@@ -314,7 +314,6 @@ class Document(metaclass=PoolMeta):
 
     def find_purchase_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
-        Purchase = Pool().get('purchase.purchase')
         role_domain = [('supplier', '=', True)] if 'supplier' in Party._fields else []
 
         if not data:
@@ -339,24 +338,23 @@ class Document(metaclass=PoolMeta):
         name = (data.get('name') or '').strip().upper()
         if not name:
             return
-        for domain in ([('name', '=', name)] + role_domain,
-                [('name', 'ilike', f'%{name}%')] + role_domain):
-            parties = Party.search(domain)
-            if len(parties) == 1:
-                return parties[0]
         issue_date = tools.to_date(
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
-        for domain in ([('papyrus_name', '=', name)],
-                [('papyrus_name', 'ilike', f'%{name}%')]):
-            purchases = Purchase.search(domain + [
-                    ('party', '!=', None),
-                    ('purchase_date', '>=', cutoff.isoformat()),
-                    ], order=[('purchase_date', 'DESC'), ('id', 'DESC')],
-                limit=1)
-            if purchases and (not role_domain
-                    or getattr(purchases[0].party, 'supplier', False)):
-                return purchases[0].party
+        papyrus_party, papyrus_similarity = tools.find_party_by_similarity(
+            name, model_name='purchase.purchase', role_field='supplier',
+            related_party_field='party', related_date_field='purchase_date',
+            cutoff=cutoff)
+        if papyrus_similarity == 1:
+            return papyrus_party
+
+        party, party_similarity = tools.find_party_by_similarity(name,
+            role_domain)
+        if party_similarity == 1:
+            return party
+        if papyrus_similarity >= party_similarity:
+            return papyrus_party
+        return party
 
     def create_purchase_lines_from_papyrus_lines(self, purchase):
         pool = Pool()
