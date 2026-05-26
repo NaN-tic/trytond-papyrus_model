@@ -4,11 +4,9 @@
             <group id="papyrus_info" colspan="4" col="4">
                 <label name="document"/>
                 <field name="document"/>
-                <label name="papyrus_name"/>
-                <field name="papyrus_name"/>
             </group>
             <group id="papyrus_line_actions" colspan="4" col="2">
-                <button name="create_lines"/>
+                <button name="sync_moves"/>
             </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>
