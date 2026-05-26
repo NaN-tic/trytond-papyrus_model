@@ -141,6 +141,9 @@ class Document(metaclass=PoolMeta):
             res = company.party.name
             if getattr(company.party, 'trade_name', None):
                 res += f" ({company.party.trade_name})"
+            tax_identifier = getattr(company.party, 'tax_identifier', None)
+            if tax_identifier and getattr(tax_identifier, 'code', None):
+                res += f" [VAT: {tax_identifier.code}]"
             return res
 
         if self.company:
