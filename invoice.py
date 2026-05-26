@@ -407,30 +407,38 @@ class Document(metaclass=PoolMeta):
             extracted_data and extracted_data.get('issue_date'))
         cutoff = (issue_date or date.today()) - timedelta(days=730)
         invoice_table = Invoice.__table__()
+        party_table = Party.__table__()
+        join = invoice_table.join(
+            party_table, condition=party_table.id == invoice_table.party)
         cursor = Transaction().connection.cursor()
         database = Transaction().database
         tools.create_similarity()
         papyrus_similarity = tools.Similarity(
             Upper(database.unaccent(invoice_table.papyrus_name)),
             Upper(database.unaccent(name)))
-        query = invoice_table.select(
-            invoice_table.party, papyrus_similarity,
-            where=((invoice_table.papyrus_name != Null)
-                & (invoice_table.party != Null)
-                & (invoice_table.invoice_date >= cutoff.isoformat())
-                & (papyrus_similarity >= 0.4)),
+        where = ((invoice_table.papyrus_name != Null)
+            & (invoice_table.invoice_date >= cutoff.isoformat())
+            & (papyrus_similarity >= 0.4))
+        if 'supplier' in Party._fields:
+            where &= party_table.supplier == True
+        query = join.select(
+            party_table.id, papyrus_similarity,
+            where=where,
             order_by=[papyrus_similarity.desc, invoice_table.invoice_date.desc,
-                invoice_table.id.desc])
+                invoice_table.id.desc],
+            limit=1)
         cursor.execute(*query)
         papyrus_party = None
         papyrus_similarity = 0
-        for party_id, score in cursor.fetchall():
-            parties = Party.search(role_domain + [('id', '=', party_id)],
-                limit=1)
+        row = cursor.fetchone()
+        if row:
+            party_id, papyrus_similarity = row
+            parties = Party.search([('id', '=', party_id)], limit=1)
             if parties:
                 papyrus_party = parties[0]
-                papyrus_similarity = float(score)
-                break
+                papyrus_similarity = float(papyrus_similarity)
+            else:
+                papyrus_similarity = 0
         if papyrus_similarity == 1:
             return papyrus_party
 
