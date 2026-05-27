@@ -659,6 +659,38 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
             'shipment', 'SUPPLIER-SHIP-SWAPPED-001')
 
     @with_transaction()
+    def test_shipment_line_find_move_matches_pending_supplier_move(self):
+        pool = Pool()
+        Move = pool.get('stock.move')
+        PapyrusShipmentInLine = pool.get('papyrus.shipment.in.line')
+
+        company = create_company()
+        with set_company(company):
+            party = self._create_party(company, name='Shipment Move Party')
+            shipment = self._create_shipment_in(company, party)
+            product = self._create_product('SHIP-MOVE-001')
+
+            move = Move()
+            move.product = product
+            move.on_change_product()
+            move.quantity = Decimal('2')
+            move.from_location = shipment.supplier.supplier_location
+            move.to_location = shipment.warehouse.input_location
+            move.company = shipment.company
+            move.currency = shipment.company.currency
+            move.unit_price = Decimal('260.0000')
+            move.save()
+
+            line = PapyrusShipmentInLine()
+            line.product = product
+            line.quantity = Decimal('2')
+            line.unit_price = Decimal('260.0000')
+
+            PapyrusShipmentInLine.find_move(shipment, [line])
+
+            self.assertEqual(line.move, move)
+
+    @with_transaction()
     def test_sale_party_find_by_name_ignores_non_customer(self):
         Document = Pool().get('papyrus.document')
         Party = Pool().get('party.party')

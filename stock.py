@@ -324,6 +324,7 @@ class Document(metaclass=PoolMeta):
                 line.taxes = str(taxes)
             lines.append(line)
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
+        PapyrusShipmentInLine.find_move(shipment, lines)
         shipment.papyrus_lines = lines
         shipment.save()
 
@@ -527,6 +528,48 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                     If(Eval('move_matches', False),
                         'success', 'danger'), '')),
             ]
+
+    @classmethod
+    def find_move(cls, shipment, lines):
+        Move = Pool().get('stock.move')
+        Document = Pool().get('papyrus.document')
+
+        candidates = Move.search([
+                ('shipment', '=', None),
+                ('state', '=', 'draft'),
+                ('from_location', '=', shipment.supplier.supplier_location),
+                ('to_location', '=', shipment.warehouse.input_location),
+                ])
+        used = {line.move.id for line in lines if getattr(line, 'move', None)}
+
+        for line in lines:
+            if getattr(line, 'move', None):
+                continue
+            product = getattr(line, 'product', None)
+            if not product:
+                continue
+            quantity = getattr(line, 'quantity', None)
+            unit_price = getattr(line, 'unit_price', None)
+
+            line_candidates = [move for move in candidates
+                if move.id not in used and move.product == product]
+            if not line_candidates:
+                continue
+            if quantity is not None:
+                line_candidates = [move for move in line_candidates
+                    if move.quantity == quantity]
+                if not line_candidates:
+                    continue
+            if unit_price is not None:
+                line_candidates = [move for move in line_candidates
+                    if (move.unit_price is not None
+                        and Document.amounts_match(move.unit_price,
+                            unit_price))]
+            if not line_candidates:
+                continue
+            line_candidates.sort(key=lambda move: move.id)
+            line.move = line_candidates[0]
+            used.add(line_candidates[0].id)
 
     @classmethod
     def find_product(cls, party, lines):
