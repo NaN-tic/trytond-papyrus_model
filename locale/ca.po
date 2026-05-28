@@ -484,8 +484,8 @@ msgid "Create Lines"
 msgstr "Crea línies"
 
 msgctxt "model:ir.model.button,string:shipment_in_sync_moves_button"
-msgid "Synchronize Moves"
-msgstr "Sincronitza moviments"
+msgid "Synchronize Papyrus Moves"
+msgstr "Sincronitza moviments Papyrus"
 
 msgctxt "model:papyrus.invoice.line,string:"
 msgid "Papyrus Invoice Line"
