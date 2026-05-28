@@ -94,8 +94,13 @@ class Document(metaclass=PoolMeta):
                 "the provided schema. Use numbers for monetary/quantitative "
                 "fields; use null when unknown. Extract seller/buyer info "
                 "(names, VAT/tax ID, address, email, phone), document number, "
-                "dates, currency, line items (codes, descriptions, quantities, "
+                "our purchase number, supplier purchase reference, dates, "
+                "currency, line items (codes, descriptions, quantities, "
                 "unit prices, discounts, taxes, line totals), and totals. If "
+                "both purchase numbers are present, purchase_number is our "
+                "purchase/order number and purchase_reference is the "
+                "supplier's purchase/order reference. "
+                "If unsure, return the closest values in those fields. If "
                 "a line contains both our/internal product code and the "
                 "supplier's product code, keep them separate: product_code is "
                 "our/internal code and party_product_code is the supplier code. "
@@ -150,6 +155,12 @@ class Document(metaclass=PoolMeta):
                     'currency': {
                         'type': 'string',
                         'description': 'ISO 4217 currency code, e.g., EUR, USD.',
+                        },
+                    'purchase_number': {
+                        'type': ['string', 'null'],
+                        },
+                    'purchase_reference': {
+                        'type': ['string', 'null'],
                         },
                     'seller': {
                         'type': 'object',
@@ -234,7 +245,8 @@ class Document(metaclass=PoolMeta):
                         },
                 },
                 'required': ['shipment_number', 'issue_date',
-                     'due_date', 'currency', 'seller', 'buyer', 'line_items',
+                     'due_date', 'currency', 'purchase_number',
+                     'purchase_reference', 'seller', 'buyer', 'line_items',
                      'totals', 'notes'],
                 'additionalProperties': False
             }
@@ -324,7 +336,7 @@ class Document(metaclass=PoolMeta):
                 line.taxes = str(taxes)
             lines.append(line)
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
-        PapyrusShipmentInLine.find_move(shipment, lines)
+        PapyrusShipmentInLine.find_move(shipment, lines, data)
         shipment.papyrus_lines = lines
         shipment.save()
 
@@ -530,9 +542,11 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             ]
 
     @classmethod
-    def find_move(cls, shipment, lines):
-        Move = Pool().get('stock.move')
-        Document = Pool().get('papyrus.document')
+    def find_move(cls, shipment, lines, data):
+        pool = Pool()
+        Move = pool.get('stock.move')
+        Document = pool.get('papyrus.document')
+        Purchase = pool.get('purchase.purchase')
 
         candidates = Move.search([
                 ('shipment', '=', None),
@@ -540,6 +554,29 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                 ('from_location', '=', shipment.supplier.supplier_location),
                 ('to_location', '=', shipment.warehouse.input_location),
                 ])
+        purchase_number = (data.get('purchase_number') or '').strip()
+        purchase_reference = (data.get('purchase_reference') or '').strip()
+        purchase_domain = []
+        if purchase_number:
+            purchase_domain.extend([
+                    ('number', '=', purchase_number),
+                    ('reference', '=', purchase_number),
+                    ])
+        if purchase_reference:
+            purchase_domain.extend([
+                    ('number', '=', purchase_reference),
+                    ('reference', '=', purchase_reference),
+                    ])
+        if purchase_domain:
+            purchases = Purchase.search([
+                    ('party', '=', shipment.supplier),
+                    ['OR'] + purchase_domain,
+                    ])
+            if purchases:
+                PurchaseLine = pool.get('purchase.line')
+                candidates = [move for move in candidates
+                    if (isinstance(move.origin, PurchaseLine)
+                        and move.origin.purchase in purchases)]
         used = {line.move.id for line in lines if getattr(line, 'move', None)}
 
         for line in lines:

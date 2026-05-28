@@ -864,6 +864,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         Document = pool.get('papyrus.document')
+        Purchase = pool.get('purchase.purchase')
 
         candidate_invoice_lines = InvoiceLine.search([
                 ('invoice', '=', None),
@@ -921,7 +922,35 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         our_order_number = normalize(data.get('our_order_number'))
         party_order_number = normalize(data.get('party_order_number'))
         party_shipment_number = normalize(data.get('party_shipment_number'))
-        if our_order_number:
+        purchase_matched = False
+        our_order_number_value = (data.get('our_order_number') or '').strip()
+        party_order_number_value = (
+            data.get('party_order_number') or '').strip()
+        purchase_domain = []
+        if our_order_number_value:
+            purchase_domain.extend([
+                    ('number', '=', our_order_number_value),
+                    ('reference', '=', our_order_number_value),
+                    ])
+        if party_order_number_value:
+            purchase_domain.extend([
+                    ('number', '=', party_order_number_value),
+                    ('reference', '=', party_order_number_value),
+                    ])
+        if purchase_domain:
+            purchases = Purchase.search([
+                    ('party', '=', party),
+                    ['OR'] + purchase_domain,
+                    ])
+            if purchases:
+                matching = []
+                for invoice_line in candidates:
+                    purchase = purchase_for_invoice_line(invoice_line)
+                    if purchase and purchase in purchases:
+                        matching.append(invoice_line)
+                candidates = matching
+                purchase_matched = True
+        if not purchase_matched and our_order_number:
             matching = []
             for invoice_line in candidates:
                 purchase = purchase_for_invoice_line(invoice_line)
