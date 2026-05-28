@@ -397,7 +397,7 @@ class ShipmentIn(metaclass=PoolMeta):
     def __setup__(cls):
         super().__setup__()
         cls._buttons.update({
-                'sync_moves': {
+                'sync_papyrus_line_moves': {
                     'invisible': ~Bool(Eval('papyrus_lines')),
                     'depends': ['papyrus_lines'],
                     },
@@ -405,7 +405,7 @@ class ShipmentIn(metaclass=PoolMeta):
 
     @classmethod
     @ModelView.button
-    def sync_moves(cls, shipments):
+    def sync_papyrus_line_moves(cls, shipments):
         Move = Pool().get('stock.move')
         to_save = []
 
@@ -593,10 +593,10 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             if not line_candidates:
                 continue
             if quantity is not None:
-                line_candidates = [move for move in line_candidates
+                matching = [move for move in line_candidates
                     if move.quantity == quantity]
-                if not line_candidates:
-                    continue
+                if matching:
+                    line_candidates = matching
             if unit_price is not None:
                 line_candidates = [move for move in line_candidates
                     if (move.unit_price is not None

@@ -371,7 +371,8 @@ class Document(metaclass=PoolMeta):
                     line.product, = products
                 lines.append(line)
 
-        PapyrusInvoiceLine.find_invoice_line(invoice.party, lines, data)
+        PapyrusInvoiceLine.find_invoice_line(
+            invoice.party, lines, data)
         invoice.papyrus_lines = lines
         self.create_invoice_lines_from_papyrus_lines(invoice)
         invoice.save()

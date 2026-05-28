@@ -18,8 +18,8 @@
         </record>
 
         <record model="ir.model.button" id="shipment_in_sync_moves_button">
-            <field name="name">sync_moves</field>
-            <field name="string">Synchronize Moves</field>
+            <field name="name">sync_papyrus_line_moves</field>
+            <field name="string">Synchronize Papyrus Moves</field>
             <field name="model">stock.shipment.in</field>
         </record>
 
