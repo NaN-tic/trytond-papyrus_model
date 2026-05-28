@@ -6,7 +6,7 @@
                 <field name="document"/>
             </group>
             <group id="papyrus_line_actions" colspan="4" col="2">
-                <button name="sync_moves"/>
+                <button name="sync_papyrus_line_moves"/>
             </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>

@@ -371,7 +371,8 @@ class Document(metaclass=PoolMeta):
                     line.product, = products
                 lines.append(line)
 
-        PapyrusInvoiceLine.find_invoice_line(invoice.party, lines, data)
+        PapyrusInvoiceLine.find_invoice_line(
+            invoice.party, lines, data)
         invoice.papyrus_lines = lines
         self.create_invoice_lines_from_papyrus_lines(invoice)
         invoice.save()
@@ -864,6 +865,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         Document = pool.get('papyrus.document')
+        Purchase = pool.get('purchase.purchase')
 
         candidate_invoice_lines = InvoiceLine.search([
                 ('invoice', '=', None),
@@ -921,7 +923,35 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         our_order_number = normalize(data.get('our_order_number'))
         party_order_number = normalize(data.get('party_order_number'))
         party_shipment_number = normalize(data.get('party_shipment_number'))
-        if our_order_number:
+        purchase_matched = False
+        our_order_number_value = (data.get('our_order_number') or '').strip()
+        party_order_number_value = (
+            data.get('party_order_number') or '').strip()
+        purchase_domain = []
+        if our_order_number_value:
+            purchase_domain.extend([
+                    ('number', '=', our_order_number_value),
+                    ('reference', '=', our_order_number_value),
+                    ])
+        if party_order_number_value:
+            purchase_domain.extend([
+                    ('number', '=', party_order_number_value),
+                    ('reference', '=', party_order_number_value),
+                    ])
+        if purchase_domain:
+            purchases = Purchase.search([
+                    ('party', '=', party),
+                    ['OR'] + purchase_domain,
+                    ])
+            if purchases:
+                matching = []
+                for invoice_line in candidates:
+                    purchase = purchase_for_invoice_line(invoice_line)
+                    if purchase and purchase in purchases:
+                        matching.append(invoice_line)
+                candidates = matching
+                purchase_matched = True
+        if not purchase_matched and our_order_number:
             matching = []
             for invoice_line in candidates:
                 purchase = purchase_for_invoice_line(invoice_line)
@@ -956,7 +986,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if getattr(line, 'invoice_line', None):
                 continue
             product = getattr(line, 'product', None)
-            quantity = getattr(line, 'quantity', None)
             unit_price = getattr(line, 'unit_price', None)
             discount_rate = getattr(line, 'discount_rate', None)
             if unit_price is not None and discount_rate:
@@ -977,11 +1006,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     if invoice_line.id not in used]
             if not line_candidates:
                 continue
-            if quantity is not None:
-                matching = [invoice_line for invoice_line in line_candidates
-                    if invoice_line.quantity == quantity]
-                if matching:
-                    line_candidates = matching
             if unit_price is not None:
                 matching = [invoice_line for invoice_line in line_candidates
                     if Document.amounts_match(invoice_line.unit_price,
