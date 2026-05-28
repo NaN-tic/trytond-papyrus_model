@@ -986,7 +986,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if getattr(line, 'invoice_line', None):
                 continue
             product = getattr(line, 'product', None)
-            quantity = getattr(line, 'quantity', None)
             unit_price = getattr(line, 'unit_price', None)
             discount_rate = getattr(line, 'discount_rate', None)
             if unit_price is not None and discount_rate:
@@ -1007,11 +1006,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     if invoice_line.id not in used]
             if not line_candidates:
                 continue
-            if quantity is not None:
-                matching = [invoice_line for invoice_line in line_candidates
-                    if invoice_line.quantity == quantity]
-                if matching:
-                    line_candidates = matching
             if unit_price is not None:
                 matching = [invoice_line for invoice_line in line_candidates
                     if Document.amounts_match(invoice_line.unit_price,

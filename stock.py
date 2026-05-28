@@ -585,18 +585,12 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             product = getattr(line, 'product', None)
             if not product:
                 continue
-            quantity = getattr(line, 'quantity', None)
             unit_price = getattr(line, 'unit_price', None)
 
             line_candidates = [move for move in candidates
                 if move.id not in used and move.product == product]
             if not line_candidates:
                 continue
-            if quantity is not None:
-                matching = [move for move in line_candidates
-                    if move.quantity == quantity]
-                if matching:
-                    line_candidates = matching
             if unit_price is not None:
                 line_candidates = [move for move in line_candidates
                     if (move.unit_price is not None
