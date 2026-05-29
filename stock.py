@@ -546,7 +546,10 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         pool = Pool()
         Move = pool.get('stock.move')
         Document = pool.get('papyrus.document')
-        Purchase = pool.get('purchase.purchase')
+        try:
+            Purchase = pool.get('purchase.purchase')
+        except KeyError:
+            Purchase = None
 
         candidates = Move.search([
                 ('shipment', '=', None),
@@ -567,7 +570,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                     ('number', '=', purchase_reference),
                     ('reference', '=', purchase_reference),
                     ])
-        if purchase_domain:
+        if purchase_domain and Purchase:
             purchases = Purchase.search([
                     ('party', '=', shipment.supplier),
                     ['OR'] + purchase_domain,
