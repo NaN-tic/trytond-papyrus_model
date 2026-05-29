@@ -865,7 +865,10 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         Document = pool.get('papyrus.document')
-        Purchase = pool.get('purchase.purchase')
+        try:
+            Purchase = pool.get('purchase.purchase')
+        except KeyError:
+            Purchase = None
 
         candidate_invoice_lines = InvoiceLine.search([
                 ('invoice', '=', None),
@@ -938,7 +941,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     ('number', '=', party_order_number_value),
                     ('reference', '=', party_order_number_value),
                     ])
-        if purchase_domain:
+        if purchase_domain and Purchase:
             purchases = Purchase.search([
                     ('party', '=', party),
                     ['OR'] + purchase_domain,
