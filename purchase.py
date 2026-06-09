@@ -84,7 +84,12 @@ class Document(metaclass=PoolMeta):
                 "normalize unit_price to one unit. Never invent or guess a "
                 "quantity base that is not clearly written in the document. "
                 "quantity must be the real number of billed units, and line "
-                "totals must stay as the full line totals from the document."
+                "totals must stay as the full line totals from the document. "
+                "When the document shows withholdings such as IRPF, treat "
+                "them as tax/withholding adjustments instead of product or "
+                "service line items. Do not create a separate line item only "
+                "for the withholding; reflect it through taxes, totals, or "
+                "notes when needed."
                 )
             }
         user = {
