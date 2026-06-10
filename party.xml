@@ -1,5 +1,5 @@
 <tryton>
-    <data>
+    <data depends="account_invoice">
         <record model="ir.ui.view" id="party_view_form">
             <field name="model">party.party</field>
             <field name="inherit" ref="party.party_view_form"/>
