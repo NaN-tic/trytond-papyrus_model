@@ -78,7 +78,7 @@ class Document(metaclass=PoolMeta):
                 f"{info}. Return ONLY JSON (no markdown) valid per the "
                 "provided schema. Use numbers for monetary/quantitative "
                 "fields; use null when unknown. Extract seller/buyer info "
-                "(names, VAT/tax ID, address), document number, dates, "
+                "(names, VAT/tax ID), document number, dates, "
                 "currency, our order number, supplier order number, supplier "
                 "delivery note number, line items (codes, descriptions, "
                 "quantities, unit prices, taxes), and totals. If a line contains both "
@@ -156,11 +156,8 @@ class Document(metaclass=PoolMeta):
                         'properties': {
                             'name': {'type': 'string'},
                             'vat': {'type': ['string', 'null']},
-                            'address': {'type': 'string'},
-                            'email': {'type': 'string'},
-                            'phone': {'type': 'string'}
                         },
-                        'required': ['name', 'vat', 'address', 'email', 'phone'],
+                        'required': ['name', 'vat'],
                         'additionalProperties': False
                     },
                     'buyer': {
@@ -168,11 +165,8 @@ class Document(metaclass=PoolMeta):
                         'properties': {
                             'name': {'type': 'string'},
                             'vat': {'type': ['string', 'null']},
-                            'address': {'type': 'string'},
-                            'email': {'type': 'string'},
-                            'phone': {'type': 'string'}
                         },
-                        'required': ['name', 'vat', 'address', 'email', 'phone'],
+                        'required': ['name', 'vat'],
                         'additionalProperties': False
                     },
                     'line_items': {
@@ -202,19 +196,21 @@ class Document(metaclass=PoolMeta):
                                         'one unit and keep that explicit base '
                                         'in unit.'),
                                     },
-                                'discount': {'type': 'number'},
+                                'discount': {
+                                    'type': 'number',
+                                    'description': ('Discount rate as a percentage, e.g., 10 for 10%. '
+                                    'If the document shows a discount amount, calculate the discount rate '
+                                    'as (discount_amount / (quantity * unit_price)) * 100.'),
+                                    },
+                                'line_total_excl_tax': {
+                                    'type': 'number'},
                                 'tax_rate': {'type': 'number'},
-                                'tax_amount': {'type': 'number'},
-                                'line_total_excl_tax': {'type': 'number'},
-                                'line_total_incl_tax': {'type': 'number'}
                             },
                             'required': [
                                 'product_code', 'party_product_code',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
-                                 'tax_rate', 'tax_amount',
-                                 'line_total_excl_tax',
-                                 'line_total_incl_tax',
+                                 'line_total_excl_tax', 'tax_rate',
                                  ],
                             'additionalProperties': False
                         }
@@ -236,7 +232,7 @@ class Document(metaclass=PoolMeta):
                 'required': ['invoice_number', 'issue_date',
                      'due_date', 'currency', 'our_order_number',
                      'party_order_number', 'party_shipment_number', 'seller',
-                     'buyer', 'line_items', 'totals', 'notes'],
+                     'buyer', 'line_items', 'totals'],
                 'additionalProperties': False
             }
         }
@@ -244,7 +240,6 @@ class Document(metaclass=PoolMeta):
     def guess_invoice(self):
         pool = Pool()
         Currency = pool.get('currency.currency')
-        Invoice = pool.get('account.invoice')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
         if self.model_type != 'invoice':
@@ -256,15 +251,7 @@ class Document(metaclass=PoolMeta):
         if not data:
             return
 
-        if self.invoice:
-            invoice = self.invoice[0]
-        else:
-            invoice = Invoice()
-            invoice.document = self
-            invoice.type = 'in'
-            invoice.on_change_type()
-            invoice.company = self.document_company
-            invoice.on_change_company()
+        invoice = self.get_invoice()
 
         if (getattr(invoice, 'papyrus_lines', None)
                 and Transaction().context.get('papyrus_reinspect')):
@@ -381,6 +368,20 @@ class Document(metaclass=PoolMeta):
         invoice.papyrus_lines = lines
         self.create_invoice_lines_from_papyrus_lines(invoice)
         invoice.save()
+
+    def get_invoice(self):
+        Invoice = Pool().get('account.invoice')
+
+        if self.invoice:
+            return self.invoice[0]
+
+        invoice = Invoice()
+        invoice.document = self
+        invoice.type = 'in'
+        invoice.on_change_type()
+        invoice.company = self.document_company
+        invoice.on_change_company()
+        return invoice
 
     def find_invoice_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
@@ -1009,9 +1010,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 if external_code and external_code in external_codes_for_invoice_line(
                         invoice_line):
                     line_candidates.append(invoice_line)
-            if not line_candidates:
-                line_candidates = [invoice_line for invoice_line in candidates
-                    if invoice_line.id not in used]
             if not line_candidates:
                 continue
             if unit_price is not None:
