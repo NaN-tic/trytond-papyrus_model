@@ -226,19 +226,20 @@ class Document(metaclass=PoolMeta):
                         'additionalProperties': False
                     },
                     'notes': {
-                        'type': 'string',
+                        'type': ['string', 'null'],
                         },
                 },
                 'required': ['invoice_number', 'issue_date',
                      'due_date', 'currency', 'our_order_number',
                      'party_order_number', 'party_shipment_number', 'seller',
-                     'buyer', 'line_items', 'totals'],
+                     'buyer', 'line_items', 'totals', 'notes'],
                 'additionalProperties': False
             }
         }
 
     def guess_invoice(self):
         pool = Pool()
+        Invoice = pool.get('account.invoice')
         Currency = pool.get('currency.currency')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
@@ -251,7 +252,15 @@ class Document(metaclass=PoolMeta):
         if not data:
             return
 
-        invoice = self.get_invoice()
+        if self.invoice:
+            invoice = self.invoice[0]
+        else:
+            invoice = Invoice()
+            invoice.document = self
+            invoice.type = 'in'
+            invoice.on_change_type()
+            invoice.company = self.document_company
+            invoice.on_change_company()
 
         if (getattr(invoice, 'papyrus_lines', None)
                 and Transaction().context.get('papyrus_reinspect')):
