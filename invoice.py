@@ -439,14 +439,13 @@ class Document(metaclass=PoolMeta):
     def create_invoice_lines_from_papyrus_lines(self, invoice):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
+        PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
 
         digits = InvoiceLine.unit_price.digits[1]
         exp = Decimal(str(10.0 ** -digits))
 
         to_save = []
         to_update = []
-        papyrus_lines = []
-
         for papyrus_line in getattr(invoice, 'papyrus_lines', []):
             invoice_line = getattr(papyrus_line, 'invoice_line', None)
             if invoice_line:
@@ -471,13 +470,12 @@ class Document(metaclass=PoolMeta):
                 unit_price *= (Decimal('100')
                     - discount_rate) / Decimal('100')
             line.unit_price = unit_price.quantize(exp)
-            to_save.append(line)
-            papyrus_lines.append(papyrus_line)
+
+            papyrus_line.invoice_line = line
+            to_save.append(papyrus_line)
 
         if to_save:
-            InvoiceLine.save(to_save)
-            for papyrus_line, line in zip(papyrus_lines, to_save):
-                papyrus_line.invoice_line = line
+            PapyrusInvoiceLine.save(to_save)
         if to_update:
             InvoiceLine.save(to_update)
         if to_save or to_update:
