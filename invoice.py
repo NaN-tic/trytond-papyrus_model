@@ -262,9 +262,10 @@ class Document(metaclass=PoolMeta):
             invoice.company = self.document_company
             invoice.on_change_company()
 
-        if (getattr(invoice, 'papyrus_lines', None)
+        if ((getattr(invoice, 'papyrus_lines', None) or getattr(invoice, 'lines', None))
                 and Transaction().context.get('papyrus_reinspect')):
             invoice.papyrus_lines = []
+            invoice.lines = [l for l in invoice.lines if not l.papyrus_created]
             invoice.save()
 
         if not getattr(invoice, 'party', None):
@@ -437,6 +438,7 @@ class Document(metaclass=PoolMeta):
             if not product:
                 continue
             line = InvoiceLine()
+            line.papyrus_created = True
             line.invoice = invoice
             line.product = product
             line.on_change_product()
@@ -591,6 +593,11 @@ class Invoice(metaclass=PoolMeta):
                 if invoice.papyrus_name == name:
                     continue
                 super().write([invoice], {'papyrus_name': name})
+
+class InvoiceLine(metaclass=PoolMeta):
+    __name__ = 'account.invoice.line'
+
+    papyrus_created = fields.Boolean('Papyrus Created', readonly=True)
 
 
 class PapyrusInvoiceLine(ModelSQL, ModelView):
