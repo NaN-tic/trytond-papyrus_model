@@ -81,6 +81,10 @@ msgctxt "field:papyrus.document,shipment_in:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
 
+msgctxt "field:account.invoice.line,papyrus_created:"
+msgid "Papyrus Created"
+msgstr "Creada por Papyrus"
+
 msgctxt "field:papyrus.invoice.line,amount:"
 msgid "Amount"
 msgstr "Importe"
