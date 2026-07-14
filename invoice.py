@@ -242,6 +242,7 @@ class Document(metaclass=PoolMeta):
         Invoice = pool.get('account.invoice')
         Currency = pool.get('currency.currency')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
+        InvoiceLine = pool.get('account.invoice.line')
 
         if self.model_type != 'invoice':
             return
@@ -262,10 +263,13 @@ class Document(metaclass=PoolMeta):
             invoice.company = self.document_company
             invoice.on_change_company()
 
-        if ((getattr(invoice, 'papyrus_lines', None) or getattr(invoice, 'lines', None))
-                and Transaction().context.get('papyrus_reinspect')):
-            invoice.papyrus_lines = []
-            invoice.lines = [l for l in invoice.lines if not l.papyrus_created]
+        if Transaction().context.get('papyrus_reinspect'):
+            if getattr(invoice, 'papyrus_lines', None):
+                invoice.papyrus_lines = []
+            if getattr(invoice, 'lines', None):
+                papyrus_created = [l for l in invoice.lines if l.papyrus_created]
+                InvoiceLine.delete(papyrus_created)
+                invoice.lines = []
             invoice.save()
 
         if not getattr(invoice, 'party', None):
