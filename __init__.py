@@ -19,7 +19,6 @@ def register():
         invoice.Queue,
         invoice.Document,
         invoice.Invoice,
-        invoice.InvoiceLine,
         invoice.PapyrusInvoiceLine,
         module=module, type_='model', depends=['account_invoice'])
     Pool.register(
