@@ -279,7 +279,7 @@ class Document(metaclass=PoolMeta):
             shipment.company = self.document_company
 
         if (getattr(shipment, 'papyrus_lines', None)
-                and Transaction().context.get('papyrus_reinspect')):
+                and not Transaction().context.get('papyrus_reinspect')):
             shipment.papyrus_lines = []
             shipment.save()
 
@@ -315,34 +315,16 @@ class Document(metaclass=PoolMeta):
         if seller_name:
             shipment.papyrus_name = seller_name
 
-        lines = []
-        for item in data.get('line_items', []):
-            product_code = item.get('product_code')
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-            external_code = item.get('party_product_code')
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-            description = item.get('description')
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip()
-            line = PapyrusShipmentInLine()
-            line.product_code = product_code
-            line.external_code = external_code
-            line.description = description
-            line.quantity = tools.to_decimal(item.get('quantity'))
-            line.unit_price = tools.to_decimal(item.get('unit_price'))
-            line.discount_rate = tools.to_decimal(item.get('discount'))
-            line.amount = tools.to_decimal(item.get('line_total_excl_tax'))
-            if line.discount_rate:
-                line.discount_rate = abs(line.discount_rate)
-            taxes = item.get('tax_rate')
-            if taxes is not None:
-                line.taxes = str(taxes)
-            lines.append(line)
+        lines = getattr(shipment, 'papyrus_lines', None)
+        if not lines:
+            lines = []
+            for item in data.get('line_items', []):
+                line = PapyrusShipmentInLine()
+                line.set_from_data(item)
+                lines.append(line)
+            shipment.papyrus_lines = lines
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
         PapyrusShipmentInLine.find_move(shipment, lines, data)
-        shipment.papyrus_lines = lines
         shipment.save()
 
     def find_shipment_in_party_from_data(self, data, extracted_data=None):
@@ -503,6 +485,29 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
     move_matches = fields.Function(fields.Boolean('Move Matches'),
             'get_move_matches')
 
+    def set_from_data(self, data):
+        product_code = data.get('product_code')
+        if isinstance(product_code, str):
+            product_code = product_code.replace('\x00', '').strip() or None
+        external_code = data.get('party_product_code')
+        if isinstance(external_code, str):
+            external_code = external_code.replace('\x00', '').strip() or None
+        description = data.get('description')
+        if isinstance(description, str):
+            description = description.replace('\x00', '').strip()
+        self.product_code = product_code
+        self.external_code = external_code
+        self.description = description
+        self.quantity = tools.to_decimal(data.get('quantity'))
+        self.unit_price = tools.to_decimal(data.get('unit_price'))
+        self.discount_rate = tools.to_decimal(data.get('discount'))
+        self.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        if self.discount_rate:
+            self.discount_rate = abs(self.discount_rate)
+        taxes = data.get('tax_rate')
+        if taxes is not None:
+            self.taxes = str(taxes)
+
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
         quantity = getattr(self, 'quantity', None)
@@ -535,6 +540,19 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             return False
         return True
 
+    def get_line_candidates(self, candidates):
+        Document = Pool().get('papyrus.document')
+        product = getattr(self, 'product', None)
+        if not product:
+            return []
+        candidates = [move for move in candidates if move.product == product]
+        unit_price = getattr(self, 'unit_price', None)
+        if unit_price is not None:
+            candidates = [move for move in candidates
+                if (move.unit_price is not None
+                    and Document.amounts_match(move.unit_price, unit_price))]
+        return candidates
+
     @classmethod
     def view_attributes(cls):
         return super().view_attributes() + [
@@ -550,7 +568,6 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
     def find_move(cls, shipment, lines, data):
         pool = Pool()
         Move = pool.get('stock.move')
-        Document = pool.get('papyrus.document')
         try:
             Purchase = pool.get('purchase.purchase')
         except KeyError:
@@ -590,20 +607,8 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         for line in lines:
             if getattr(line, 'move', None):
                 continue
-            product = getattr(line, 'product', None)
-            if not product:
-                continue
-            unit_price = getattr(line, 'unit_price', None)
-
-            line_candidates = [move for move in candidates
-                if move.id not in used and move.product == product]
-            if not line_candidates:
-                continue
-            if unit_price is not None:
-                line_candidates = [move for move in line_candidates
-                    if (move.unit_price is not None
-                        and Document.amounts_match(move.unit_price,
-                            unit_price))]
+            line_candidates = line.get_line_candidates([
+                    move for move in candidates if move.id not in used])
             if not line_candidates:
                 continue
             line_candidates.sort(key=lambda move: move.id)
@@ -612,6 +617,9 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
 
     @classmethod
     def find_product(cls, party, lines):
+        lines = [line for line in lines if not line.product]
+        if not lines:
+            return
         pool = Pool()
         Product = pool.get('product.product')
         HistoryLine = pool.get('papyrus.shipment.in.line')
