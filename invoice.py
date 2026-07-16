@@ -730,7 +730,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     @classmethod
     def find_product(cls, party, lines):
-        lines = [line for line in lines if not line.product]
+        lines = [line for line in lines if not getattr(line, 'product', None)]
         if not lines:
             return
         pool = Pool()
