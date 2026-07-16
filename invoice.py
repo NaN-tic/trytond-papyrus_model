@@ -242,7 +242,6 @@ class Document(metaclass=PoolMeta):
         Invoice = pool.get('account.invoice')
         Currency = pool.get('currency.currency')
         PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
-        InvoiceLine = pool.get('account.invoice.line')
 
         if self.model_type != 'invoice':
             return
@@ -263,13 +262,9 @@ class Document(metaclass=PoolMeta):
             invoice.company = self.document_company
             invoice.on_change_company()
 
-        if Transaction().context.get('papyrus_reinspect'):
-            if getattr(invoice, 'papyrus_lines', None):
-                invoice.papyrus_lines = []
-            if getattr(invoice, 'lines', None):
-                papyrus_created = [l for l in invoice.lines if l.papyrus_created]
-                InvoiceLine.delete(papyrus_created)
-                invoice.lines = []
+        if (getattr(invoice, 'papyrus_lines', None)
+                and not Transaction().context.get('papyrus_reinspect')):
+            invoice.papyrus_lines = []
             invoice.save()
 
         if not getattr(invoice, 'party', None):
@@ -308,74 +303,65 @@ class Document(metaclass=PoolMeta):
         if seller_name:
             invoice.papyrus_name = seller_name
 
-        lines = []
-        for item in data.get('line_items', []):
-            line = PapyrusInvoiceLine()
-            line.set_from_data(item)
-            lines.append(line)
+        lines = getattr(invoice, 'papyrus_lines', None)
 
-        PapyrusInvoiceLine.find_product(invoice.party, lines)
-        if invoice.party.papyrus_group_lines_by_tax:
-            grouped = {}
-            for line in lines:
-                key = getattr(line, 'taxes', None) or ''
-                if key not in grouped:
-                    grouped[key] = [line]
-                    continue
-                grouped[key].append(line)
+        if lines:
+            PapyrusInvoiceLine.find_product(invoice.party, lines)
+        else:
             lines = []
-            for tax, tax_lines in grouped.items():
-                if len(tax_lines) == 1:
-                    lines.append(tax_lines[0])
-                    continue
-                amount = Decimal(0)
-                products = set()
-                for line in tax_lines:
-                    line_amount = getattr(line, 'amount', None)
-                    if line_amount is None:
-                        quantity = getattr(line, 'quantity', None)
-                        unit_price = getattr(line, 'unit_price', None)
-                        if quantity is not None and unit_price is not None:
-                            discount_rate = getattr(line, 'discount_rate', None)
-                            if discount_rate:
-                                unit_price *= (
-                                    Decimal('100') - discount_rate
-                                    ) / Decimal('100')
-                            line_amount = quantity * unit_price
-                    if line_amount is not None:
-                        amount += line_amount
-                    product = getattr(line, 'product', None)
-                    if product:
-                        products.add(product)
+            for item in data.get('line_items', []):
                 line = PapyrusInvoiceLine()
-                line.description = 'Taxes %s' % (tax or '0')
-                line.quantity = Decimal(1)
-                line.unit_price = amount
-                line.amount = amount
-                line.taxes = tax or None
-                if len(products) == 1:
-                    line.product, = products
+                line.set_from_data(item)
                 lines.append(line)
+            PapyrusInvoiceLine.find_product(invoice.party, lines)
+            if invoice.party.papyrus_group_lines_by_tax:
+                grouped = {}
+                for line in lines:
+                    key = getattr(line, 'taxes', None) or ''
+                    if key not in grouped:
+                        grouped[key] = [line]
+                        continue
+                    grouped[key].append(line)
+                lines = []
+                for tax, tax_lines in grouped.items():
+                    if len(tax_lines) == 1:
+                        lines.append(tax_lines[0])
+                        continue
+                    amount = Decimal(0)
+                    products = set()
+                    for line in tax_lines:
+                        line_amount = getattr(line, 'amount', None)
+                        if line_amount is None:
+                            quantity = getattr(line, 'quantity', None)
+                            unit_price = getattr(line, 'unit_price', None)
+                            if quantity is not None and unit_price is not None:
+                                discount_rate = getattr(
+                                    line, 'discount_rate', None)
+                                if discount_rate:
+                                    unit_price *= (
+                                        Decimal('100') - discount_rate
+                                        ) / Decimal('100')
+                                line_amount = quantity * unit_price
+                        if line_amount is not None:
+                            amount += line_amount
+                        product = getattr(line, 'product', None)
+                        if product:
+                            products.add(product)
+                    line = PapyrusInvoiceLine()
+                    line.description = 'Taxes %s' % (tax or '0')
+                    line.quantity = Decimal(1)
+                    line.unit_price = amount
+                    line.amount = amount
+                    line.taxes = tax or None
+                    if len(products) == 1:
+                        line.product, = products
+                    lines.append(line)
+            invoice.papyrus_lines = lines
 
         PapyrusInvoiceLine.find_invoice_line(
             invoice.party, lines, data)
-        invoice.papyrus_lines = lines
-        self.create_invoice_lines_from_papyrus_lines(invoice)
+        invoice.create_invoice_lines_from_papyrus_lines()
         invoice.save()
-
-    def get_invoice(self):
-        Invoice = Pool().get('account.invoice')
-
-        if self.invoice:
-            return self.invoice[0]
-
-        invoice = Invoice()
-        invoice.document = self
-        invoice.type = 'in'
-        invoice.on_change_type()
-        invoice.company = self.document_company
-        invoice.on_change_company()
-        return invoice
 
     def find_invoice_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
@@ -420,57 +406,6 @@ class Document(metaclass=PoolMeta):
         if papyrus_similarity >= party_similarity:
             return papyrus_party
         return party
-
-    def create_invoice_lines_from_papyrus_lines(self, invoice):
-        pool = Pool()
-        InvoiceLine = pool.get('account.invoice.line')
-        PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
-
-        digits = InvoiceLine.unit_price.digits[1]
-        exp = Decimal(str(10.0 ** -digits))
-
-        to_save = []
-        to_update = []
-        for papyrus_line in getattr(invoice, 'papyrus_lines', []):
-            invoice_line = getattr(papyrus_line, 'invoice_line', None)
-            if invoice_line:
-                if not invoice_line.invoice:
-                    invoice_line.invoice = invoice
-                    to_update.append(invoice_line)
-                continue
-            product = getattr(papyrus_line, 'product', None)
-            if not product:
-                continue
-            line = InvoiceLine()
-            line.papyrus_created = True
-            line.invoice = invoice
-            line.product = product
-            line.on_change_product()
-            line.description = getattr(papyrus_line, 'description', None)
-            line.quantity = getattr(papyrus_line, 'quantity', None)
-            unit_price = getattr(papyrus_line, 'unit_price', None)
-            if unit_price is None:
-                continue
-            discount_rate = getattr(papyrus_line, 'discount_rate', None)
-            if discount_rate:
-                unit_price *= (Decimal('100')
-                    - discount_rate) / Decimal('100')
-            line.unit_price = unit_price.quantize(exp)
-            self.set_invoice_line_from_papyrus_line(line, papyrus_line)
-
-            papyrus_line.invoice_line = line
-            to_save.append(papyrus_line)
-
-        if to_save:
-            PapyrusInvoiceLine.save(to_save)
-        if to_update:
-            InvoiceLine.save(to_update)
-        if to_save or to_update:
-            invoice.on_change_lines()
-
-    def set_invoice_line_from_papyrus_line(self, invoice_line, papyrus_line):
-        pass
-
 
 class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
@@ -524,6 +459,33 @@ class Invoice(metaclass=PoolMeta):
                     },
                 })
 
+    def create_invoice_lines_from_papyrus_lines(self):
+        pool = Pool()
+        InvoiceLine = pool.get('account.invoice.line')
+        PapyrusInvoiceLine = pool.get('papyrus.invoice.line')
+
+        to_save = []
+        to_update = []
+        for papyrus_line in getattr(self, 'papyrus_lines', []):
+            invoice_line = getattr(papyrus_line, 'invoice_line', None)
+            if invoice_line:
+                if not invoice_line.invoice:
+                    invoice_line.invoice = self
+                    to_update.append(invoice_line)
+                continue
+            invoice_line = papyrus_line.get_invoice_line()
+            if not invoice_line:
+                continue
+            papyrus_line.invoice_line = invoice_line
+            to_save.append(papyrus_line)
+
+        if to_save:
+            PapyrusInvoiceLine.save(to_save)
+        if to_update:
+            InvoiceLine.save(to_update)
+        if to_save or to_update:
+            self.on_change_lines()
+
     @classmethod
     @ModelView.button
     def create_lines(cls, invoices):
@@ -540,7 +502,7 @@ class Invoice(metaclass=PoolMeta):
             if not invoice.document:
                 continue
 
-            invoice.document.create_invoice_lines_from_papyrus_lines(invoice)
+            invoice.create_invoice_lines_from_papyrus_lines()
             invoice.save()
 
     @classmethod
@@ -598,12 +560,6 @@ class Invoice(metaclass=PoolMeta):
                     continue
                 super().write([invoice], {'papyrus_name': name})
 
-class InvoiceLine(metaclass=PoolMeta):
-    __name__ = 'account.invoice.line'
-
-    papyrus_created = fields.Boolean('Papyrus Created', readonly=True)
-
-
 class PapyrusInvoiceLine(ModelSQL, ModelView):
     __name__ = 'papyrus.invoice.line'
 
@@ -622,8 +578,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     product = fields.Many2One('product.product', 'Product')
     invoice_line = fields.Many2One('account.invoice.line', 'Invoice Line',
         ondelete='SET NULL')
-    invoice_line_matches = fields.Function(fields.Boolean('Invoice Line Matches'),
-            'get_invoice_line_matches')
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
 
@@ -664,29 +618,27 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
         return Document.amounts_match(amount, quantity * unit_price)
 
-    def get_invoice_line_matches(self, name):
-        Document = Pool().get('papyrus.document')
-        invoice_line = getattr(self, 'invoice_line', None)
-        if not invoice_line:
-            return False
-        product = getattr(self, 'product', None)
-        if product is not None and invoice_line.product != product:
-            return False
-        quantity = getattr(self, 'quantity', None)
-        if quantity is not None and invoice_line.quantity != quantity:
-            return False
-        unit_price = getattr(self, 'unit_price', None)
-        discount_rate = getattr(self, 'discount_rate', None)
-        if unit_price is not None and discount_rate:
-            unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
-        if (unit_price is not None
-                and not Document.amounts_match(invoice_line.unit_price,
-                    unit_price)):
-            return False
-        return self.matches_invoice_line(invoice_line)
+    def get_invoice_line(self):
+        InvoiceLine = Pool().get('account.invoice.line')
 
-    def matches_invoice_line(self, invoice_line):
-        return True
+        invoice = self.invoice
+        product = getattr(self, 'product', None)
+        unit_price = getattr(self, 'unit_price', None)
+        if not product or unit_price is None:
+            return
+        digits = InvoiceLine.unit_price.digits[1]
+        exp = Decimal(str(10.0 ** -digits))
+        invoice_line = InvoiceLine()
+        invoice_line.invoice = invoice
+        invoice_line.product = product
+        invoice_line.on_change_product()
+        invoice_line.description = getattr(self, 'description', None)
+        invoice_line.quantity = getattr(self, 'quantity', None)
+        discount_rate = getattr(self, 'discount_rate', None)
+        if discount_rate:
+            unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
+        invoice_line.unit_price = unit_price.quantize(exp)
+        return invoice_line
 
     def get_invoice_line_issue(self, name):
         Document = Pool().get('papyrus.document')
@@ -721,8 +673,49 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     invoice=invoice_line.unit_price))
         return ', '.join(issues)
 
-    def filter_invoice_line_candidates(self, candidates):
-        return candidates
+    def get_line_candidates(self, candidates):
+        Document = Pool().get('papyrus.document')
+
+        def normalize(value):
+            if not value:
+                return ''
+            return ''.join(char for char in value.upper() if char.isalnum())
+
+        def external_codes_for_invoice_line(invoice_line):
+            codes = set()
+            origin = getattr(invoice_line, 'origin', None)
+            product_supplier = getattr(
+                origin, 'product_supplier', None) if origin else None
+            if product_supplier and product_supplier.code:
+                codes.add(product_supplier.code)
+            for move in getattr(invoice_line, 'stock_moves', []):
+                origin = getattr(move, 'origin', None)
+                product_supplier = getattr(origin, 'product_supplier', None)
+                if product_supplier and product_supplier.code:
+                    codes.add(product_supplier.code)
+            return {normalize(code) for code in codes if code}
+
+        product = getattr(self, 'product', None)
+        external_code = normalize(getattr(self, 'external_code', None))
+        line_candidates = []
+        for invoice_line in candidates:
+            if product and invoice_line.product == product:
+                line_candidates.append(invoice_line)
+                continue
+            if (external_code
+                    and external_code in external_codes_for_invoice_line(
+                        invoice_line)):
+                line_candidates.append(invoice_line)
+        unit_price = getattr(self, 'unit_price', None)
+        discount_rate = getattr(self, 'discount_rate', None)
+        if unit_price is not None and discount_rate:
+            unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
+        if unit_price is not None:
+            matching = [invoice_line for invoice_line in line_candidates
+                if Document.amounts_match(invoice_line.unit_price, unit_price)]
+            if matching:
+                line_candidates = matching
+        return line_candidates
 
     @classmethod
     def view_attributes(cls):
@@ -737,6 +730,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     @classmethod
     def find_product(cls, party, lines):
+        lines = [line for line in lines if not line.product]
+        if not lines:
+            return
         pool = Pool()
         Product = pool.get('product.product')
         HistoryLine = pool.get('papyrus.invoice.line')
@@ -901,7 +897,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     def find_invoice_line(cls, party, lines, data):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
-        Document = pool.get('papyrus.document')
         try:
             Purchase = pool.get('purchase.purchase')
         except KeyError:
@@ -946,19 +941,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 shipment = getattr(move, 'shipment', None)
                 if shipment:
                     return shipment
-
-        def external_codes_for_invoice_line(invoice_line):
-            codes = set()
-            origin = getattr(invoice_line, 'origin', None)
-            product_supplier = getattr(origin, 'product_supplier', None) if origin else None
-            if product_supplier and product_supplier.code:
-                codes.add(product_supplier.code)
-            for move in getattr(invoice_line, 'stock_moves', []):
-                origin = getattr(move, 'origin', None)
-                product_supplier = getattr(origin, 'product_supplier', None)
-                if product_supplier and product_supplier.code:
-                    codes.add(product_supplier.code)
-            return {normalize(code) for code in codes if code}
 
         our_order_number = normalize(data.get('our_order_number'))
         party_order_number = normalize(data.get('party_order_number'))
@@ -1025,32 +1007,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         for line in lines:
             if getattr(line, 'invoice_line', None):
                 continue
-            product = getattr(line, 'product', None)
-            unit_price = getattr(line, 'unit_price', None)
-            discount_rate = getattr(line, 'discount_rate', None)
-            if unit_price is not None and discount_rate:
-                unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
-            external_code = normalize(getattr(line, 'external_code', None))
-            line_candidates = []
-            for invoice_line in candidates:
-                if invoice_line.id in used:
-                    continue
-                if product and invoice_line.product == product:
-                    line_candidates.append(invoice_line)
-                    continue
-                if external_code and external_code in external_codes_for_invoice_line(
-                        invoice_line):
-                    line_candidates.append(invoice_line)
-            if not line_candidates:
-                continue
-            if unit_price is not None:
-                matching = [invoice_line for invoice_line in line_candidates
-                    if Document.amounts_match(invoice_line.unit_price,
-                        unit_price)]
-                if matching:
-                    line_candidates = matching
-            line_candidates = line.filter_invoice_line_candidates(
-                line_candidates)
+            line_candidates = line.get_line_candidates([
+                    invoice_line for invoice_line in candidates
+                    if invoice_line.id not in used])
             if not line_candidates:
                 continue
             issue_date = tools.to_date(data.get('issue_date')) or date.today()
