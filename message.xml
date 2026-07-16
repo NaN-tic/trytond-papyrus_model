@@ -33,6 +33,9 @@
         <record model="ir.message" id="msg_mismatch_quantity">
             <field name="text">Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
         </record>
+        <record model="ir.message" id="msg_mismatch_number_of_packages">
+            <field name="text">Number of packages mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
+        </record>
         <record model="ir.message" id="msg_mismatch_unit_price">
             <field name="text">Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
         </record>
