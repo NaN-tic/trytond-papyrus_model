@@ -7,7 +7,7 @@ from datetime import datetime
 from magic import Magic
 from sql.conditionals import Greatest
 from sql.functions import Upper
-from trytond.config import config
+import trytond.config as config
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.modules.widgets.tools import Similarity, create_similarity
