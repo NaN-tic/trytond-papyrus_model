@@ -291,8 +291,7 @@ class Document(metaclass=PoolMeta):
         if not lines:
             lines = []
             for item in data.get('line_items', []):
-                line = PapyrusPurchaseLine()
-                line.set_from_data(item)
+                line = PapyrusPurchaseLine.build(item)
                 lines.append(line)
             purchase.papyrus_lines = lines
         PapyrusPurchaseLine.find_product(purchase.party, lines)
@@ -477,7 +476,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
 
-    def set_from_data(self, data):
+    @classmethod
+    def build(cls, data):
+        line = cls()
         product_code = data.get('product_code')
         if isinstance(product_code, str):
             product_code = product_code.replace('\x00', '').strip() or None
@@ -487,18 +488,19 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         description = data.get('description')
         if isinstance(description, str):
             description = description.replace('\x00', '').strip()
-        self.product_code = product_code
-        self.external_code = external_code
-        self.description = description
-        self.quantity = tools.to_decimal(data.get('quantity'))
-        self.unit_price = tools.to_decimal(data.get('unit_price'))
-        self.discount_rate = tools.to_decimal(data.get('discount'))
-        self.amount = tools.to_decimal(data.get('line_total_excl_tax'))
-        if self.discount_rate:
-            self.discount_rate = abs(self.discount_rate)
+        line.product_code = product_code
+        line.external_code = external_code
+        line.description = description
+        line.quantity = tools.to_decimal(data.get('quantity'))
+        line.unit_price = tools.to_decimal(data.get('unit_price'))
+        line.discount_rate = tools.to_decimal(data.get('discount'))
+        line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        if line.discount_rate:
+            line.discount_rate = abs(line.discount_rate)
         taxes = data.get('tax_rate')
         if taxes is not None:
-            self.taxes = str(taxes)
+            line.taxes = str(taxes)
+        return line
 
     def get_purchase_line(self):
         PurchaseLine = Pool().get('purchase.line')
