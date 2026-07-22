@@ -470,10 +470,6 @@ msgstr ""
 "Discrepancia de cantidad: Papyrus %(papyrus)s vs %(invoice)s de línea de factu"
 "ra"
 
-msgctxt "model:ir.message,text:msg_mismatch_number_of_packages"
-msgid "Number of packages mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
-msgstr "Discrepancia de número de paquetes: Papyrus %(papyrus)s vs línea de factura %(invoice)s"
-
 msgctxt "model:ir.message,text:msg_mismatch_unit_price"
 msgid "Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
 msgstr ""
