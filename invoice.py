@@ -237,6 +237,9 @@ class Document(metaclass=PoolMeta):
             }
         }
 
+    def should_import_data(self, data):
+        return bool(data)
+
     def guess_invoice(self):
         pool = Pool()
         Invoice = pool.get('account.invoice')
@@ -249,7 +252,7 @@ class Document(metaclass=PoolMeta):
         messages = self.guess_invoice_messages()
         schema = self.guess_invoice_schema()
         data = self.extract_data_with_llm('invoice', messages, schema)
-        if not data:
+        if not self.should_import_data(data):
             return
 
         if self.invoice:
