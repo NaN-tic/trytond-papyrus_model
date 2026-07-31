@@ -18,8 +18,8 @@
         <record model="ir.message" id="msg_cannot_change_company_shipment_in">
             <field name="text">The company of the document "%(document)s" and shipment "%(model)s" do not match</field>
         </record>
-        <record model="ir.message" id="msg_cannot_create_lines_with_unmatched_products">
-            <field name="text">Document "%(document)s" still has %(total)s lines without product. Match or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines tab) before creating final lines.</field>
+        <record model="ir.message" id="msg_papyrus_pending_lines">
+            <field name="text">Document "%(document)s" still has %(total)s pending Papyrus lines. Review them before continuing, or confirm this warning to continue with the lines already created.</field>
         </record>
         <record model="ir.message" id="msg_invoice_line_not_found">
             <field name="text">No invoice line candidate was found for "%(line)s" in invoice "%(invoice)s".</field>

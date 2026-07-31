@@ -34,6 +34,7 @@ def register():
         sale.Queue,
         sale.Document,
         sale.Sale,
+        sale.SaleLine,
         sale.PapyrusSaleLine,
         module=module, type_='model', depends=['sale'])
     Pool.register(

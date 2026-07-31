@@ -4,11 +4,12 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
+from stdnum import ean
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.wizard import Wizard, StateAction
 from trytond.pyson import PYSONEncoder, Eval, Bool, If
-from trytond.exceptions import UserError
+from trytond.exceptions import UserWarning
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
@@ -80,7 +81,7 @@ class Document(metaclass=PoolMeta):
                 "fields; use null when unknown. Extract seller/buyer info "
                 "(names, VAT/tax ID), document number, dates, "
                 "currency, our order number, supplier order number, supplier "
-                "delivery note number, line items (codes, descriptions, "
+                "delivery note number, line items (codes, EANs, descriptions, "
                 "quantities, unit prices, taxes), and totals. If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
@@ -177,6 +178,7 @@ class Document(metaclass=PoolMeta):
                                 'product_code': {'type': ['string', 'null']},
                                 'party_product_code': {
                                     'type': ['string', 'null']},
+                                'ean': {'type': ['string', 'null']},
                                 'description': {'type': 'string'},
                                 'quantity': {'type': 'number'},
                                 'unit': {
@@ -207,7 +209,7 @@ class Document(metaclass=PoolMeta):
                                 'tax_rate': {'type': 'number'},
                             },
                             'required': [
-                                'product_code', 'party_product_code',
+                                'product_code', 'party_product_code', 'ean',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
                                  'line_total_excl_tax', 'tax_rate',
@@ -492,20 +494,25 @@ class Invoice(metaclass=PoolMeta):
     @ModelView.button
     def create_lines(cls, invoices):
         for invoice in invoices:
-            pending = [line for line in getattr(invoice, 'papyrus_lines', [])
-                if (not getattr(line, 'invoice_line', None)
-                    and not getattr(line, 'product', None))]
-            if pending:
-                raise UserError(gettext('papyrus_model.'
-                        'msg_cannot_create_lines_with_unmatched_products',
-                        document=invoice.rec_name,
-                        total=len(pending)))
-
             if not invoice.document:
                 continue
 
             invoice.create_invoice_lines_from_papyrus_lines()
             invoice.save()
+
+    @classmethod
+    def post(cls, invoices):
+        Warning = Pool().get('res.user.warning')
+        for invoice in invoices:
+            pending = [line for line in invoice.papyrus_lines
+                if not line.invoice_line]
+            if pending:
+                key = 'papyrus_pending_invoice_lines.%s' % invoice.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_pending_lines',
+                            document=invoice.rec_name, total=len(pending)))
+        super().post(invoices)
 
     @classmethod
     def copy(cls, invoices, default=None):
@@ -569,6 +576,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
+    ean = fields.Char('EAN')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
@@ -592,11 +600,15 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         external_code = data.get('party_product_code')
         if isinstance(external_code, str):
             external_code = external_code.replace('\x00', '').strip() or None
+        ean_code = data.get('ean')
+        if isinstance(ean_code, str):
+            ean_code = ean_code.replace('\x00', '').strip() or None
         description = data.get('description')
         if isinstance(description, str):
             description = description.replace('\x00', '').strip()
         line.product_code = product_code
         line.external_code = external_code
+        line.ean = ean_code
         line.description = description
         line.quantity = tools.to_decimal(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
@@ -740,11 +752,43 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             return
         pool = Pool()
         Product = pool.get('product.product')
+        Identifier = pool.get('product.identifier')
         HistoryLine = pool.get('papyrus.invoice.line')
         try:
             ProductSupplier = pool.get('purchase.product_supplier')
         except KeyError:
             ProductSupplier = None
+
+        ean_codes = []
+        for line in lines:
+            ean_code = getattr(line, 'ean', None)
+            if isinstance(ean_code, str):
+                ean_code = ean_code.replace('\x00', '').strip() or None
+                line.ean = ean_code
+            if ean_code and ean.is_valid(ean_code):
+                ean_codes.append(ean.compact(ean_code))
+        products_by_ean = {}
+        if ean_codes:
+            identifiers = Identifier.search([
+                    ('type', '=', 'ean'),
+                    ('code', 'in', list(set(ean_codes))),
+                    ])
+            for identifier in identifiers:
+                code = ean.compact(identifier.code)
+                if code in products_by_ean:
+                    products_by_ean[code] = None
+                else:
+                    products_by_ean[code] = identifier.product
+        for line in lines:
+            ean_code = getattr(line, 'ean', None)
+            if ean_code and ean.is_valid(ean_code):
+                product = products_by_ean.get(ean.compact(ean_code))
+                if product:
+                    line.product = product
+
+        lines = [line for line in lines if not getattr(line, 'product', None)]
+        if not lines:
+            return
 
         values = []
         for line in lines:

@@ -6,6 +6,8 @@
                 <field name="document"/>
                 <label name="papyrus_name"/>
                 <field name="papyrus_name"/>
+                <label name="previous_sale_reference"/>
+                <field name="previous_sale_reference"/>
             </group>
             <group id="papyrus_line_actions" colspan="4" col="2">
                 <button name="create_lines"/>
