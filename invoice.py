@@ -759,37 +759,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         except KeyError:
             ProductSupplier = None
 
-        ean_codes = []
-        for line in lines:
-            ean_code = getattr(line, 'ean', None)
-            if isinstance(ean_code, str):
-                ean_code = ean_code.replace('\x00', '').strip() or None
-                line.ean = ean_code
-            if ean_code and ean.is_valid(ean_code):
-                ean_codes.append(ean.compact(ean_code))
-        products_by_ean = {}
-        if ean_codes:
-            identifiers = Identifier.search([
-                    ('type', '=', 'ean'),
-                    ('code', 'in', list(set(ean_codes))),
-                    ])
-            for identifier in identifiers:
-                code = ean.compact(identifier.code)
-                if code in products_by_ean:
-                    products_by_ean[code] = None
-                else:
-                    products_by_ean[code] = identifier.product
-        for line in lines:
-            ean_code = getattr(line, 'ean', None)
-            if ean_code and ean.is_valid(ean_code):
-                product = products_by_ean.get(ean.compact(ean_code))
-                if product:
-                    line.product = product
-
-        lines = [line for line in lines if not getattr(line, 'product', None)]
-        if not lines:
-            return
-
         values = []
         for line in lines:
             description = getattr(line, 'description', None)
@@ -804,6 +773,10 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if isinstance(external_code, str):
                 external_code = external_code.replace('\x00', '').strip() or None
                 line.external_code = external_code
+            ean_code = getattr(line, 'ean', None)
+            if isinstance(ean_code, str):
+                ean_code = ean_code.replace('\x00', '').strip() or None
+                line.ean = ean_code
             if product_code:
                 values.append(product_code)
             if external_code:
@@ -811,6 +784,23 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if description:
                 values.append(description)
 
+        ean_codes = []
+        for line in lines:
+            ean_code = getattr(line, 'ean', None)
+            if ean_code and ean.is_valid(ean_code):
+                ean_codes.append(ean.compact(ean_code))
+        products_by_ean = {}
+        if ean_codes:
+            identifiers = Identifier.search([
+                    ('type', '=', 'ean'),
+                    ('code', 'in', list(set(ean_codes))),
+                    ])
+            for identifier in identifiers:
+                code = ean.compact(identifier.code)
+                if code in products_by_ean:
+                    products_by_ean[code] = None
+                else:
+                    products_by_ean[code] = identifier.product
         by_code = {}
         by_name = {}
         history_by_code = {}
@@ -880,9 +870,12 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             description = getattr(line, 'description', None)
             product_code = getattr(line, 'product_code', None)
             external_code = getattr(line, 'external_code', None)
-            product = None
+            ean_code = getattr(line, 'ean', None)
+            product = (
+                products_by_ean.get(ean.compact(ean_code))
+                if ean_code and ean.is_valid(ean_code) else None)
             if product_code:
-                product = by_code.get(product_code)
+                product = product or by_code.get(product_code)
             if not product and external_code:
                 product = by_code.get(external_code)
             if not product and description:

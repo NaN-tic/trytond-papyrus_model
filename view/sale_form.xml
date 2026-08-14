@@ -9,6 +9,10 @@
                 <label name="previous_sale_reference"/>
                 <field name="previous_sale_reference"/>
             </group>
+            <group id="previous_sales" colspan="4" col="2">
+                <label name="previous_sales"/>
+                <field name="previous_sales" colspan="3"/>
+            </group>
             <group id="papyrus_line_actions" colspan="4" col="2">
                 <button name="create_lines"/>
             </group>

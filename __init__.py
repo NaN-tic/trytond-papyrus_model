@@ -32,9 +32,11 @@ def register():
         module=module, type_='model', depends=['stock'])
     Pool.register(
         sale.Queue,
+        sale.Configuration,
         sale.Document,
         sale.Sale,
         sale.SaleLine,
+        sale.SalePreviousSale,
         sale.PapyrusSaleLine,
         module=module, type_='model', depends=['sale'])
     Pool.register(

@@ -101,6 +101,10 @@ msgctxt "field:papyrus.invoice.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descuento (%)"
 
+msgctxt "field:papyrus.invoice.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
 msgctxt "field:papyrus.invoice.line,external_code:"
 msgid "External Code"
 msgstr "Código externo"
@@ -156,6 +160,10 @@ msgstr "Descripción"
 msgctxt "field:papyrus.purchase.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.purchase.line,ean:"
+msgid "EAN"
+msgstr "EAN"
 
 msgctxt "field:papyrus.purchase.line,external_code:"
 msgid "External Code"
@@ -276,6 +284,10 @@ msgstr "Descripción"
 msgctxt "field:papyrus.shipment.in.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descuento (%)"
+
+msgctxt "field:papyrus.shipment.in.line,ean:"
+msgid "EAN"
+msgstr "EAN"
 
 msgctxt "field:papyrus.shipment.in.line,external_code:"
 msgid "External Code"
@@ -401,16 +413,57 @@ msgstr ""
 "La empresa del documento \"%(document)s\" y del albarán \"%(model)s\" no "
 "coinciden"
 
-msgctxt "model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
+msgctxt "model:ir.message,text:msg_papyrus_pending_lines"
 msgid ""
-"Document \"%(document)s\" still has %(total)s lines without product. Match "
-"or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines"
-" tab) before creating final lines."
+"Document \"%(document)s\" still has %(total)s pending Papyrus lines. Review "
+"them before continuing, or confirm this warning to continue with the lines "
+"already created."
 msgstr ""
-"El documento \"%(document)s\" todavía tiene %(total)s líneas sin producto. "
-"Relacione o complete los productos en el registro relacionado "
-"(factura/venta/albarán, pestaña Líneas Papyrus) antes de crear las líneas "
-"finales."
+"El documento \"%(document)s\" todavía tiene %(total)s líneas Papyrus "
+"pendientes. Revísalas antes de continuar o confirme este aviso para seguir "
+"con las líneas ya creadas."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_not_quotation"
+msgid "Previous sale \"%(sale)s\" is not an active quotation and cannot be linked."
+msgstr "La venta anterior \"%(sale)s\" no es un presupuesto activo y no se puede vincular."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_expired"
+msgid "Sale \"%(sale)s\" refers to expired quotation(s) %(quotations)s. Review the prices before confirming."
+msgstr "La venta \"%(sale)s\" hace referencia a los presupuestos caducados %(quotations)s. Revise los precios antes de confirmar."
+
+msgctxt "model:ir.message,text:msg_sale_previous_sale_unique"
+msgid "A previous sale can only be linked once to the same sale."
+msgstr "Una venta anterior solo se puede vincular una vez a la misma venta."
+
+msgctxt "field:papyrus.sale.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referencia de venta anterior"
+
+msgctxt "field:sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referencia de venta anterior"
+
+msgctxt "field:sale.sale,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referencia de venta anterior"
+
+msgctxt "field:sale.sale,previous_sales:"
+msgid "Previous Sales"
+msgstr "Ventas anteriores"
+
+msgctxt "field:sale.sale-previous.sale,sale:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "field:sale.sale-previous.sale,previous_sale:"
+msgid "Previous Sale"
+msgstr "Venta anterior"
 
 msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
 msgid ""

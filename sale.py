@@ -6,9 +6,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 from stdnum import ean
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import Unique, fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
-from trytond.exceptions import UserWarning
+from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
@@ -22,6 +22,14 @@ class Queue(metaclass=PoolMeta):
         return super()._get_model_type() + [
             ('sale', 'Sale'),
             ]
+
+
+class Configuration(metaclass=PoolMeta):
+    __name__ = 'sale.configuration'
+
+    @staticmethod
+    def default_sale_quotation_validity(**pattern):
+        return timedelta(weeks=1)
 
 
 class Document(metaclass=PoolMeta):
@@ -64,6 +72,16 @@ class Document(metaclass=PoolMeta):
 
     def guess_sale_messages(self):
         info = self.get_company_info()
+        Configuration = Pool().get('sale.configuration')
+        sequence = Configuration(1).get_multivalue(
+            'sale_sequence', company=self.document_company.id)
+        pattern = []
+        if sequence and sequence.prefix:
+            pattern.append('prefix %s' % sequence.prefix)
+        if sequence and sequence.suffix:
+            pattern.append('suffix %s' % sequence.suffix)
+        if sequence and sequence.padding:
+            pattern.append('%s digit number' % sequence.padding)
         system = {
             "role": "system",
             "content": (
@@ -90,7 +108,14 @@ class Document(metaclass=PoolMeta):
                 "them as tax/withholding adjustments instead of product or "
                 "service line items. Do not create a separate line item only "
                 "for the withholding; reflect it through taxes, totals, or "
-                "notes when needed."
+                "notes when needed. Our internal quotation and sale "
+                "references use %s. Only fill previous_sale_reference when "
+                "the document explicitly states one of our prior references. "
+                "Do not infer it from the customer order number or another "
+                "external reference. Use the line property only when the "
+                "reference applies to that line."
+                % (', '.join(pattern) if pattern else
+                    'the configured sale sequence')
                 )
             }
 
@@ -309,6 +334,7 @@ class Document(metaclass=PoolMeta):
         PapyrusSaleLine.find_product(sale.party, lines)
         sale.create_sale_lines_from_papyrus_lines()
         sale.save()
+        sale.link_previous_sales()
 
     def find_sale_party_from_data(self, data, extracted_data=None):
         Party = Pool().get('party.party')
@@ -359,6 +385,11 @@ class Sale(metaclass=PoolMeta):
     document = fields.Many2One('papyrus.document', "Document")
     papyrus_name = fields.Char('Papyrus Name')
     previous_sale_reference = fields.Char('Previous Sale Reference')
+    previous_sales = fields.Many2Many(
+        'sale.sale-previous.sale', 'sale', 'previous_sale', 'Previous Sales',
+        states={
+            'readonly': Eval('state') != 'draft',
+            })
     papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount', states={
             'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
             })
@@ -381,6 +412,68 @@ class Sale(metaclass=PoolMeta):
         'Papyrus Lines', states={
             'invisible': ~Bool(Eval('papyrus_lines')),
             })
+
+    def get_previous_sales_to_link(self):
+        Sale = Pool().get('sale.sale')
+
+        references = []
+        if self.previous_sale_reference:
+            references.append(self.previous_sale_reference)
+        references.extend(line.previous_sale_reference for line in self.lines
+            if line.previous_sale_reference)
+        references = list(dict.fromkeys(references))
+        if not references:
+            return []
+
+        previous_sales = Sale.search([
+                ('number', 'in', references),
+                ('company', '=', self.company.id),
+                ('party', '=', self.party.id),
+                ])
+        by_number = {sale.number: sale for sale in previous_sales}
+        linked = {sale.id for sale in self.previous_sales}
+        to_link = []
+        for reference in references:
+            previous_sale = by_number.get(reference)
+            if not previous_sale or previous_sale.id in linked:
+                continue
+            if previous_sale.state != 'quotation':
+                raise UserError(gettext(
+                        'papyrus_model.msg_previous_sale_not_quotation',
+                        sale=previous_sale.rec_name))
+            to_link.append(previous_sale)
+        return to_link
+
+    def link_previous_sales(self):
+        PreviousSale = Pool().get('sale.sale-previous.sale')
+        previous_sales = self.get_previous_sales_to_link()
+        if previous_sales:
+            PreviousSale.create([{
+                    'sale': self.id,
+                    'previous_sale': previous_sale.id,
+                    } for previous_sale in previous_sales])
+
+    def previous_sale_is_expired(self, previous_sale):
+        Date = Pool().get('ir.date')
+
+        with Transaction().set_context(company=self.company.id):
+            return bool(
+                previous_sale.quotation_expire
+                and previous_sale.quotation_expire < Date.today())
+
+    def is_previous_sale_reference_expired(self, reference):
+        Sale = Pool().get('sale.sale')
+
+        if not reference or not self.company or not self.party:
+            return False
+        previous_sales = Sale.search([
+                ('number', '=', reference),
+                ('company', '=', self.company.id),
+                ('party', '=', self.party.id),
+                ('state', '=', 'quotation'),
+                ])
+        return any(self.previous_sale_is_expired(s)
+            for s in previous_sales)
 
     def get_papyrus_untaxed_amount_matches(self, name):
         if not isinstance(self.papyrus_untaxed_amount, Decimal):
@@ -461,7 +554,20 @@ class Sale(metaclass=PoolMeta):
                     raise UserWarning(key, gettext(
                             'papyrus_model.msg_papyrus_pending_lines',
                             document=sale.rec_name, total=len(pending)))
+            expired = [s for s in sale.previous_sales
+                if sale.previous_sale_is_expired(s)]
+            if expired:
+                key = 'papyrus_expired_previous_sale.%s' % sale.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_previous_sale_expired',
+                            sale=sale.rec_name,
+                            quotations=', '.join(
+                                s.rec_name for s in expired)))
         super().confirm(sales)
+        for sale in sales:
+            if sale.previous_sales:
+                cls.cancel(sale.previous_sales)
 
     @classmethod
     def copy(cls, sales, default=None):
@@ -523,6 +629,25 @@ class SaleLine(metaclass=PoolMeta):
     __name__ = 'sale.line'
 
     previous_sale_reference = fields.Char('Previous Sale Reference')
+
+
+class SalePreviousSale(ModelSQL):
+    __name__ = 'sale.sale-previous.sale'
+
+    sale = fields.Many2One('sale.sale', 'Sale', required=True,
+        ondelete='CASCADE')
+    previous_sale = fields.Many2One('sale.sale', 'Previous Sale',
+        required=True, ondelete='CASCADE')
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        table = cls.__table__()
+        cls._sql_constraints += [
+            ('sale_previous_sale_unique', Unique(table, table.sale,
+                table.previous_sale),
+                'papyrus_model.msg_sale_previous_sale_unique'),
+            ]
 
 
 class PapyrusSaleLine(ModelSQL, ModelView):
@@ -665,37 +790,6 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         except KeyError:
             ProductCustomer = None
 
-        ean_codes = []
-        for line in lines:
-            ean_code = getattr(line, 'ean', None)
-            if isinstance(ean_code, str):
-                ean_code = ean_code.replace('\x00', '').strip() or None
-                line.ean = ean_code
-            if ean_code and ean.is_valid(ean_code):
-                ean_codes.append(ean.compact(ean_code))
-        products_by_ean = {}
-        if ean_codes:
-            identifiers = Identifier.search([
-                    ('type', '=', 'ean'),
-                    ('code', 'in', list(set(ean_codes))),
-                    ])
-            for identifier in identifiers:
-                code = ean.compact(identifier.code)
-                if code in products_by_ean:
-                    products_by_ean[code] = None
-                else:
-                    products_by_ean[code] = identifier.product
-        for line in lines:
-            ean_code = getattr(line, 'ean', None)
-            if ean_code and ean.is_valid(ean_code):
-                product = products_by_ean.get(ean.compact(ean_code))
-                if product:
-                    line.product = product
-
-        lines = [line for line in lines if not getattr(line, 'product', None)]
-        if not lines:
-            return
-
         values = []
         for line in lines:
             description = getattr(line, 'description', None)
@@ -710,6 +804,10 @@ class PapyrusSaleLine(ModelSQL, ModelView):
             if isinstance(external_code, str):
                 external_code = external_code.replace('\x00', '').strip() or None
                 line.external_code = external_code
+            ean_code = getattr(line, 'ean', None)
+            if isinstance(ean_code, str):
+                ean_code = ean_code.replace('\x00', '').strip() or None
+                line.ean = ean_code
             if product_code:
                 values.append(product_code)
             if external_code:
@@ -717,6 +815,23 @@ class PapyrusSaleLine(ModelSQL, ModelView):
             if description:
                 values.append(description)
 
+        ean_codes = []
+        for line in lines:
+            ean_code = getattr(line, 'ean', None)
+            if ean_code and ean.is_valid(ean_code):
+                ean_codes.append(ean.compact(ean_code))
+        products_by_ean = {}
+        if ean_codes:
+            identifiers = Identifier.search([
+                    ('type', '=', 'ean'),
+                    ('code', 'in', list(set(ean_codes))),
+                    ])
+            for identifier in identifiers:
+                code = ean.compact(identifier.code)
+                if code in products_by_ean:
+                    products_by_ean[code] = None
+                else:
+                    products_by_ean[code] = identifier.product
         by_code = {}
         by_name = {}
         history_by_code = {}
@@ -786,9 +901,12 @@ class PapyrusSaleLine(ModelSQL, ModelView):
             description = getattr(line, 'description', None)
             product_code = getattr(line, 'product_code', None)
             external_code = getattr(line, 'external_code', None)
-            product = None
+            ean_code = getattr(line, 'ean', None)
+            product = (
+                products_by_ean.get(ean.compact(ean_code))
+                if ean_code and ean.is_valid(ean_code) else None)
             if product_code:
-                product = by_code.get(product_code)
+                product = product or by_code.get(product_code)
             if not product and external_code:
                 product = by_code.get(external_code)
             if not product and description:
