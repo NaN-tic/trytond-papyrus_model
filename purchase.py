@@ -8,7 +8,7 @@ from stdnum import ean
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
-from trytond.exceptions import UserWarning
+from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
@@ -95,7 +95,10 @@ class Document(metaclass=PoolMeta):
                 "purchase_number is our purchase/order number and "
                 "purchase_reference is the supplier's purchase/order "
                 "reference. If unsure, return the closest values in those "
-                "fields."
+                "fields. When a supplier confirms different quantities of "
+                "the same line for different delivery dates, extract every "
+                "quantity/date split in delivery_schedule. Do not merge "
+                "those dates or invent dates."
                 )
             }
         user = {
@@ -199,7 +202,25 @@ class Document(metaclass=PoolMeta):
                                 'tax_rate': {'type': 'number'},
                                 'tax_amount': {'type': 'number'},
                                 'line_total_excl_tax': {'type': 'number'},
-                                'line_total_incl_tax': {'type': 'number'}
+                                'line_total_incl_tax': {'type': 'number'},
+                                'delivery_schedule': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'object',
+                                        'properties': {
+                                            'quantity': {'type': 'number'},
+                                            'delivery_date': {
+                                                'type': ['string', 'null'],
+                                                'description': (
+                                                    'ISO 8601 date '
+                                                    '(YYYY-MM-DD).'),
+                                                },
+                                            },
+                                        'required': [
+                                            'quantity', 'delivery_date'],
+                                        'additionalProperties': False,
+                                        },
+                                    },
                             },
                             'required': [
                                 'product_code', 'party_product_code', 'ean',
@@ -207,7 +228,7 @@ class Document(metaclass=PoolMeta):
                                 'unit', 'unit_price', 'discount',
                                 'tax_rate', 'tax_amount',
                                 'line_total_excl_tax',
-                                'line_total_incl_tax',
+                                'line_total_incl_tax', 'delivery_schedule',
                                 ],
                             'additionalProperties': False
                         }
@@ -406,6 +427,7 @@ class Purchase(metaclass=PoolMeta):
 
     def create_purchase_lines_from_papyrus_lines(self):
         PurchaseLine = Pool().get('purchase.line')
+        PapyrusPurchaseLine = Pool().get('papyrus.purchase.line')
 
         to_save = []
         papyrus_lines = []
@@ -422,6 +444,57 @@ class Purchase(metaclass=PoolMeta):
             PurchaseLine.save(to_save)
             for papyrus_line, purchase_line in zip(papyrus_lines, to_save):
                 papyrus_line.purchase_line = purchase_line
+            PapyrusPurchaseLine.save(papyrus_lines)
+        self._apply_delivery_schedules()
+
+    def _apply_delivery_schedules(self):
+        pool = Pool()
+        PurchaseLine = pool.get('purchase.line')
+        Schedule = pool.get('papyrus.purchase.line.delivery_schedule')
+
+        purchase_lines = []
+        schedules = []
+        for papyrus_line in getattr(self, 'papyrus_lines', []):
+            source_line = getattr(papyrus_line, 'purchase_line', None)
+            line_schedules = list(
+                getattr(papyrus_line, 'delivery_schedules', []))
+            if not source_line or not line_schedules:
+                continue
+            if (source_line.purchase.state not in {'draft', 'quotation'}
+                    or source_line.moves):
+                raise UserError(gettext(
+                    'papyrus_model.msg_papyrus_delivery_schedule_too_late',
+                    line=papyrus_line.rec_name))
+            quantities = [schedule.quantity for schedule in line_schedules]
+            if (any(quantity is None or quantity <= 0
+                    for quantity in quantities)
+                    or (papyrus_line.quantity is not None
+                        and sum(quantities, Decimal(0))
+                        != papyrus_line.quantity)):
+                raise UserError(gettext(
+                    'papyrus_model.msg_papyrus_delivery_schedule_mismatch',
+                    line=papyrus_line.rec_name))
+            for index, schedule in enumerate(line_schedules):
+                if schedule.purchase_line:
+                    continue
+                if index == 0:
+                    line = source_line
+                else:
+                    line, = PurchaseLine.copy([source_line], default={
+                        'quantity': schedule.quantity,
+                        'delivery_date_edit': True,
+                        'delivery_date_store': schedule.delivery_date,
+                        })
+                line.quantity = schedule.quantity
+                line.delivery_date_edit = True
+                line.delivery_date_store = schedule.delivery_date
+                purchase_lines.append(line)
+                schedule.purchase_line = line
+                schedules.append(schedule)
+        if purchase_lines:
+            PurchaseLine.save(purchase_lines)
+        if schedules:
+            Schedule.save(schedules)
 
     @classmethod
     def __setup__(cls):
@@ -546,6 +619,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     product = fields.Many2One('product.product', 'Product')
     purchase_line = fields.Many2One('purchase.line', 'Purchase Line',
         ondelete='SET NULL')
+    delivery_schedules = fields.One2Many(
+        'papyrus.purchase.line.delivery_schedule', 'papyrus_line',
+        'Delivery Schedules')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
 
@@ -572,6 +648,15 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         line.unit_price = tools.to_decimal(data.get('unit_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        line.delivery_schedules = [
+            PapyrusPurchaseDeliverySchedule(
+                quantity=tools.to_decimal(item.get('quantity')),
+                delivery_date=(
+                    date.fromisoformat(item['delivery_date'])
+                    if item.get('delivery_date') else None),
+                )
+            for item in data.get('delivery_schedule', [])
+            ]
         if line.discount_rate:
             line.discount_rate = abs(line.discount_rate)
         taxes = data.get('tax_rate')
@@ -833,3 +918,15 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
+
+
+class PapyrusPurchaseDeliverySchedule(ModelSQL, ModelView):
+    __name__ = 'papyrus.purchase.line.delivery_schedule'
+
+    papyrus_line = fields.Many2One(
+        'papyrus.purchase.line', 'Papyrus Line', required=True,
+        ondelete='CASCADE')
+    quantity = fields.Numeric('Quantity', required=True)
+    delivery_date = fields.Date('Delivery Date')
+    purchase_line = fields.Many2One(
+        'purchase.line', 'Purchase Line', ondelete='SET NULL')

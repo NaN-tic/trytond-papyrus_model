@@ -104,6 +104,8 @@ class Document(metaclass=PoolMeta):
                 "quantity base that is not clearly written in the document. "
                 "quantity must be the real number of billed units, and line "
                 "totals must stay as the full line totals from the document. "
+                "Extract a promised delivery date for a line only when the "
+                "document explicitly states one. "
                 "When the document shows withholdings such as IRPF, treat "
                 "them as tax/withholding adjustments instead of product or "
                 "service line items. Do not create a separate line item only "
@@ -199,6 +201,12 @@ class Document(metaclass=PoolMeta):
                                 'ean': {'type': ['string', 'null']},
                                 'previous_sale_reference': {
                                     'type': ['string', 'null']},
+                                'delivery_date': {
+                                    'type': ['string', 'null'],
+                                    'description': (
+                                        'ISO 8601 date (YYYY-MM-DD) when '
+                                        'explicitly promised for the line.'),
+                                    },
                                 'description': {'type': 'string'},
                                 'quantity': {'type': 'number'},
                                 'unit': {
@@ -227,6 +235,7 @@ class Document(metaclass=PoolMeta):
                             'required': [
                                 'product_code', 'party_product_code', 'ean',
                                 'previous_sale_reference',
+                                'delivery_date',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
                                  'tax_rate', 'tax_amount',
@@ -491,6 +500,7 @@ class Sale(metaclass=PoolMeta):
 
     def create_sale_lines_from_papyrus_lines(self):
         SaleLine = Pool().get('sale.line')
+        PapyrusSaleLine = Pool().get('papyrus.sale.line')
 
         to_save = []
         papyrus_lines = []
@@ -507,6 +517,7 @@ class Sale(metaclass=PoolMeta):
             SaleLine.save(to_save)
             for papyrus_line, sale_line in zip(papyrus_lines, to_save):
                 papyrus_line.sale_line = sale_line
+            PapyrusSaleLine.save(papyrus_lines)
 
     @classmethod
     def __setup__(cls):
@@ -659,6 +670,7 @@ class PapyrusSaleLine(ModelSQL, ModelView):
     external_code = fields.Char('External Code')
     ean = fields.Char('EAN')
     previous_sale_reference = fields.Char('Previous Sale Reference')
+    delivery_date = fields.Date('Delivery Date')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
@@ -696,6 +708,7 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         line.external_code = external_code
         line.ean = ean_code
         line.previous_sale_reference = previous_sale_reference
+        line.delivery_date = tools.to_date(data.get('delivery_date'))
         line.description = description
         line.quantity = tools.to_decimal(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
@@ -727,6 +740,9 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         sale_line.on_change_quantity()
         sale_line.previous_sale_reference = getattr(
             self, 'previous_sale_reference', None)
+        if 'manual_delivery_date' in SaleLine._fields:
+            sale_line.manual_delivery_date = getattr(
+                self, 'delivery_date', None)
         discount_rate = getattr(self, 'discount_rate', None)
         if discount_rate:
             unit_price *= (Decimal('100') - discount_rate) / Decimal('100')

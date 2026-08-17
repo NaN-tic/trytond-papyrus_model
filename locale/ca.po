@@ -639,3 +639,33 @@ msgstr "Crea línies"
 msgctxt "view:purchase.purchase:"
 msgid "Papyrus"
 msgstr "Papyrus"
+
+msgctxt "field:papyrus.purchase.line,delivery_schedules:"
+msgid "Delivery Schedules"
+msgstr "Calendaris de lliurament"
+
+msgctxt "field:papyrus.purchase.line.delivery_schedule,delivery_date:"
+msgid "Delivery Date"
+msgstr "Data de lliurament"
+
+msgctxt "field:papyrus.sale.line,delivery_date:"
+msgid "Delivery Date"
+msgstr "Data de lliurament"
+
+msgctxt "field:papyrus.purchase.line.delivery_schedule,quantity:"
+msgid "Quantity"
+msgstr "Quantitat"
+
+msgctxt "field:papyrus.purchase.line.delivery_schedule,purchase_line:"
+msgid "Purchase Line"
+msgstr "Línia de compra"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_delivery_schedule_mismatch"
+msgid "The delivery schedule of Papyrus line \"%(line)s\" has invalid quantities or does not match the confirmed line quantity."
+msgstr "El calendari de lliurament de la línia Papyrus «%(line)s» té quantitats no vàlides o no coincideix amb la quantitat confirmada."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_delivery_schedule_too_late"
+msgid "The delivery schedule of Papyrus line \"%(line)s\" cannot be applied because the purchase already has stock moves or is no longer editable."
+msgstr "No es pot aplicar el calendari de lliurament de la línia Papyrus «%(line)s» perquè la compra ja té moviments d'estoc o ja no es pot editar."

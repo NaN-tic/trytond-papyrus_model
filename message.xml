@@ -45,5 +45,11 @@
         <record model="ir.message" id="msg_mismatch_unit_price">
             <field name="text">Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
         </record>
+        <record model="ir.message" id="msg_papyrus_delivery_schedule_mismatch">
+            <field name="text">The delivery schedule of Papyrus line "%(line)s" has invalid quantities or does not match the confirmed line quantity.</field>
+        </record>
+        <record model="ir.message" id="msg_papyrus_delivery_schedule_too_late">
+            <field name="text">The delivery schedule of Papyrus line "%(line)s" cannot be applied because the purchase already has stock moves or is no longer editable.</field>
+        </record>
     </data>
 </tryton>

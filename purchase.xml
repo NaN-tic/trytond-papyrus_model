@@ -33,5 +33,34 @@
             <field name="type">tree</field>
             <field name="name">papyrus_purchase_line_tree</field>
         </record>
+        <record model="ir.ui.view"
+            id="papyrus_purchase_delivery_schedule_view_form">
+            <field name="model">papyrus.purchase.line.delivery_schedule</field>
+            <field name="type">form</field>
+            <field name="name">papyrus_purchase_delivery_schedule_form</field>
+        </record>
+        <record model="ir.ui.view"
+            id="papyrus_purchase_delivery_schedule_view_tree">
+            <field name="model">papyrus.purchase.line.delivery_schedule</field>
+            <field name="type">tree</field>
+            <field name="name">papyrus_purchase_delivery_schedule_tree</field>
+        </record>
+        <record model="ir.model.access"
+            id="access_papyrus_purchase_delivery_schedule_default">
+            <field name="model">papyrus.purchase.line.delivery_schedule</field>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+        <record model="ir.model.access"
+            id="access_papyrus_purchase_delivery_schedule">
+            <field name="model">papyrus.purchase.line.delivery_schedule</field>
+            <field name="group" ref="purchase.group_purchase"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
     </data>
 </tryton>

@@ -4,6 +4,7 @@
     <field name="external_code" optional="0"/>
     <field name="ean" optional="1"/>
     <field name="previous_sale_reference" optional="1"/>
+    <field name="delivery_date" optional="1"/>
     <field name="description"/>
     <field name="quantity"/>
     <field name="unit_price"/>

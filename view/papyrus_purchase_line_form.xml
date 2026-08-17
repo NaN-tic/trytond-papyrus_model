@@ -24,4 +24,6 @@
     <field name="product"/>
     <label name="purchase_line"/>
     <field name="purchase_line"/>
+    <label name="delivery_schedules"/>
+    <field name="delivery_schedules" colspan="3"/>
 </form>

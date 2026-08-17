@@ -44,4 +44,5 @@ def register():
         purchase.Document,
         purchase.Purchase,
         purchase.PapyrusPurchaseLine,
+        purchase.PapyrusPurchaseDeliverySchedule,
         module=module, type_='model', depends=['purchase'])

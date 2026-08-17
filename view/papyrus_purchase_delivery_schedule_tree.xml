@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<tree editable="1">
+    <field name="papyrus_line"/>
+    <field name="quantity"/>
+    <field name="delivery_date"/>
+    <field name="purchase_line"/>
+</tree>

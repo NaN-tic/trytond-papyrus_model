@@ -6,17 +6,17 @@
                 <field name="document"/>
                 <label name="papyrus_name"/>
                 <field name="papyrus_name"/>
-                <label name="previous_sale_reference"/>
-                <field name="previous_sale_reference"/>
-            </group>
-            <group id="previous_sales" colspan="4" col="2">
-                <label name="previous_sales"/>
-                <field name="previous_sales" colspan="3"/>
             </group>
             <group id="papyrus_line_actions" colspan="4" col="2">
                 <button name="create_lines"/>
             </group>
             <field name="papyrus_lines" colspan="4"/>
+        </page>
+        <page name="previous_sales">
+            <group id="previous_sales" colspan="4" col="2">
+                <label name="previous_sales"/>
+                <field name="previous_sales" colspan="3"/>
+            </group>
         </page>
     </xpath>
 </data>
