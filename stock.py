@@ -669,10 +669,12 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             ProductSupplier = None
 
         values = []
+        ean_codes = []
         for line in lines:
             description = getattr(line, 'description', None)
             product_code = getattr(line, 'product_code', None)
             external_code = getattr(line, 'external_code', None)
+            ean_code = getattr(line, 'ean', None)
             if isinstance(description, str):
                 description = description.replace('\x00', '').strip() or None
                 line.description = description
@@ -682,7 +684,6 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             if isinstance(external_code, str):
                 external_code = external_code.replace('\x00', '').strip() or None
                 line.external_code = external_code
-            ean_code = getattr(line, 'ean', None)
             if isinstance(ean_code, str):
                 ean_code = ean_code.replace('\x00', '').strip() or None
                 line.ean = ean_code
@@ -692,12 +693,9 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                 values.append(external_code)
             if description:
                 values.append(description)
-
-        ean_codes = []
-        for line in lines:
-            ean_code = getattr(line, 'ean', None)
             if ean_code and ean.is_valid(ean_code):
                 ean_codes.append(ean.compact(ean_code))
+                values.append(ean.compact(ean_code))
         products_by_ean = {}
         if ean_codes:
             identifiers = Identifier.search([
