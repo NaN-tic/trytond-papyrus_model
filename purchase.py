@@ -650,7 +650,11 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             if ean_code and ean.is_valid(ean_code):
                 ean_codes.append(ean.compact(ean_code))
                 values.append(ean.compact(ean_code))
-        products_by_ean = {}
+        by_code = {}
+        by_name = {}
+        by_ean = {}
+        history_by_code = {}
+        history_by_description = {}
         if ean_codes:
             identifiers = Identifier.search([
                     ('type', '=', 'ean'),
@@ -658,14 +662,10 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                     ])
             for identifier in identifiers:
                 code = ean.compact(identifier.code)
-                if code in products_by_ean:
-                    products_by_ean[code] = None
+                if code in by_ean:
+                    by_ean[code] = None
                 else:
-                    products_by_ean[code] = identifier.product
-        by_code = {}
-        by_name = {}
-        history_by_code = {}
-        history_by_description = {}
+                    by_ean[code] = identifier.product
         products_by_code = Product.search([('code', 'in', values)])
         for product in products_by_code:
             if product.code:
@@ -733,7 +733,7 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             external_code = getattr(line, 'external_code', None)
             ean_code = getattr(line, 'ean', None)
             product = (
-                products_by_ean.get(ean.compact(ean_code))
+                by_ean.get(ean.compact(ean_code))
                 if ean_code and ean.is_valid(ean_code) else None)
             if product_code:
                 product = product or by_code.get(product_code)
