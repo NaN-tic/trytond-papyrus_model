@@ -72,7 +72,8 @@ class Document(metaclass=PoolMeta):
                 "per the provided schema. Use numbers for "
                 "monetary/quantitative fields; use null when unknown. Extract "
                 "seller/buyer info (names, VAT/tax ID, address, email, "
-                "phone), document number, dates, currency, line items "
+                "phone), document number, our purchase number, supplier "
+                "purchase reference, dates, currency, line items "
                 "(codes, EANs, descriptions, quantities, unit prices, discounts, "
                 "taxes, line totals), and totals. If a line contains both "
                 "our/internal product code and the supplier's product code, "
@@ -90,7 +91,11 @@ class Document(metaclass=PoolMeta):
                 "them as tax/withholding adjustments instead of product or "
                 "service line items. Do not create a separate line item only "
                 "for the withholding; reflect it through taxes, totals, or "
-                "notes when needed."
+                "notes when needed. If both purchase numbers are present, "
+                "purchase_number is our purchase/order number and "
+                "purchase_reference is the supplier's purchase/order "
+                "reference. If unsure, return the closest values in those "
+                "fields."
                 )
             }
         user = {
@@ -121,7 +126,10 @@ class Document(metaclass=PoolMeta):
                 'type': 'object',
                 'properties': {
                     'purchase_number': {
-                        'type': 'string',
+                        'type': ['string', 'null'],
+                        },
+                    'purchase_reference': {
+                        'type': ['string', 'null'],
                         },
                     'issue_date': {
                         'type': 'string',
@@ -218,9 +226,9 @@ class Document(metaclass=PoolMeta):
                         'type': 'string',
                         },
                 },
-                'required': ['purchase_number', 'issue_date',
-                    'due_date', 'currency', 'seller', 'buyer', 'line_items',
-                    'totals', 'notes'],
+                'required': ['purchase_number', 'purchase_reference',
+                    'issue_date', 'due_date', 'currency', 'seller', 'buyer',
+                    'line_items', 'totals', 'notes'],
                 'additionalProperties': False
             }
         }
@@ -244,8 +252,26 @@ class Document(metaclass=PoolMeta):
             purchase = self.purchase[0]
         else:
             purchase = None
-            purchase_number = data.get('purchase_number')
-            if purchase_number:
+            purchase_number = (data.get('purchase_number') or '').strip()
+            purchase_reference = (
+                data.get('purchase_reference') or '').strip()
+            if purchase_reference:
+                purchases = Purchase.search([
+                        ('reference', '=', purchase_reference),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+            if not purchase and purchase_number:
+                purchases = Purchase.search([
+                        ('number', '=', purchase_number),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+            if not purchase and purchase_number:
                 purchases = Purchase.search([
                         ('reference', '=', purchase_number),
                         ('company', '=', self.document_company.id),
@@ -253,6 +279,18 @@ class Document(metaclass=PoolMeta):
                         ])
                 if len(purchases) == 1:
                     purchase, = purchases
+                    purchase_number, purchase_reference = (
+                        purchase_reference, purchase_number)
+            if not purchase and purchase_reference:
+                purchases = Purchase.search([
+                        ('number', '=', purchase_reference),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+                    purchase_number, purchase_reference = (
+                        purchase_reference, purchase_number)
             if purchase:
                 purchase.document = self
             else:
@@ -294,7 +332,7 @@ class Document(metaclass=PoolMeta):
         purchase.save()
 
         if not purchase.reference:
-            purchase.reference = data['purchase_number']
+            purchase.reference = purchase_reference or purchase_number
         if not purchase.purchase_date:
             purchase.purchase_date = tools.to_date(data['issue_date'])
         seller = data.get('seller', {})
