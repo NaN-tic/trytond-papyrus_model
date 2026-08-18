@@ -101,6 +101,10 @@ msgctxt "field:papyrus.invoice.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descompte (%)"
 
+msgctxt "field:papyrus.invoice.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
 msgctxt "field:papyrus.invoice.line,external_code:"
 msgid "External Code"
 msgstr "Codi extern"
@@ -156,6 +160,10 @@ msgstr "Descripció"
 msgctxt "field:papyrus.purchase.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descompte (%)"
+
+msgctxt "field:papyrus.purchase.line,ean:"
+msgid "EAN"
+msgstr "EAN"
 
 msgctxt "field:papyrus.purchase.line,external_code:"
 msgid "External Code"
@@ -276,6 +284,10 @@ msgstr "Descripció"
 msgctxt "field:papyrus.shipment.in.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descompte (%)"
+
+msgctxt "field:papyrus.shipment.in.line,ean:"
+msgid "EAN"
+msgstr "EAN"
 
 msgctxt "field:papyrus.shipment.in.line,external_code:"
 msgid "External Code"
@@ -401,16 +413,57 @@ msgstr ""
 "La empresa del document \"%(document)s\" i del albarà \"%(model)s\" no "
 "coincideixen"
 
-msgctxt "model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
+msgctxt "model:ir.message,text:msg_papyrus_pending_lines"
 msgid ""
-"Document \"%(document)s\" still has %(total)s lines without product. Match "
-"or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines"
-" tab) before creating final lines."
+"Document \"%(document)s\" still has %(total)s pending Papyrus lines. Review "
+"them before continuing, or confirm this warning to continue with the lines "
+"already created."
 msgstr ""
-"El document \"%(document)s\" encara té %(total)s línies sense producte. "
-"Relaciona o completa els productes al registre relacionat "
-"(factura/venda/albarà, pestanya Línies Papyrus) abans de crear les línies "
-"finals."
+"El document \"%(document)s\" encara té %(total)s línies Papyrus pendents. "
+"Revisa-les abans de continuar o confirma aquest avís per seguir amb les "
+"línies ja creades."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_not_quotation"
+msgid "Previous sale \"%(sale)s\" is not an active quotation and cannot be linked."
+msgstr "La venda anterior \"%(sale)s\" no és un pressupost actiu i no es pot vincular."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_expired"
+msgid "Sale \"%(sale)s\" refers to expired quotation(s) %(quotations)s. Review the prices before confirming."
+msgstr "La venda \"%(sale)s\" fa referència als pressupostos caducats %(quotations)s. Revisa els preus abans de confirmar."
+
+msgctxt "model:ir.message,text:msg_sale_previous_sale_unique"
+msgid "A previous sale can only be linked once to the same sale."
+msgstr "Una venda anterior només es pot vincular una vegada a la mateixa venda."
+
+msgctxt "field:papyrus.sale.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referència de venda anterior"
+
+msgctxt "field:sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referència de venda anterior"
+
+msgctxt "field:sale.sale,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Referència de venda anterior"
+
+msgctxt "field:sale.sale,previous_sales:"
+msgid "Previous Sales"
+msgstr "Vendes anteriors"
+
+msgctxt "field:sale.sale-previous.sale,sale:"
+msgid "Sale"
+msgstr "Venda"
+
+msgctxt "field:sale.sale-previous.sale,previous_sale:"
+msgid "Previous Sale"
+msgstr "Venda anterior"
 
 msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
 msgid ""
@@ -586,3 +639,29 @@ msgstr "Crea línies"
 msgctxt "view:purchase.purchase:"
 msgid "Papyrus"
 msgstr "Papyrus"
+
+msgctxt "field:papyrus.purchase.line,delivery_date:"
+msgid "Delivery Date"
+msgstr "Data de lliurament"
+
+msgctxt "field:papyrus.purchase.line,purchase_lines:"
+msgid "Purchase Lines"
+msgstr "Línies de compra"
+
+msgctxt "field:purchase.line,desired_delivery_date:"
+msgid "Desired Delivery Date"
+msgstr "Data de lliurament desitjada"
+
+msgctxt "field:purchase.line,papyrus_line:"
+msgid "Papyrus Line"
+msgstr "Línia Papyrus"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_missing_purchase_lines"
+msgid "Purchase \"%(document)s\" has %(total)s order lines that were not read by Papyrus. Review them before continuing, or confirm this warning to continue."
+msgstr "La compra «%(document)s» té %(total)s línies que Papyrus no ha llegit. Revisa-les abans de continuar o confirma aquest avís per seguir."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_purchase_lines_too_late"
+msgid "Purchase \"%(purchase)s\" cannot be reconciled because it is no longer editable."
+msgstr "La compra «%(purchase)s» no es pot reconciliar perquè ja no es pot editar."

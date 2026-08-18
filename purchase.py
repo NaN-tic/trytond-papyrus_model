@@ -4,10 +4,11 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
+from stdnum import ean
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
-from trytond.exceptions import UserError
+from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
@@ -71,8 +72,9 @@ class Document(metaclass=PoolMeta):
                 "per the provided schema. Use numbers for "
                 "monetary/quantitative fields; use null when unknown. Extract "
                 "seller/buyer info (names, VAT/tax ID, address, email, "
-                "phone), document number, dates, currency, line items "
-                "(codes, descriptions, quantities, unit prices, discounts, "
+                "phone), document number, our purchase number, supplier "
+                "purchase reference, dates, currency, line items "
+                "(codes, EANs, descriptions, quantities, unit prices, discounts, "
                 "taxes, line totals), and totals. If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
@@ -83,13 +85,23 @@ class Document(metaclass=PoolMeta):
                 "pack, etc., copy that value into unit and use it to "
                 "normalize unit_price to one unit. Never invent or guess a "
                 "quantity base that is not clearly written in the document. "
-                "quantity must be the real number of billed units, and line "
-                "totals must stay as the full line totals from the document. "
+                "quantity must be the real number of billed units. For a "
+                "quantity/date split, report the amount for that split and "
+                "make all split quantities and amounts add up to the full "
+                "line totals from the document. "
                 "When the document shows withholdings such as IRPF, treat "
                 "them as tax/withholding adjustments instead of product or "
                 "service line items. Do not create a separate line item only "
                 "for the withholding; reflect it through taxes, totals, or "
-                "notes when needed."
+                "notes when needed. If both purchase numbers are present, "
+                "purchase_number is our purchase/order number and "
+                "purchase_reference is the supplier's purchase/order "
+                "reference. If unsure, return the closest values in those "
+                "fields. When a supplier confirms different quantities of "
+                "the same product for different delivery dates, return one "
+                "line item for each quantity/date split. Repeat the product "
+                "and pricing data on each split. Do not merge dates or invent "
+                "dates."
                 )
             }
         user = {
@@ -120,15 +132,14 @@ class Document(metaclass=PoolMeta):
                 'type': 'object',
                 'properties': {
                     'purchase_number': {
-                        'type': 'string',
+                        'type': ['string', 'null'],
+                        },
+                    'purchase_reference': {
+                        'type': ['string', 'null'],
                         },
                     'issue_date': {
                         'type': 'string',
                         'description': 'ISO 8601 date (YYYY-MM-DD) if possible.',
-                        },
-                    'due_date': {
-                        'type': 'string',
-                        'description': 'ISO 8601 date (YYYY-MM-DD) if present.',
                         },
                     'currency': {
                         'type': 'string',
@@ -166,6 +177,7 @@ class Document(metaclass=PoolMeta):
                                 'product_code': {'type': ['string', 'null']},
                                 'party_product_code': {
                                     'type': ['string', 'null']},
+                                'ean': {'type': ['string', 'null']},
                                 'description': {'type': 'string'},
                                 'quantity': {'type': 'number'},
                                 'unit': {
@@ -189,15 +201,22 @@ class Document(metaclass=PoolMeta):
                                 'tax_rate': {'type': 'number'},
                                 'tax_amount': {'type': 'number'},
                                 'line_total_excl_tax': {'type': 'number'},
-                                'line_total_incl_tax': {'type': 'number'}
+                                'line_total_incl_tax': {'type': 'number'},
+                                'delivery_date': {
+                                    'type': ['string', 'null'],
+                                    'description': (
+                                        'Committed delivery date for this '
+                                        'quantity split, ISO 8601 date '
+                                        '(YYYY-MM-DD).'),
+                                    },
                             },
                             'required': [
-                                'product_code', 'party_product_code',
+                                'product_code', 'party_product_code', 'ean',
                                 'description', 'quantity',
                                 'unit', 'unit_price', 'discount',
                                 'tax_rate', 'tax_amount',
                                 'line_total_excl_tax',
-                                'line_total_incl_tax',
+                                'line_total_incl_tax', 'delivery_date',
                                 ],
                             'additionalProperties': False
                         }
@@ -216,9 +235,9 @@ class Document(metaclass=PoolMeta):
                         'type': 'string',
                         },
                 },
-                'required': ['purchase_number', 'issue_date',
-                    'due_date', 'currency', 'seller', 'buyer', 'line_items',
-                    'totals', 'notes'],
+                'required': ['purchase_number', 'purchase_reference',
+                    'issue_date', 'currency', 'seller', 'buyer',
+                    'line_items', 'totals', 'notes'],
                 'additionalProperties': False
             }
         }
@@ -241,10 +260,53 @@ class Document(metaclass=PoolMeta):
         if self.purchase:
             purchase = self.purchase[0]
         else:
-            purchase = Purchase()
-            purchase.document = self
-            purchase.company = self.document_company
-            purchase.on_change_company()
+            purchase = None
+            purchase_number = (data.get('purchase_number') or '').strip()
+            purchase_reference = (
+                data.get('purchase_reference') or '').strip()
+            if purchase_reference:
+                purchases = Purchase.search([
+                        ('reference', '=', purchase_reference),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+            if not purchase and purchase_number:
+                purchases = Purchase.search([
+                        ('number', '=', purchase_number),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+            if not purchase and purchase_number:
+                purchases = Purchase.search([
+                        ('reference', '=', purchase_number),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+                    purchase_number, purchase_reference = (
+                        purchase_reference, purchase_number)
+            if not purchase and purchase_reference:
+                purchases = Purchase.search([
+                        ('number', '=', purchase_reference),
+                        ('company', '=', self.document_company.id),
+                        ('document', '=', None),
+                        ])
+                if len(purchases) == 1:
+                    purchase, = purchases
+                    purchase_number, purchase_reference = (
+                        purchase_reference, purchase_number)
+            if purchase:
+                purchase.document = self
+            else:
+                purchase = Purchase()
+                purchase.document = self
+                purchase.company = self.document_company
+                purchase.on_change_company()
 
         if (getattr(purchase, 'papyrus_lines', None)
                 and not Transaction().context.get('papyrus_reinspect')):
@@ -279,7 +341,7 @@ class Document(metaclass=PoolMeta):
         purchase.save()
 
         if not purchase.reference:
-            purchase.reference = data['purchase_number']
+            purchase.reference = purchase_reference or purchase_number
         if not purchase.purchase_date:
             purchase.purchase_date = tools.to_date(data['issue_date'])
         seller = data.get('seller', {})
@@ -353,22 +415,91 @@ class Purchase(metaclass=PoolMeta):
 
     def create_purchase_lines_from_papyrus_lines(self):
         PurchaseLine = Pool().get('purchase.line')
+        PapyrusPurchaseLine = Pool().get('papyrus.purchase.line')
 
-        to_save = []
-        papyrus_lines = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'purchase_line', None):
-                continue
-            purchase_line = papyrus_line.get_purchase_line()
-            if not purchase_line:
-                continue
-            to_save.append(purchase_line)
-            papyrus_lines.append(papyrus_line)
+        purchase_lines = list(self.lines)
+        for line in purchase_lines:
+            if not line.desired_delivery_date:
+                line.desired_delivery_date = (
+                    line.delivery_date_store or line.delivery_date)
 
-        if to_save:
-            PurchaseLine.save(to_save)
-            for papyrus_line, purchase_line in zip(papyrus_lines, to_save):
+        papyrus_lines = sorted(
+            [line for line in self.papyrus_lines
+                if not line.purchase_line],
+            key=lambda line: (
+                line.product.id if line.product else 0,
+                line.delivery_date or date.max,
+                line.id or 0))
+        if not purchase_lines:
+            for papyrus_line in papyrus_lines:
+                purchase_line = papyrus_line.get_purchase_line()
+                if not purchase_line:
+                    continue
+                purchase_line.delivery_date_edit = True
+                purchase_line.delivery_date_store = papyrus_line.delivery_date
+                purchase_line.desired_delivery_date = (
+                    papyrus_line.delivery_date)
+                purchase_line.papyrus_line = papyrus_line
+                # Keep the legacy link populated too. It is still used to
+                # determine whether a Papyrus line has been materialized.
                 papyrus_line.purchase_line = purchase_line
+                purchase_lines.append(purchase_line)
+        else:
+            self._reconcile_purchase_lines(purchase_lines, papyrus_lines)
+
+        if purchase_lines:
+            PurchaseLine.save(purchase_lines)
+        PapyrusPurchaseLine.save([
+                line for line in papyrus_lines
+                if line.purchase_line])
+
+    def _reconcile_purchase_lines(self, purchase_lines, papyrus_lines):
+        PurchaseLine = Pool().get('purchase.line')
+        if (self.state not in {'draft', 'quotation'}
+                or any(line.moves for line in purchase_lines)):
+            raise UserError(gettext(
+                'papyrus_model.msg_papyrus_purchase_lines_too_late',
+                purchase=self.rec_name))
+        remaining = {line: Decimal(str(line.quantity or 0))
+            for line in purchase_lines}
+        candidates = sorted(purchase_lines, key=lambda line: (
+            line.product.id if line.product else 0,
+            line.desired_delivery_date or date.max,
+            line.id or 0))
+        for papyrus_line in papyrus_lines:
+            if not papyrus_line.product or not papyrus_line.quantity:
+                continue
+            if papyrus_line.quantity <= 0:
+                continue
+            quantity = papyrus_line.quantity
+            for line in candidates:
+                if quantity <= 0 or line.product != papyrus_line.product:
+                    continue
+                available = remaining[line]
+                if available <= 0:
+                    continue
+                amount = min(quantity, available)
+                if amount < available:
+                    residual, = PurchaseLine.copy([line], default={
+                        'quantity': available - amount,
+                        'delivery_date_edit': True,
+                        'delivery_date_store': line.delivery_date,
+                        'papyrus_line': None,
+                        })
+                    residual.desired_delivery_date = (
+                        line.desired_delivery_date)
+                    candidates.insert(candidates.index(line) + 1, residual)
+                    purchase_lines.append(residual)
+                    remaining[residual] = available - amount
+                line.quantity = amount
+                line.delivery_date_edit = True
+                line.delivery_date_store = papyrus_line.delivery_date
+                line.papyrus_line = papyrus_line
+                papyrus_line.purchase_line = line
+                remaining[line] = Decimal(0)
+                quantity -= amount
+            if quantity:
+                papyrus_line.purchase_line = None
 
     @classmethod
     def __setup__(cls):
@@ -384,20 +515,59 @@ class Purchase(metaclass=PoolMeta):
     @ModelView.button
     def create_lines(cls, purchases):
         for purchase in purchases:
-            pending = [line for line in getattr(purchase, 'papyrus_lines', [])
-                if (not getattr(line, 'purchase_line', None)
-                    and not getattr(line, 'product', None))]
-            if pending:
-                raise UserError(gettext('papyrus_model.'
-                        'msg_cannot_create_lines_with_unmatched_products',
-                        document=purchase.rec_name,
-                        total=len(pending)))
-
             if not purchase.document:
                 continue
 
             purchase.create_purchase_lines_from_papyrus_lines()
             purchase.save()
+
+    @classmethod
+    def quote(cls, purchases):
+        Warning = Pool().get('res.user.warning')
+        for purchase in purchases:
+            pending = [line for line in purchase.papyrus_lines
+                if not line.purchase_line]
+            if pending:
+                key = 'papyrus_pending_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_pending_lines',
+                            document=purchase.rec_name, total=len(pending)))
+            missing = [line for line in purchase.lines
+                if not line.papyrus_line
+                and not getattr(line, 'freight_line', False)]
+            if missing:
+                key = 'papyrus_missing_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_missing_purchase_lines',
+                            document=purchase.rec_name,
+                            total=len(missing)))
+        super().quote(purchases)
+
+    @classmethod
+    def confirm(cls, purchases):
+        Warning = Pool().get('res.user.warning')
+        for purchase in purchases:
+            pending = [line for line in purchase.papyrus_lines
+                if not line.purchase_line]
+            if pending:
+                key = 'papyrus_pending_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_pending_lines',
+                            document=purchase.rec_name, total=len(pending)))
+            missing = [line for line in purchase.lines
+                if not line.papyrus_line
+                and not getattr(line, 'freight_line', False)]
+            if missing:
+                key = 'papyrus_missing_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_missing_purchase_lines',
+                            document=purchase.rec_name,
+                            total=len(missing)))
+        super().confirm(purchases)
 
     @classmethod
     def copy(cls, purchases, default=None):
@@ -455,6 +625,44 @@ class Purchase(metaclass=PoolMeta):
                 super().write([purchase], {'papyrus_name': name})
 
 
+class PurchaseLine(metaclass=PoolMeta):
+    __name__ = 'purchase.line'
+
+    desired_delivery_date = fields.Date(
+        'Desired Delivery Date', readonly=True)
+    papyrus_line = fields.Many2One(
+        'papyrus.purchase.line', 'Papyrus Line', ondelete='SET NULL')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        to_write = {}
+        for line, values in zip(lines, vlist):
+            desired = values.get('delivery_date_store')
+            if line.desired_delivery_date or not desired:
+                continue
+            to_write.setdefault(desired, []).append(line)
+        for desired, lines in to_write.items():
+            cls.write(lines, {'desired_delivery_date': desired})
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_write = {}
+        actions = iter(args)
+        for lines, values in zip(actions, actions):
+            desired = values.get('delivery_date_store')
+            if not desired:
+                continue
+            lines = [line for line in lines
+                if not line.desired_delivery_date]
+            if lines:
+                to_write.setdefault(desired, []).extend(lines)
+        super().write(*args)
+        for desired, lines in to_write.items():
+            cls.write(lines, {'desired_delivery_date': desired})
+
+
 class PapyrusPurchaseLine(ModelSQL, ModelView):
     __name__ = 'papyrus.purchase.line'
 
@@ -462,6 +670,7 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
+    ean = fields.Char('EAN')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
@@ -473,6 +682,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     product = fields.Many2One('product.product', 'Product')
     purchase_line = fields.Many2One('purchase.line', 'Purchase Line',
         ondelete='SET NULL')
+    purchase_lines = fields.One2Many(
+        'purchase.line', 'papyrus_line', 'Purchase Lines')
+    delivery_date = fields.Date('Delivery Date')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
 
@@ -485,16 +697,23 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         external_code = data.get('party_product_code')
         if isinstance(external_code, str):
             external_code = external_code.replace('\x00', '').strip() or None
+        ean_code = data.get('ean')
+        if isinstance(ean_code, str):
+            ean_code = ean_code.replace('\x00', '').strip() or None
         description = data.get('description')
         if isinstance(description, str):
             description = description.replace('\x00', '').strip()
         line.product_code = product_code
         line.external_code = external_code
+        line.ean = ean_code
         line.description = description
         line.quantity = tools.to_decimal(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        line.delivery_date = (
+            date.fromisoformat(data['delivery_date'])
+            if data.get('delivery_date') else None)
         if line.discount_rate:
             line.discount_rate = abs(line.discount_rate)
         taxes = data.get('tax_rate')
@@ -518,6 +737,8 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         purchase_line.on_change_product()
         purchase_line.description = getattr(self, 'description', None)
         purchase_line.quantity = getattr(self, 'quantity', None)
+        purchase_line.delivery_date_edit = True
+        purchase_line.delivery_date_store = self.delivery_date
         purchase_line.on_change_quantity()
         discount_rate = getattr(self, 'discount_rate', None)
         if discount_rate:
@@ -542,19 +763,22 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
 
     def get_purchase_line_matches(self, name):
         Document = Pool().get('papyrus.document')
-        purchase_line = getattr(self, 'purchase_line', None)
-        if not purchase_line:
+        purchase_lines = list(getattr(self, 'purchase_lines', []))
+        if not purchase_lines:
             return False
         quantity = getattr(self, 'quantity', None)
-        if quantity is not None and purchase_line.quantity != quantity:
+        if (quantity is not None
+                and sum((line.quantity or Decimal(0)
+                    for line in purchase_lines), Decimal(0)) != quantity):
             return False
         unit_price = getattr(self, 'unit_price', None)
-        if (unit_price is not None
-                and not Document.amounts_match(purchase_line.unit_price,
-                    unit_price)):
+        if (unit_price is not None and any(
+                not Document.amounts_match(line.unit_price, unit_price)
+                for line in purchase_lines)):
             return False
         product = getattr(self, 'product', None)
-        if product is not None and purchase_line.product != product:
+        if (product is not None
+                and any(line.product != product for line in purchase_lines)):
             return False
         return True
 
@@ -563,8 +787,8 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         return super().view_attributes() + [
             ('/tree/field[@name="amount"]',
                 'visual', If(Eval('amount_matches', False), 'success', 'danger')),
-            ('/tree/field[@name="purchase_line"]',
-                'visual', If(Bool(Eval('purchase_line')),
+            ('/tree/field[@name="purchase_lines"]',
+                'visual', If(Bool(Eval('purchase_lines')),
                     If(Eval('purchase_line_matches', False),
                         'success', 'danger'), '')),
             ]
@@ -576,6 +800,7 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             return
         pool = Pool()
         Product = pool.get('product.product')
+        Identifier = pool.get('product.identifier')
         HistoryLine = pool.get('papyrus.purchase.line')
         try:
             ProductSupplier = pool.get('purchase.product_supplier')
@@ -583,10 +808,12 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             ProductSupplier = None
 
         values = []
+        ean_codes = []
         for line in lines:
             description = getattr(line, 'description', None)
             product_code = getattr(line, 'product_code', None)
             external_code = getattr(line, 'external_code', None)
+            ean_code = getattr(line, 'ean', None)
             if isinstance(description, str):
                 description = description.replace('\x00', '').strip() or None
                 line.description = description
@@ -596,17 +823,34 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             if isinstance(external_code, str):
                 external_code = external_code.replace('\x00', '').strip() or None
                 line.external_code = external_code
+            if isinstance(ean_code, str):
+                ean_code = ean_code.replace('\x00', '').strip() or None
+                line.ean = ean_code
             if product_code:
                 values.append(product_code)
             if external_code:
                 values.append(external_code)
             if description:
                 values.append(description)
-
+            if ean_code and ean.is_valid(ean_code):
+                ean_codes.append(ean.compact(ean_code))
+                values.append(ean.compact(ean_code))
         by_code = {}
         by_name = {}
+        by_ean = {}
         history_by_code = {}
         history_by_description = {}
+        if ean_codes:
+            identifiers = Identifier.search([
+                    ('type', '=', 'ean'),
+                    ('code', 'in', list(set(ean_codes))),
+                    ])
+            for identifier in identifiers:
+                code = ean.compact(identifier.code)
+                if code in by_ean:
+                    by_ean[code] = None
+                else:
+                    by_ean[code] = identifier.product
         products_by_code = Product.search([('code', 'in', values)])
         for product in products_by_code:
             if product.code:
@@ -672,9 +916,12 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             description = getattr(line, 'description', None)
             product_code = getattr(line, 'product_code', None)
             external_code = getattr(line, 'external_code', None)
-            product = None
+            ean_code = getattr(line, 'ean', None)
+            product = (
+                by_ean.get(ean.compact(ean_code))
+                if ean_code and ean.is_valid(ean_code) else None)
             if product_code:
-                product = by_code.get(product_code)
+                product = product or by_code.get(product_code)
             if not product and external_code:
                 product = by_code.get(external_code)
             if not product and description:

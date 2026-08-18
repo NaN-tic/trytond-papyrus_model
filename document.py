@@ -218,6 +218,7 @@ class Document(metaclass=PoolMeta):
                     kind, self.id, llm, exc)
                 continue
             self.extracted_data = json.dumps(data, indent=4)
+            self.guess_company(data)
             self.save()
             return data
 
@@ -303,9 +304,57 @@ class Document(metaclass=PoolMeta):
                         model=field_to_check[0].rec_name))
 
 
-    def guess_company(self):
-        if self.company:
+    def guess_company(self, data=None):
+        if getattr(self, 'company', None):
             return
+
+        if data is None and self.extracted_data:
+            try:
+                data = json.loads(self.extracted_data)
+            except (TypeError, ValueError):
+                return
+        if not data:
+            return
+
+        buyer = data.get('buyer') or {}
+        vat = buyer.get('vat') or ''
+        vat = ''.join(char for char in vat.upper() if char.isalnum())
+
+        Company = Pool().get('company.company')
+        companies = Company.search([])
+        if vat:
+            vat_codes = {vat}
+            if vat.startswith('ES'):
+                vat_codes.add(vat[2:])
+            else:
+                vat_codes.add('ES' + vat)
+            for company in companies:
+                for identifier in company.party.identifiers:
+                    code = ''.join(
+                        char for char in identifier.code.upper()
+                        if char.isalnum())
+                    if code in vat_codes:
+                        self.company = company
+                        self.guessed_company = company
+                        return
+
+        name = buyer.get('name') or ''
+        name = ''.join(char for char in name.upper() if char.isalnum())
+        if not name:
+            return
+        matches = []
+        for company in companies:
+            names = [company.party.name, company.party.trade_name]
+            for candidate in names:
+                candidate = candidate or ''
+                candidate = ''.join(
+                    char for char in candidate.upper() if char.isalnum())
+                if candidate == name:
+                    matches.append(company)
+                    break
+        if len(matches) == 1:
+            self.company = matches[0]
+            self.guessed_company = matches[0]
 
     def guess_party(self, type_=None):
         pool = Pool()

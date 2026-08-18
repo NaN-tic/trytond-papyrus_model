@@ -18,8 +18,23 @@
         <record model="ir.message" id="msg_cannot_change_company_shipment_in">
             <field name="text">The company of the document "%(document)s" and shipment "%(model)s" do not match</field>
         </record>
-        <record model="ir.message" id="msg_cannot_create_lines_with_unmatched_products">
-            <field name="text">Document "%(document)s" still has %(total)s lines without product. Match or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines tab) before creating final lines.</field>
+        <record model="ir.message" id="msg_papyrus_pending_lines">
+            <field name="text">Document "%(document)s" still has %(total)s pending Papyrus lines. Review them before continuing, or confirm this warning to continue with the lines already created.</field>
+        </record>
+        <record model="ir.message" id="msg_papyrus_missing_purchase_lines">
+            <field name="text">Purchase "%(document)s" has %(total)s order lines that were not read by Papyrus. Review them before continuing, or confirm this warning to continue.</field>
+        </record>
+        <record model="ir.message" id="msg_papyrus_purchase_lines_too_late">
+            <field name="text">Purchase "%(purchase)s" cannot be reconciled because it is no longer editable.</field>
+        </record>
+        <record model="ir.message" id="msg_previous_sale_not_quotation">
+            <field name="text">Previous sale "%(sale)s" is not an active quotation and cannot be linked.</field>
+        </record>
+        <record model="ir.message" id="msg_previous_sale_expired">
+            <field name="text">Sale "%(sale)s" refers to expired quotation(s) %(quotations)s. Review the prices before confirming.</field>
+        </record>
+        <record model="ir.message" id="msg_sale_previous_sale_unique">
+            <field name="text">A previous sale can only be linked once to the same sale.</field>
         </record>
         <record model="ir.message" id="msg_invoice_line_not_found">
             <field name="text">No invoice line candidate was found for "%(line)s" in invoice "%(invoice)s".</field>

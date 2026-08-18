@@ -6,6 +6,12 @@
     <field name="product_code"/>
     <label name="external_code"/>
     <field name="external_code"/>
+    <label name="ean"/>
+    <field name="ean"/>
+    <label name="previous_sale_reference"/>
+    <field name="previous_sale_reference"/>
+    <label name="delivery_date"/>
+    <field name="delivery_date"/>
     <label name="description"/>
     <field name="description"/>
     <label name="quantity"/>
