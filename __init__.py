@@ -43,6 +43,6 @@ def register():
         purchase.Queue,
         purchase.Document,
         purchase.Purchase,
+        purchase.PurchaseLine,
         purchase.PapyrusPurchaseLine,
-        purchase.PapyrusPurchaseDeliverySchedule,
         module=module, type_='model', depends=['purchase'])

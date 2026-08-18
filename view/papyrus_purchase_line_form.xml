@@ -12,6 +12,8 @@
     <field name="description"/>
     <label name="quantity"/>
     <field name="quantity"/>
+    <label name="delivery_date"/>
+    <field name="delivery_date"/>
     <label name="unit_price"/>
     <field name="unit_price"/>
     <label name="discount_rate"/>
@@ -22,8 +24,6 @@
     <field name="amount"/>
     <label name="product"/>
     <field name="product"/>
-    <label name="purchase_line"/>
-    <field name="purchase_line"/>
-    <label name="delivery_schedules"/>
-    <field name="delivery_schedules" colspan="3"/>
+    <label name="purchase_lines"/>
+    <field name="purchase_lines" colspan="3"/>
 </form>

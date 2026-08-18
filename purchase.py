@@ -85,8 +85,10 @@ class Document(metaclass=PoolMeta):
                 "pack, etc., copy that value into unit and use it to "
                 "normalize unit_price to one unit. Never invent or guess a "
                 "quantity base that is not clearly written in the document. "
-                "quantity must be the real number of billed units, and line "
-                "totals must stay as the full line totals from the document. "
+                "quantity must be the real number of billed units. For a "
+                "quantity/date split, report the amount for that split and "
+                "make all split quantities and amounts add up to the full "
+                "line totals from the document. "
                 "When the document shows withholdings such as IRPF, treat "
                 "them as tax/withholding adjustments instead of product or "
                 "service line items. Do not create a separate line item only "
@@ -96,9 +98,10 @@ class Document(metaclass=PoolMeta):
                 "purchase_reference is the supplier's purchase/order "
                 "reference. If unsure, return the closest values in those "
                 "fields. When a supplier confirms different quantities of "
-                "the same line for different delivery dates, extract every "
-                "quantity/date split in delivery_schedule. Do not merge "
-                "those dates or invent dates."
+                "the same product for different delivery dates, return one "
+                "line item for each quantity/date split. Repeat the product "
+                "and pricing data on each split. Do not merge dates or invent "
+                "dates."
                 )
             }
         user = {
@@ -137,10 +140,6 @@ class Document(metaclass=PoolMeta):
                     'issue_date': {
                         'type': 'string',
                         'description': 'ISO 8601 date (YYYY-MM-DD) if possible.',
-                        },
-                    'due_date': {
-                        'type': 'string',
-                        'description': 'ISO 8601 date (YYYY-MM-DD) if present.',
                         },
                     'currency': {
                         'type': 'string',
@@ -203,23 +202,12 @@ class Document(metaclass=PoolMeta):
                                 'tax_amount': {'type': 'number'},
                                 'line_total_excl_tax': {'type': 'number'},
                                 'line_total_incl_tax': {'type': 'number'},
-                                'delivery_schedule': {
-                                    'type': 'array',
-                                    'items': {
-                                        'type': 'object',
-                                        'properties': {
-                                            'quantity': {'type': 'number'},
-                                            'delivery_date': {
-                                                'type': ['string', 'null'],
-                                                'description': (
-                                                    'ISO 8601 date '
-                                                    '(YYYY-MM-DD).'),
-                                                },
-                                            },
-                                        'required': [
-                                            'quantity', 'delivery_date'],
-                                        'additionalProperties': False,
-                                        },
+                                'delivery_date': {
+                                    'type': ['string', 'null'],
+                                    'description': (
+                                        'Committed delivery date for this '
+                                        'quantity split, ISO 8601 date '
+                                        '(YYYY-MM-DD).'),
                                     },
                             },
                             'required': [
@@ -228,7 +216,7 @@ class Document(metaclass=PoolMeta):
                                 'unit', 'unit_price', 'discount',
                                 'tax_rate', 'tax_amount',
                                 'line_total_excl_tax',
-                                'line_total_incl_tax', 'delivery_schedule',
+                                'line_total_incl_tax', 'delivery_date',
                                 ],
                             'additionalProperties': False
                         }
@@ -248,7 +236,7 @@ class Document(metaclass=PoolMeta):
                         },
                 },
                 'required': ['purchase_number', 'purchase_reference',
-                    'issue_date', 'due_date', 'currency', 'seller', 'buyer',
+                    'issue_date', 'currency', 'seller', 'buyer',
                     'line_items', 'totals', 'notes'],
                 'additionalProperties': False
             }
@@ -429,72 +417,89 @@ class Purchase(metaclass=PoolMeta):
         PurchaseLine = Pool().get('purchase.line')
         PapyrusPurchaseLine = Pool().get('papyrus.purchase.line')
 
-        to_save = []
-        papyrus_lines = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'purchase_line', None):
-                continue
-            purchase_line = papyrus_line.get_purchase_line()
-            if not purchase_line:
-                continue
-            to_save.append(purchase_line)
-            papyrus_lines.append(papyrus_line)
+        purchase_lines = list(self.lines)
+        for line in purchase_lines:
+            if not line.desired_delivery_date:
+                line.desired_delivery_date = (
+                    line.delivery_date_store or line.delivery_date)
 
-        if to_save:
-            PurchaseLine.save(to_save)
-            for papyrus_line, purchase_line in zip(papyrus_lines, to_save):
-                papyrus_line.purchase_line = purchase_line
-            PapyrusPurchaseLine.save(papyrus_lines)
-        self._apply_delivery_schedules()
-
-    def _apply_delivery_schedules(self):
-        pool = Pool()
-        PurchaseLine = pool.get('purchase.line')
-        Schedule = pool.get('papyrus.purchase.line.delivery_schedule')
-
-        purchase_lines = []
-        schedules = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
-            source_line = getattr(papyrus_line, 'purchase_line', None)
-            line_schedules = list(
-                getattr(papyrus_line, 'delivery_schedules', []))
-            if not source_line or not line_schedules:
-                continue
-            if (source_line.purchase.state not in {'draft', 'quotation'}
-                    or source_line.moves):
-                raise UserError(gettext(
-                    'papyrus_model.msg_papyrus_delivery_schedule_too_late',
-                    line=papyrus_line.rec_name))
-            quantities = [schedule.quantity for schedule in line_schedules]
-            if (any(quantity is None or quantity <= 0
-                    for quantity in quantities)
-                    or (papyrus_line.quantity is not None
-                        and sum(quantities, Decimal(0))
-                        != papyrus_line.quantity)):
-                raise UserError(gettext(
-                    'papyrus_model.msg_papyrus_delivery_schedule_mismatch',
-                    line=papyrus_line.rec_name))
-            for index, schedule in enumerate(line_schedules):
-                if schedule.purchase_line:
+        papyrus_lines = sorted(
+            [line for line in self.papyrus_lines
+                if not line.purchase_line],
+            key=lambda line: (
+                line.product.id if line.product else 0,
+                line.delivery_date or date.max,
+                line.id or 0))
+        if not purchase_lines:
+            for papyrus_line in papyrus_lines:
+                purchase_line = papyrus_line.get_purchase_line()
+                if not purchase_line:
                     continue
-                if index == 0:
-                    line = source_line
-                else:
-                    line, = PurchaseLine.copy([source_line], default={
-                        'quantity': schedule.quantity,
-                        'delivery_date_edit': True,
-                        'delivery_date_store': schedule.delivery_date,
-                        })
-                line.quantity = schedule.quantity
-                line.delivery_date_edit = True
-                line.delivery_date_store = schedule.delivery_date
-                purchase_lines.append(line)
-                schedule.purchase_line = line
-                schedules.append(schedule)
+                purchase_line.delivery_date_edit = True
+                purchase_line.delivery_date_store = papyrus_line.delivery_date
+                purchase_line.desired_delivery_date = (
+                    papyrus_line.delivery_date)
+                purchase_line.papyrus_line = papyrus_line
+                # Keep the legacy link populated too. It is still used to
+                # determine whether a Papyrus line has been materialized.
+                papyrus_line.purchase_line = purchase_line
+                purchase_lines.append(purchase_line)
+        else:
+            self._reconcile_purchase_lines(purchase_lines, papyrus_lines)
+
         if purchase_lines:
             PurchaseLine.save(purchase_lines)
-        if schedules:
-            Schedule.save(schedules)
+        PapyrusPurchaseLine.save([
+                line for line in papyrus_lines
+                if line.purchase_line])
+
+    def _reconcile_purchase_lines(self, purchase_lines, papyrus_lines):
+        PurchaseLine = Pool().get('purchase.line')
+        if (self.state not in {'draft', 'quotation'}
+                or any(line.moves for line in purchase_lines)):
+            raise UserError(gettext(
+                'papyrus_model.msg_papyrus_purchase_lines_too_late',
+                purchase=self.rec_name))
+        remaining = {line: Decimal(str(line.quantity or 0))
+            for line in purchase_lines}
+        candidates = sorted(purchase_lines, key=lambda line: (
+            line.product.id if line.product else 0,
+            line.desired_delivery_date or date.max,
+            line.id or 0))
+        for papyrus_line in papyrus_lines:
+            if not papyrus_line.product or not papyrus_line.quantity:
+                continue
+            if papyrus_line.quantity <= 0:
+                continue
+            quantity = papyrus_line.quantity
+            for line in candidates:
+                if quantity <= 0 or line.product != papyrus_line.product:
+                    continue
+                available = remaining[line]
+                if available <= 0:
+                    continue
+                amount = min(quantity, available)
+                if amount < available:
+                    residual, = PurchaseLine.copy([line], default={
+                        'quantity': available - amount,
+                        'delivery_date_edit': True,
+                        'delivery_date_store': line.delivery_date,
+                        'papyrus_line': None,
+                        })
+                    residual.desired_delivery_date = (
+                        line.desired_delivery_date)
+                    candidates.insert(candidates.index(line) + 1, residual)
+                    purchase_lines.append(residual)
+                    remaining[residual] = available - amount
+                line.quantity = amount
+                line.delivery_date_edit = True
+                line.delivery_date_store = papyrus_line.delivery_date
+                line.papyrus_line = papyrus_line
+                papyrus_line.purchase_line = line
+                remaining[line] = Decimal(0)
+                quantity -= amount
+            if quantity:
+                papyrus_line.purchase_line = None
 
     @classmethod
     def __setup__(cls):
@@ -528,6 +533,16 @@ class Purchase(metaclass=PoolMeta):
                     raise UserWarning(key, gettext(
                             'papyrus_model.msg_papyrus_pending_lines',
                             document=purchase.rec_name, total=len(pending)))
+            missing = [line for line in purchase.lines
+                if not line.papyrus_line
+                and not getattr(line, 'freight_line', False)]
+            if missing:
+                key = 'papyrus_missing_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_missing_purchase_lines',
+                            document=purchase.rec_name,
+                            total=len(missing)))
         super().quote(purchases)
 
     @classmethod
@@ -542,6 +557,16 @@ class Purchase(metaclass=PoolMeta):
                     raise UserWarning(key, gettext(
                             'papyrus_model.msg_papyrus_pending_lines',
                             document=purchase.rec_name, total=len(pending)))
+            missing = [line for line in purchase.lines
+                if not line.papyrus_line
+                and not getattr(line, 'freight_line', False)]
+            if missing:
+                key = 'papyrus_missing_purchase_lines.%s' % purchase.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_missing_purchase_lines',
+                            document=purchase.rec_name,
+                            total=len(missing)))
         super().confirm(purchases)
 
     @classmethod
@@ -600,6 +625,44 @@ class Purchase(metaclass=PoolMeta):
                 super().write([purchase], {'papyrus_name': name})
 
 
+class PurchaseLine(metaclass=PoolMeta):
+    __name__ = 'purchase.line'
+
+    desired_delivery_date = fields.Date(
+        'Desired Delivery Date', readonly=True)
+    papyrus_line = fields.Many2One(
+        'papyrus.purchase.line', 'Papyrus Line', ondelete='SET NULL')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        to_write = {}
+        for line, values in zip(lines, vlist):
+            desired = values.get('delivery_date_store')
+            if line.desired_delivery_date or not desired:
+                continue
+            to_write.setdefault(desired, []).append(line)
+        for desired, lines in to_write.items():
+            cls.write(lines, {'desired_delivery_date': desired})
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_write = {}
+        actions = iter(args)
+        for lines, values in zip(actions, actions):
+            desired = values.get('delivery_date_store')
+            if not desired:
+                continue
+            lines = [line for line in lines
+                if not line.desired_delivery_date]
+            if lines:
+                to_write.setdefault(desired, []).extend(lines)
+        super().write(*args)
+        for desired, lines in to_write.items():
+            cls.write(lines, {'desired_delivery_date': desired})
+
+
 class PapyrusPurchaseLine(ModelSQL, ModelView):
     __name__ = 'papyrus.purchase.line'
 
@@ -619,9 +682,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     product = fields.Many2One('product.product', 'Product')
     purchase_line = fields.Many2One('purchase.line', 'Purchase Line',
         ondelete='SET NULL')
-    delivery_schedules = fields.One2Many(
-        'papyrus.purchase.line.delivery_schedule', 'papyrus_line',
-        'Delivery Schedules')
+    purchase_lines = fields.One2Many(
+        'purchase.line', 'papyrus_line', 'Purchase Lines')
+    delivery_date = fields.Date('Delivery Date')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
 
@@ -648,15 +711,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         line.unit_price = tools.to_decimal(data.get('unit_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
-        line.delivery_schedules = [
-            PapyrusPurchaseDeliverySchedule(
-                quantity=tools.to_decimal(item.get('quantity')),
-                delivery_date=(
-                    date.fromisoformat(item['delivery_date'])
-                    if item.get('delivery_date') else None),
-                )
-            for item in data.get('delivery_schedule', [])
-            ]
+        line.delivery_date = (
+            date.fromisoformat(data['delivery_date'])
+            if data.get('delivery_date') else None)
         if line.discount_rate:
             line.discount_rate = abs(line.discount_rate)
         taxes = data.get('tax_rate')
@@ -680,6 +737,8 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         purchase_line.on_change_product()
         purchase_line.description = getattr(self, 'description', None)
         purchase_line.quantity = getattr(self, 'quantity', None)
+        purchase_line.delivery_date_edit = True
+        purchase_line.delivery_date_store = self.delivery_date
         purchase_line.on_change_quantity()
         discount_rate = getattr(self, 'discount_rate', None)
         if discount_rate:
@@ -704,19 +763,22 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
 
     def get_purchase_line_matches(self, name):
         Document = Pool().get('papyrus.document')
-        purchase_line = getattr(self, 'purchase_line', None)
-        if not purchase_line:
+        purchase_lines = list(getattr(self, 'purchase_lines', []))
+        if not purchase_lines:
             return False
         quantity = getattr(self, 'quantity', None)
-        if quantity is not None and purchase_line.quantity != quantity:
+        if (quantity is not None
+                and sum((line.quantity or Decimal(0)
+                    for line in purchase_lines), Decimal(0)) != quantity):
             return False
         unit_price = getattr(self, 'unit_price', None)
-        if (unit_price is not None
-                and not Document.amounts_match(purchase_line.unit_price,
-                    unit_price)):
+        if (unit_price is not None and any(
+                not Document.amounts_match(line.unit_price, unit_price)
+                for line in purchase_lines)):
             return False
         product = getattr(self, 'product', None)
-        if product is not None and purchase_line.product != product:
+        if (product is not None
+                and any(line.product != product for line in purchase_lines)):
             return False
         return True
 
@@ -725,8 +787,8 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         return super().view_attributes() + [
             ('/tree/field[@name="amount"]',
                 'visual', If(Eval('amount_matches', False), 'success', 'danger')),
-            ('/tree/field[@name="purchase_line"]',
-                'visual', If(Bool(Eval('purchase_line')),
+            ('/tree/field[@name="purchase_lines"]',
+                'visual', If(Bool(Eval('purchase_lines')),
                     If(Eval('purchase_line_matches', False),
                         'success', 'danger'), '')),
             ]
@@ -918,15 +980,3 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
-
-
-class PapyrusPurchaseDeliverySchedule(ModelSQL, ModelView):
-    __name__ = 'papyrus.purchase.line.delivery_schedule'
-
-    papyrus_line = fields.Many2One(
-        'papyrus.purchase.line', 'Papyrus Line', required=True,
-        ondelete='CASCADE')
-    quantity = fields.Numeric('Quantity', required=True)
-    delivery_date = fields.Date('Delivery Date')
-    purchase_line = fields.Many2One(
-        'purchase.line', 'Purchase Line', ondelete='SET NULL')

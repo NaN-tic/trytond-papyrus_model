@@ -21,6 +21,12 @@
         <record model="ir.message" id="msg_papyrus_pending_lines">
             <field name="text">Document "%(document)s" still has %(total)s pending Papyrus lines. Review them before continuing, or confirm this warning to continue with the lines already created.</field>
         </record>
+        <record model="ir.message" id="msg_papyrus_missing_purchase_lines">
+            <field name="text">Purchase "%(document)s" has %(total)s order lines that were not read by Papyrus. Review them before continuing, or confirm this warning to continue.</field>
+        </record>
+        <record model="ir.message" id="msg_papyrus_purchase_lines_too_late">
+            <field name="text">Purchase "%(purchase)s" cannot be reconciled because it is no longer editable.</field>
+        </record>
         <record model="ir.message" id="msg_previous_sale_not_quotation">
             <field name="text">Previous sale "%(sale)s" is not an active quotation and cannot be linked.</field>
         </record>
@@ -44,12 +50,6 @@
         </record>
         <record model="ir.message" id="msg_mismatch_unit_price">
             <field name="text">Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s</field>
-        </record>
-        <record model="ir.message" id="msg_papyrus_delivery_schedule_mismatch">
-            <field name="text">The delivery schedule of Papyrus line "%(line)s" has invalid quantities or does not match the confirmed line quantity.</field>
-        </record>
-        <record model="ir.message" id="msg_papyrus_delivery_schedule_too_late">
-            <field name="text">The delivery schedule of Papyrus line "%(line)s" cannot be applied because the purchase already has stock moves or is no longer editable.</field>
         </record>
     </data>
 </tryton>

@@ -5,13 +5,13 @@
     <field name="ean" optional="1"/>
     <field name="description"/>
     <field name="quantity"/>
+    <field name="delivery_date" optional="1"/>
     <field name="unit_price"/>
     <field name="amount" optional="0"/>
     <field name="amount_matches" tree_invisible="1"/>
     <field name="discount_rate" optional="1"/>
     <field name="taxes" optional="1"/>
     <field name="product" optional="0"/>
-    <field name="purchase_line" optional="1"/>
     <field name="purchase_line_matches" tree_invisible="1"/>
-    <field name="delivery_schedules" optional="1"/>
+    <field name="purchase_lines" optional="1"/>
 </tree>
