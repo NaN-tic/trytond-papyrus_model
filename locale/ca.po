@@ -97,6 +97,10 @@ msgctxt "field:papyrus.invoice.line,discount_rate:"
 msgid "Discount (%)"
 msgstr "Descompte (%)"
 
+msgctxt "field:papyrus.invoice.line,cost_price:"
+msgid "Cost Price"
+msgstr "Preu de cost"
+
 msgctxt "field:papyrus.invoice.line,external_code:"
 msgid "External Code"
 msgstr "Codi extern"
