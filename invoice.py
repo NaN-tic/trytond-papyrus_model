@@ -91,6 +91,9 @@ class Document(metaclass=PoolMeta):
                 "pack, etc., copy that value into unit and use it to "
                 "normalize unit_price to one unit. Never invent or guess a "
                 "quantity base that is not clearly written in the document. "
+                "Extract cost_price only when the document explicitly shows "
+                "a cost or cost base distinct from the unit price; otherwise "
+                "return null. "
                 "quantity must be the real number of billed units, and line "
                 "totals must stay as the full line totals from the document. "
                 "When the document shows withholdings such as IRPF, treat "
@@ -204,13 +207,20 @@ class Document(metaclass=PoolMeta):
                                     },
                                 'line_total_excl_tax': {
                                     'type': 'number'},
+                                'cost_price': {
+                                    'type': ['number', 'null'],
+                                    'description': ('Explicit unit cost or '
+                                        'cost base shown on the document, if '
+                                        'different from the unit price.'),
+                                    },
                                 'tax_rate': {'type': 'number'},
                             },
                             'required': [
                                 'product_code', 'party_product_code',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
-                                 'line_total_excl_tax', 'tax_rate',
+                                 'cost_price', 'line_total_excl_tax',
+                                 'tax_rate',
                                  ],
                             'additionalProperties': False
                         }
@@ -572,6 +582,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
+    cost_price = fields.Numeric('Cost Price')
     discount_rate = fields.Numeric('Discount (%)')
     taxes = fields.Char('Taxes')
     amount = fields.Numeric('Amount')
@@ -600,6 +611,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.description = description
         line.quantity = tools.to_decimal(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
+        line.cost_price = tools.to_decimal(data.get('cost_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
         if line.discount_rate:
