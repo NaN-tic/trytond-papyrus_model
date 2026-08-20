@@ -247,7 +247,7 @@ class Document(metaclass=PoolMeta):
             purchase.on_change_company()
 
         if (getattr(purchase, 'papyrus_lines', None)
-                and Transaction().context.get('papyrus_reinspect')):
+                and not Transaction().context.get('papyrus_reinspect')):
             purchase.papyrus_lines = []
             purchase.save()
 
@@ -287,34 +287,15 @@ class Document(metaclass=PoolMeta):
         if seller_name:
             purchase.papyrus_name = seller_name
 
-        lines = []
-        for item in data.get('line_items', []):
-            product_code = item.get('product_code')
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-            external_code = item.get('party_product_code')
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-            description = item.get('description')
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip()
-            line = PapyrusPurchaseLine()
-            line.product_code = product_code
-            line.external_code = external_code
-            line.description = description
-            line.quantity = tools.to_decimal(item.get('quantity'))
-            line.unit_price = tools.to_decimal(item.get('unit_price'))
-            line.discount_rate = tools.to_decimal(item.get('discount'))
-            line.amount = tools.to_decimal(item.get('line_total_excl_tax'))
-            if line.discount_rate:
-                line.discount_rate = abs(line.discount_rate)
-            taxes = item.get('tax_rate')
-            if taxes is not None:
-                line.taxes = str(taxes)
-            lines.append(line)
+        lines = getattr(purchase, 'papyrus_lines', None)
+        if not lines:
+            lines = []
+            for item in data.get('line_items', []):
+                line = PapyrusPurchaseLine.build(item)
+                lines.append(line)
+            purchase.papyrus_lines = lines
         PapyrusPurchaseLine.find_product(purchase.party, lines)
-        purchase.papyrus_lines = lines
-        self.create_purchase_lines_from_papyrus_lines(purchase)
+        purchase.create_purchase_lines_from_papyrus_lines()
         purchase.save()
 
     def find_purchase_party_from_data(self, data, extracted_data=None):
@@ -361,47 +342,6 @@ class Document(metaclass=PoolMeta):
             return papyrus_party
         return party
 
-    def create_purchase_lines_from_papyrus_lines(self, purchase):
-        pool = Pool()
-        PurchaseLine = pool.get('purchase.line')
-
-        digits = PurchaseLine.unit_price.digits[1]
-        exp = Decimal(str(10.0 ** -digits))
-
-        to_save = []
-        papyrus_lines = []
-
-        for papyrus_line in getattr(purchase, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'purchase_line', None):
-                continue
-            product = getattr(papyrus_line, 'product', None)
-            if not product:
-                continue
-            line = PurchaseLine()
-            line.purchase = purchase
-            line.product = product
-            line.on_change_product()
-            line.description = getattr(papyrus_line, 'description', None)
-            line.quantity = getattr(papyrus_line, 'quantity', None)
-            line.on_change_quantity()
-            unit_price = getattr(papyrus_line, 'unit_price', None)
-            if unit_price is None:
-                continue
-            discount_rate = getattr(papyrus_line, 'discount_rate', None)
-            if discount_rate:
-                unit_price *= (Decimal('100')
-                    - discount_rate) / Decimal('100')
-            line.unit_price = unit_price.quantize(exp)
-            line.on_change_taxes()
-            to_save.append(line)
-            papyrus_lines.append(papyrus_line)
-
-        if to_save:
-            PurchaseLine.save(to_save)
-            for papyrus_line, line in zip(papyrus_lines, to_save):
-                papyrus_line.purchase_line = line
-
-
 class Purchase(metaclass=PoolMeta):
     __name__ = 'purchase.purchase'
     document = fields.Many2One('papyrus.document', "Document")
@@ -410,6 +350,25 @@ class Purchase(metaclass=PoolMeta):
         'Papyrus Lines', states={
             'invisible': ~Bool(Eval('papyrus_lines')),
             })
+
+    def create_purchase_lines_from_papyrus_lines(self):
+        PurchaseLine = Pool().get('purchase.line')
+
+        to_save = []
+        papyrus_lines = []
+        for papyrus_line in getattr(self, 'papyrus_lines', []):
+            if getattr(papyrus_line, 'purchase_line', None):
+                continue
+            purchase_line = papyrus_line.get_purchase_line()
+            if not purchase_line:
+                continue
+            to_save.append(purchase_line)
+            papyrus_lines.append(papyrus_line)
+
+        if to_save:
+            PurchaseLine.save(to_save)
+            for papyrus_line, purchase_line in zip(papyrus_lines, to_save):
+                papyrus_line.purchase_line = purchase_line
 
     @classmethod
     def __setup__(cls):
@@ -437,8 +396,7 @@ class Purchase(metaclass=PoolMeta):
             if not purchase.document:
                 continue
 
-            purchase.document.create_purchase_lines_from_papyrus_lines(
-                purchase)
+            purchase.create_purchase_lines_from_papyrus_lines()
             purchase.save()
 
     @classmethod
@@ -518,6 +476,56 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
 
+    @classmethod
+    def build(cls, data):
+        line = cls()
+        product_code = data.get('product_code')
+        if isinstance(product_code, str):
+            product_code = product_code.replace('\x00', '').strip() or None
+        external_code = data.get('party_product_code')
+        if isinstance(external_code, str):
+            external_code = external_code.replace('\x00', '').strip() or None
+        description = data.get('description')
+        if isinstance(description, str):
+            description = description.replace('\x00', '').strip()
+        line.product_code = product_code
+        line.external_code = external_code
+        line.description = description
+        line.quantity = tools.to_decimal(data.get('quantity'))
+        line.unit_price = tools.to_decimal(data.get('unit_price'))
+        line.discount_rate = tools.to_decimal(data.get('discount'))
+        line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        if line.discount_rate:
+            line.discount_rate = abs(line.discount_rate)
+        taxes = data.get('tax_rate')
+        if taxes is not None:
+            line.taxes = str(taxes)
+        return line
+
+    def get_purchase_line(self):
+        PurchaseLine = Pool().get('purchase.line')
+
+        purchase = self.purchase
+        product = getattr(self, 'product', None)
+        unit_price = getattr(self, 'unit_price', None)
+        if not product or unit_price is None:
+            return
+        digits = PurchaseLine.unit_price.digits[1]
+        exp = Decimal(str(10.0 ** -digits))
+        purchase_line = PurchaseLine()
+        purchase_line.purchase = purchase
+        purchase_line.product = product
+        purchase_line.on_change_product()
+        purchase_line.description = getattr(self, 'description', None)
+        purchase_line.quantity = getattr(self, 'quantity', None)
+        purchase_line.on_change_quantity()
+        discount_rate = getattr(self, 'discount_rate', None)
+        if discount_rate:
+            unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
+        purchase_line.unit_price = unit_price.quantize(exp)
+        purchase_line.on_change_taxes()
+        return purchase_line
+
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
         quantity = getattr(self, 'quantity', None)
@@ -563,6 +571,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
 
     @classmethod
     def find_product(cls, party, lines):
+        lines = [line for line in lines if not getattr(line, 'product', None)]
+        if not lines:
+            return
         pool = Pool()
         Product = pool.get('product.product')
         HistoryLine = pool.get('papyrus.purchase.line')

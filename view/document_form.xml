@@ -2,6 +2,8 @@
 <!-- The COPYRIGHT file at the top level of this repository contains the full
      copyright notices and license terms. -->
 <data>
+    <xpath expr="//page[@name='text']" position="replace"/>
+    <xpath expr="//page[@name='boxes']" position="replace"/>
     <xpath expr="//group[@id='extra']" position="inside">
         <label name="model_type"/>
         <field name="model_type"/>

@@ -81,6 +81,10 @@ msgctxt "field:papyrus.document,shipment_in:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
 
+msgctxt "field:account.invoice.line,papyrus_created:"
+msgid "Papyrus Created"
+msgstr "Creada por Papyrus"
+
 msgctxt "field:papyrus.invoice.line,amount:"
 msgid "Amount"
 msgstr "Importe"
@@ -513,6 +517,10 @@ msgid "Invoice"
 msgstr "Factura"
 
 msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Supplier Invoice"
+msgstr "Factura de proveedor"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
 msgid "Purchase"
 msgstr "Compra"
 
@@ -527,6 +535,10 @@ msgstr "Albarán de proveedor"
 msgctxt "selection:papyrus.document,model_type:"
 msgid "Invoice"
 msgstr "Factura"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Supplier Invoice"
+msgstr "Factura de proveedor"
 
 msgctxt "selection:papyrus.document,model_type:"
 msgid "Purchase"
@@ -555,6 +567,10 @@ msgstr "Texto PDF (equilibrado)"
 msgctxt "selection:papyrus.queue,model_type:"
 msgid "Invoice"
 msgstr "Factura"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Supplier Invoice"
+msgstr "Factura de proveedor"
 
 msgctxt "selection:papyrus.queue,model_type:"
 msgid "Purchase"

@@ -12,6 +12,5 @@
     <field name="taxes" optional="1"/>
     <field name="product" optional="0"/>
     <field name="invoice_line" optional="0"/>
-    <field name="invoice_line_matches" tree_invisible="1"/>
     <field name="invoice_line_issue" tree_invisible="1"/>
 </tree>

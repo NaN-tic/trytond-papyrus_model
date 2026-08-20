@@ -248,7 +248,7 @@ class Document(metaclass=PoolMeta):
             sale.on_change_company()
 
         if (getattr(sale, 'papyrus_lines', None)
-                and Transaction().context.get('papyrus_reinspect')):
+                and not Transaction().context.get('papyrus_reinspect')):
             sale.papyrus_lines = []
             sale.save()
 
@@ -288,34 +288,15 @@ class Document(metaclass=PoolMeta):
         if buyer_name:
             sale.papyrus_name = buyer_name
 
-        lines = []
-        for item in data.get('line_items', []):
-            product_code = item.get('product_code')
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-            external_code = item.get('party_product_code')
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-            description = item.get('description')
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip()
-            line = PapyrusSaleLine()
-            line.product_code = product_code
-            line.external_code = external_code
-            line.description = description
-            line.quantity = tools.to_decimal(item.get('quantity'))
-            line.unit_price = tools.to_decimal(item.get('unit_price'))
-            line.discount_rate = tools.to_decimal(item.get('discount'))
-            line.amount = tools.to_decimal(item.get('line_total_excl_tax'))
-            if line.discount_rate:
-                line.discount_rate = abs(line.discount_rate)
-            taxes = item.get('tax_rate')
-            if taxes is not None:
-                line.taxes = str(taxes)
-            lines.append(line)
+        lines = getattr(sale, 'papyrus_lines', None)
+        if not lines:
+            lines = []
+            for item in data.get('line_items', []):
+                line = PapyrusSaleLine.build(item)
+                lines.append(line)
+            sale.papyrus_lines = lines
         PapyrusSaleLine.find_product(sale.party, lines)
-        sale.papyrus_lines = lines
-        self.create_sale_lines_from_papyrus_lines(sale)
+        sale.create_sale_lines_from_papyrus_lines()
         sale.save()
 
     def find_sale_party_from_data(self, data, extracted_data=None):
@@ -362,46 +343,6 @@ class Document(metaclass=PoolMeta):
             return papyrus_party
         return party
 
-    def create_sale_lines_from_papyrus_lines(self, sale):
-        pool = Pool()
-        SaleLine = pool.get('sale.line')
-
-        digits = SaleLine.unit_price.digits[1]
-        exp = Decimal(str(10.0 ** -digits))
-
-        to_save = []
-        papyrus_lines = []
-
-        for papyrus_line in getattr(sale, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'sale_line', None):
-                continue
-            product = getattr(papyrus_line, 'product', None)
-            if not product:
-                continue
-            line = SaleLine()
-            line.sale = sale
-            line.product = product
-            line.on_change_product()
-            line.description = getattr(papyrus_line, 'description', None)
-            line.quantity = getattr(papyrus_line, 'quantity', None)
-            line.on_change_quantity()
-            unit_price = getattr(papyrus_line, 'unit_price', None)
-            if unit_price is None:
-                continue
-            discount_rate = getattr(papyrus_line, 'discount_rate', None)
-            if discount_rate:
-                unit_price *= (Decimal('100')
-                    - discount_rate) / Decimal('100')
-            line.unit_price = unit_price.quantize(exp)
-            to_save.append(line)
-            papyrus_lines.append(papyrus_line)
-
-        if to_save:
-            SaleLine.save(to_save)
-            for papyrus_line, line in zip(papyrus_lines, to_save):
-                papyrus_line.sale_line = line
-
-
 class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
     document = fields.Many2One('papyrus.document', "Document")
@@ -443,6 +384,25 @@ class Sale(metaclass=PoolMeta):
         return sum([x.amount for x in getattr(self, 'papyrus_lines', [])
                 if x.amount])
 
+    def create_sale_lines_from_papyrus_lines(self):
+        SaleLine = Pool().get('sale.line')
+
+        to_save = []
+        papyrus_lines = []
+        for papyrus_line in getattr(self, 'papyrus_lines', []):
+            if getattr(papyrus_line, 'sale_line', None):
+                continue
+            sale_line = papyrus_line.get_sale_line()
+            if not sale_line:
+                continue
+            to_save.append(sale_line)
+            papyrus_lines.append(papyrus_line)
+
+        if to_save:
+            SaleLine.save(to_save)
+            for papyrus_line, sale_line in zip(papyrus_lines, to_save):
+                papyrus_line.sale_line = sale_line
+
     @classmethod
     def __setup__(cls):
         super().__setup__()
@@ -469,7 +429,7 @@ class Sale(metaclass=PoolMeta):
             if not sale.document:
                 continue
 
-            sale.document.create_sale_lines_from_papyrus_lines(sale)
+            sale.create_sale_lines_from_papyrus_lines()
             sale.save()
 
     @classmethod
@@ -549,6 +509,55 @@ class PapyrusSaleLine(ModelSQL, ModelView):
     sale_line_matches = fields.Function(fields.Boolean('Sale Line Matches'),
             'get_sale_line_matches')
 
+    @classmethod
+    def build(cls, data):
+        line = cls()
+        product_code = data.get('product_code')
+        if isinstance(product_code, str):
+            product_code = product_code.replace('\x00', '').strip() or None
+        external_code = data.get('party_product_code')
+        if isinstance(external_code, str):
+            external_code = external_code.replace('\x00', '').strip() or None
+        description = data.get('description')
+        if isinstance(description, str):
+            description = description.replace('\x00', '').strip()
+        line.product_code = product_code
+        line.external_code = external_code
+        line.description = description
+        line.quantity = tools.to_decimal(data.get('quantity'))
+        line.unit_price = tools.to_decimal(data.get('unit_price'))
+        line.discount_rate = tools.to_decimal(data.get('discount'))
+        line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        if line.discount_rate:
+            line.discount_rate = abs(line.discount_rate)
+        taxes = data.get('tax_rate')
+        if taxes is not None:
+            line.taxes = str(taxes)
+        return line
+
+    def get_sale_line(self):
+        SaleLine = Pool().get('sale.line')
+
+        sale = self.sale
+        product = getattr(self, 'product', None)
+        unit_price = getattr(self, 'unit_price', None)
+        if not product or unit_price is None:
+            return
+        digits = SaleLine.unit_price.digits[1]
+        exp = Decimal(str(10.0 ** -digits))
+        sale_line = SaleLine()
+        sale_line.sale = sale
+        sale_line.product = product
+        sale_line.on_change_product()
+        sale_line.description = getattr(self, 'description', None)
+        sale_line.quantity = getattr(self, 'quantity', None)
+        sale_line.on_change_quantity()
+        discount_rate = getattr(self, 'discount_rate', None)
+        if discount_rate:
+            unit_price *= (Decimal('100') - discount_rate) / Decimal('100')
+        sale_line.unit_price = unit_price.quantize(exp)
+        return sale_line
+
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
         quantity = getattr(self, 'quantity', None)
@@ -594,6 +603,9 @@ class PapyrusSaleLine(ModelSQL, ModelView):
 
     @classmethod
     def find_product(cls, party, lines):
+        lines = [line for line in lines if not getattr(line, 'product', None)]
+        if not lines:
+            return
         pool = Pool()
         Product = pool.get('product.product')
         HistoryLine = pool.get('papyrus.sale.line')
