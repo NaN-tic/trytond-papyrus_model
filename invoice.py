@@ -1045,7 +1045,7 @@ class InvoiceDossier(Wizard):
     __name__ = 'invoice.dossier'
 
     start_state = 'open_'
-    open_ = StateAction('papyrus.act_attachment_form')
+    open_ = StateAction('office.action_attachment')
 
     def do_open_(self, action):
         pool = Pool()
