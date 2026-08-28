@@ -2,20 +2,15 @@ import base64
 from decimal import Decimal
 import json
 import logging
-import requests
 from datetime import datetime
 from magic import Magic
 from sql.conditionals import Greatest
 from sql.functions import Upper
-import trytond.config as config
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.modules.widgets.tools import Similarity, create_similarity
 
 logger = logging.getLogger(__name__)
-
-API_KEY = config.get('openrouter', 'api_key')
-
 
 def convert_nulls(obj):
     'In some cases, x-ai/grok-4-fast will return ":null" instead of null'
@@ -103,22 +98,10 @@ def find_party_by_similarity(text, role_domain=None, model_name='party.party',
     return parties[0], float(score)
 
 
-def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
+def llm(messages, origin, model=None, pdf_engine=None, schema=None,
+        max_tokens=None,
         referer='trytond', title=None):
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": referer,
-        "X-Title": title,
-        }
-    payload = {
-        "model": model or 'openrouter/auto',
-        "messages": messages,
-        }
-    if max_tokens is not None:
-        payload['max_tokens'] = max_tokens
+    extra_body = {}
     has_file = False
     for message in messages or []:
         if not isinstance(message, dict):
@@ -139,45 +122,25 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
         elif pdf_engine:
             logger.warning('Unsupported pdf engine %r, using provider default',
                 pdf_engine)
-        payload['plugins'] = [plugin]
+        extra_body['plugins'] = [plugin]
+    response_format = None
     if schema:
-        payload["response_format"] = {
+        response_format = {
             "type": "json_schema",
             "json_schema": schema
             }
-
-    p = json.dumps(payload)
-    if len(p) > 2000:
-        p = p[:1000] + '........' + p[-1000:]
-
-    for retry in range(3):
-        try:
-            logger.debug('Sending to OpenRouter: %s', p)
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
-            logger.debug('Got response!')
-            if response.status_code == 200:
-                break
-            if response.status_code == 500:
-                logger.debug('Server error, retrying...')
-                continue
-            logger.error(f'OpenRouter error {response.status_code}: {response.text}')
-            raise LLMError(f"OpenRouter error {response.status_code}: {response.text}")
-        except requests.RequestException as e:
-            logger.error(f'Error communicating with OpenRouter: {e}')
-    else:
-        raise LLMError("Failed to get a valid response from OpenRouter after retries.")
-
+    AIModel = Pool().get('ai.model')
+    model = AIModel.get_or_create(model or 'openrouter/auto')
+    response, error = model.get_completion(
+        messages, origin,
+        response_format=response_format, extra_body=extra_body or None,
+        max_tokens=max_tokens)
+    if error:
+        raise LLMError(response)
     try:
-        data = response.json()
-    except Exception:
-        raise LLMError(f"Error converting to json server's response: {response.text}")
-
-    try:
-        content = data["choices"][0]["message"]["content"]
-    except Exception:
-        raise LLMError(f"Malformed OpenRouter response: {json.dumps(data)[:1000]}")
-
-    logger.debug('Tokens consumed: %s', data.get('usage', {}))
+        content = response.choices[0].message.content
+    except (AttributeError, IndexError):
+        raise LLMError(f'Malformed OpenRouter response: {response!r}')
 
     if isinstance(content, list):
         content = ''.join([c.get("text", "") for c in content if isinstance(c, dict) and "text" in c])
