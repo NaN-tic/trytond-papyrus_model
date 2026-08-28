@@ -119,7 +119,8 @@ class Document(metaclass=PoolMeta):
         llms = (self.queue.llm_classifier or '').split()
         for llm in llms:
             try:
-                response = tools.llm(messages=self.guess_model_type_messages(),
+                response = tools.llm(
+                    messages=self.guess_model_type_messages(), origin=self,
                     model=llm,
                     pdf_engine=self.queue.llm_pdf_engine,
                     schema=self.guess_model_type_schema(),
@@ -209,7 +210,7 @@ class Document(metaclass=PoolMeta):
         llms = (self.queue.llms or '').split()
         for llm in llms:
             try:
-                data = tools.llm(messages=messages, model=llm,
+                data = tools.llm(messages=messages, origin=self, model=llm,
                     pdf_engine=self.queue.llm_pdf_engine, schema=schema,
                     max_tokens=max_tokens)
             except Exception as exc:
