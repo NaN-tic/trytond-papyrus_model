@@ -213,7 +213,7 @@ class Document(metaclass=PoolMeta):
                 data = tools.llm(messages=messages, origin=self, model=llm,
                     pdf_engine=self.queue.llm_pdf_engine, schema=schema,
                     max_tokens=max_tokens)
-            except Exception as exc:
+            except tools.LLMError as exc:
                 tools.logger.error(
                     'Error extracting %s data for document %s with LLM %s: %s',
                     kind, self.id, llm, exc)
