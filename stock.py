@@ -52,7 +52,9 @@ class Document(metaclass=PoolMeta):
     def guess_model_types(self):
         types = super().guess_model_types()
         types.update({
-                'shipment_in': 'Incoming Supplier Shipment',
+                'shipment_in': (
+                    'Delivery note issued by supplier to us '
+                    '(incoming shipment)'),
                 })
         return types
 
