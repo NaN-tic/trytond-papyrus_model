@@ -237,9 +237,6 @@ class Document(metaclass=PoolMeta):
             }
         }
 
-    def should_import_data(self, data):
-        return bool(data)
-
     def guess_invoice(self):
         pool = Pool()
         Invoice = pool.get('account.invoice')
@@ -252,7 +249,7 @@ class Document(metaclass=PoolMeta):
         messages = self.guess_invoice_messages()
         schema = self.guess_invoice_schema()
         data = self.extract_data_with_llm('invoice', messages, schema)
-        if not self.should_import_data(data):
+        if not data:
             return
 
         if self.invoice:
@@ -570,7 +567,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
     description = fields.Text('Description')
-    quantity = fields.Numeric('Quantity')
+    quantity = fields.Float('Quantity')
     unit_price = fields.Numeric('Unit Price')
     discount_rate = fields.Numeric('Discount (%)')
     taxes = fields.Char('Taxes')
@@ -582,6 +579,14 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         ondelete='SET NULL')
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
+
+    @classmethod
+    def __register__(cls, module_name):
+        table = cls.__table_handler__(module_name)
+        if (table.column_exist('quantity')
+                and table.column_is_type('quantity', 'numeric')):
+            table.alter_type('quantity', cls.quantity.sql_type().base)
+        super().__register__(module_name)
 
     @classmethod
     def build(cls, data):
@@ -598,7 +603,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.product_code = product_code
         line.external_code = external_code
         line.description = description
-        line.quantity = tools.to_decimal(data.get('quantity'))
+        line.quantity = float(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
@@ -611,7 +616,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
-        quantity = getattr(self, 'quantity', None)
+        quantity = tools.to_decimal(getattr(self, 'quantity', None))
         unit_price = getattr(self, 'unit_price', None)
         amount = getattr(self, 'amount', None)
         if (not isinstance(quantity, Decimal)
