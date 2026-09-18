@@ -832,10 +832,14 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if code_values and history_descriptions:
                 history_domain.append(['OR',
                         ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
                         ('description', 'in', history_descriptions),
                         ])
             elif code_values:
-                history_domain.append(('product_code', 'in', code_values))
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ])
             else:
                 history_domain.append(('description', 'in',
                         history_descriptions))
@@ -845,6 +849,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 product = getattr(line, 'product', None)
                 if line.product_code and product:
                     history_by_code.setdefault(line.product_code, product)
+                if line.external_code and product:
+                    history_by_code.setdefault(line.external_code, product)
                 if line.description and product:
                     history_by_description.setdefault(line.description,
                         product)
