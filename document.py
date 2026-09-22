@@ -169,24 +169,24 @@ class Document(metaclass=PoolMeta):
 
         if self.company:
             info = self.get_company_info()
-            info = ("In order to understand the type of document take into "
-                "account that the company related to the document is: "
+            info = (
+                "In your classification take into account the following "
+                "information on the company the document was issued to: "
                 f"{info}")
         else:
             info = self.get_company_info()
-            info = ("In order to understand the type of document take into "
-                f"account that possible companies in the system are: {info}")
+            info = (
+                "In your classification you may want to take into account "
+                "the following information on the companies recorded in our "
+                f"system: {info}")
 
         user = {
             "role": "user",
             "content": [{
                     "type": "text",
                     "text": (
-                        "Classify this document text and output STRICT JSON "
-                        "matching the schema. No extra text. Parse this "
-                        "business document and output STRICT JSON matching the "
-                        "schema. No extra text. "
-                        f"{info}\n\n"
+                        "Classify the document attached below."
+                        f"\n\n{info}\n\n"
                         "Here're the document types:"
                         f"\n\n{types}\n\n"
                         ),
