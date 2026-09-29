@@ -6,7 +6,7 @@ from decimal import Decimal
 from trytond.model import fields, ModelView, Workflow
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
-from trytond.transaction import Transaction
+from trytond.transaction import Transaction, without_check_access
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from statistics import mode, StatisticsError
@@ -219,7 +219,8 @@ class Document(metaclass=PoolMeta):
                     kind, self.id, llm, exc)
                 continue
             self.extracted_data = json.dumps(data, indent=4)
-            self.save()
+            with without_check_access():
+                self.save()
             return data
 
         tools.logger.error(
@@ -270,7 +271,8 @@ class Document(metaclass=PoolMeta):
             document.guessed_company = None
             document.guessed_model_type = None
             document.extracted_data = None
-        cls.save(documents)
+        with without_check_access():
+            cls.save(documents)
         super().pending(documents)
 
     @classmethod
