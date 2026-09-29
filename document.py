@@ -466,7 +466,10 @@ class Document(metaclass=PoolMeta):
 
     def _get_invoice(self):
         Invoice = Pool().get('account.invoice')
-        defaults = Invoice.default_get(list(Invoice._fields.keys()),
+        defaults = Invoice.default_get([
+                name for name, field in Invoice._fields.items()
+                if not field.readonly
+                ],
             with_rec_name=False)
         invoice = Invoice(**defaults)
         invoice.type = 'in'
@@ -475,14 +478,20 @@ class Document(metaclass=PoolMeta):
 
     def _get_sale(self):
         Sale = Pool().get('sale.sale')
-        defaults = Sale.default_get(list(Sale._fields.keys()),
+        defaults = Sale.default_get([
+                name for name, field in Sale._fields.items()
+                if not field.readonly
+                ],
             with_rec_name=False)
         sale = Sale(**defaults)
         return sale
 
     def _get_shipment_in(self):
         ShipmentIn = Pool().get('stock.shipment.in')
-        defaults = ShipmentIn.default_get(list(ShipmentIn._fields.keys()),
+        defaults = ShipmentIn.default_get([
+                name for name, field in ShipmentIn._fields.items()
+                if not field.readonly
+                ],
             with_rec_name=False)
         shipment_in = ShipmentIn(**defaults)
         return shipment_in
