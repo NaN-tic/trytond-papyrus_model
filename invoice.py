@@ -587,7 +587,11 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             'get_amount_matches')
     product = fields.Many2One('product.product', 'Product')
     invoice_line = fields.Many2One('account.invoice.line', 'Invoice Line',
-        ondelete='SET NULL')
+        ondelete='SET NULL', domain=[
+            'OR',
+            ('invoice', '=', None),
+            ('invoice', '=', Eval('invoice', -1)),
+        ])
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
 
