@@ -765,3 +765,6 @@ class PapyrusSaleLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
+
+        tools.find_product_by_normalized_code(cls, party, lines,
+            'sale.product_customer', 'sale.party')
