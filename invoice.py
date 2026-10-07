@@ -921,6 +921,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 if products:
                     line.product, = products
 
+        tools.find_product_by_normalized_code(cls, party, lines,
+            'purchase.product_supplier', 'invoice.party')
+
     @classmethod
     def find_invoice_line(cls, party, lines, data):
         pool = Pool()
