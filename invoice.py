@@ -321,7 +321,7 @@ class Document(metaclass=PoolMeta):
         else:
             lines = []
             for item in data.get('line_items', []):
-                line = PapyrusInvoiceLine.build(item)
+                line = PapyrusInvoiceLine.build(item, currency=invoice.currency)
                 lines.append(line)
             PapyrusInvoiceLine.find_product(invoice.party, lines)
             if invoice.party.papyrus_group_lines_by_tax:
@@ -613,7 +613,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         super().__register__(module_name)
 
     @classmethod
-    def build(cls, data):
+    def build(cls, data, currency=None):
         line = cls()
         product_code = data.get('product_code')
         if isinstance(product_code, str):
@@ -630,8 +630,15 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.quantity = float(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
         line.cost_price = tools.to_decimal(data.get('cost_price'))
+        for name in ('unit_price', 'cost_price'):
+            value = getattr(line, name)
+            if value is not None:
+                setattr(line, name, value.quantize(
+                    Decimal(1).scaleb(-getattr(cls, name).digits[1])))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
+        if line.amount is not None and currency:
+            line.amount = currency.round(line.amount)
         if line.discount_rate is not None:
             line.discount_rate = abs(line.discount_rate).quantize(
                 Decimal(1).scaleb(-cls.discount_rate.digits[1]))
