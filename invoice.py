@@ -11,6 +11,7 @@ from trytond.pyson import PYSONEncoder, Eval, Bool, If
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
+from trytond.modules.product import price_digits
 from . import tools
 
 
@@ -428,7 +429,7 @@ class Invoice(metaclass=PoolMeta):
                 'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
                 }), 'get_papyrus_untaxed_amount_matches')
     papyrus_lines_untaxed_amount = fields.Function(fields.Numeric(
-            'Papyrus Lines Untaxed Amount', states={
+            'Papyrus Lines Untaxed Amount', digits='currency', states={
                 'invisible': Bool(Eval('papyrus_untaxed_amount_matches')),
                 }), 'get_papyrus_lines_untaxed_amount')
     papyrus_total_amount = fields.Numeric('Papyrus Total Amount',
@@ -575,15 +576,17 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
         ondelete='CASCADE')
+    currency = fields.Function(fields.Many2One('currency.currency', 'Currency'),
+        'on_change_with_currency')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
     description = fields.Text('Description')
     quantity = fields.Float('Quantity')
-    unit_price = fields.Numeric('Unit Price')
-    cost_price = fields.Numeric('Cost Price')
-    discount_rate = fields.Numeric('Discount (%)')
+    unit_price = fields.Numeric('Unit Price', digits=price_digits)
+    cost_price = fields.Numeric('Cost Price', digits=price_digits)
+    discount_rate = fields.Numeric('Discount (%)', digits=(16, 4))
     taxes = fields.Char('Taxes')
-    amount = fields.Numeric('Amount')
+    amount = fields.Numeric('Amount', digits='currency')
     amount_matches = fields.Function(fields.Boolean('Amount Matches'),
             'get_amount_matches')
     product = fields.Many2One('product.product', 'Product')
@@ -595,6 +598,10 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         ])
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
+
+    @fields.depends('invoice', '_parent_invoice.currency')
+    def on_change_with_currency(self, name=None):
+        return self.invoice.currency if self.invoice else None
 
     @classmethod
     def __register__(cls, module_name):
@@ -624,8 +631,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.cost_price = tools.to_decimal(data.get('cost_price'))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
-        if line.discount_rate:
-            line.discount_rate = abs(line.discount_rate)
+        if line.discount_rate is not None:
+            line.discount_rate = abs(line.discount_rate).quantize(
+                Decimal(1).scaleb(-cls.discount_rate.digits[1]))
         taxes = data.get('tax_rate')
         if taxes is not None:
             line.taxes = str(taxes)

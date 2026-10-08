@@ -93,6 +93,10 @@ msgctxt "field:papyrus.invoice.line,amount_matches:"
 msgid "Amount Matches"
 msgstr "L'import coincideix"
 
+msgctxt "field:papyrus.invoice.line,currency:"
+msgid "Currency"
+msgstr "Moneda"
+
 msgctxt "field:papyrus.invoice.line,description:"
 msgid "Description"
 msgstr "Descripció"
