@@ -419,7 +419,8 @@ class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
     document = fields.Many2One('papyrus.document', "Document")
     papyrus_name = fields.Char('Papyrus Name')
-    papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount', states={
+    papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount',
+        digits='currency', states={
             'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
             })
     papyrus_untaxed_amount_matches = fields.Function(fields.Boolean(
@@ -430,7 +431,8 @@ class Invoice(metaclass=PoolMeta):
             'Papyrus Lines Untaxed Amount', states={
                 'invisible': Bool(Eval('papyrus_untaxed_amount_matches')),
                 }), 'get_papyrus_lines_untaxed_amount')
-    papyrus_total_amount = fields.Numeric('Papyrus Total Amount', states={
+    papyrus_total_amount = fields.Numeric('Papyrus Total Amount',
+        digits='currency', states={
             'invisible': ~Bool(Eval('papyrus_total_amount')),
             })
     papyrus_total_amount_matches = fields.Function(fields.Boolean(
