@@ -306,9 +306,15 @@ class Document(metaclass=PoolMeta):
         if not invoice.papyrus_untaxed_amount:
             invoice.papyrus_untaxed_amount = tools.to_decimal(
                 data['totals']['subtotal'])
+            if invoice.papyrus_untaxed_amount is not None:
+                invoice.papyrus_untaxed_amount = invoice.currency.round(
+                    invoice.papyrus_untaxed_amount)
         if not invoice.papyrus_total_amount:
             invoice.papyrus_total_amount = tools.to_decimal(
                 data['totals']['total'])
+            if invoice.papyrus_total_amount is not None:
+                invoice.papyrus_total_amount = invoice.currency.round(
+                    invoice.papyrus_total_amount)
         seller = data.get('seller', {})
         seller_name = (seller.get('name') or '').strip().upper()
         if seller_name:
