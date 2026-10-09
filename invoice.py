@@ -308,13 +308,15 @@ class Document(metaclass=PoolMeta):
                 data['totals']['subtotal'])
             if invoice.papyrus_untaxed_amount is not None:
                 invoice.papyrus_untaxed_amount = invoice.currency.round(
-                    invoice.papyrus_untaxed_amount)
+                    invoice.papyrus_untaxed_amount).quantize(
+                        Decimal(1).scaleb(-invoice.currency.digits))
         if not invoice.papyrus_total_amount:
             invoice.papyrus_total_amount = tools.to_decimal(
                 data['totals']['total'])
             if invoice.papyrus_total_amount is not None:
                 invoice.papyrus_total_amount = invoice.currency.round(
-                    invoice.papyrus_total_amount)
+                    invoice.papyrus_total_amount).quantize(
+                        Decimal(1).scaleb(-invoice.currency.digits))
         seller = data.get('seller', {})
         seller_name = (seller.get('name') or '').strip().upper()
         if seller_name:
@@ -644,7 +646,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
         if line.amount is not None and currency:
-            line.amount = currency.round(line.amount)
+            line.amount = currency.round(line.amount).quantize(
+                Decimal(1).scaleb(-currency.digits))
         if line.discount_rate is not None:
             line.discount_rate = abs(line.discount_rate).quantize(
                 Decimal(1).scaleb(-cls.discount_rate.digits[1]))
