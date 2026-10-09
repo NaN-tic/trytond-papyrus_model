@@ -31,8 +31,24 @@ class TestInvoiceAmountPrecision(unittest.TestCase):
         Party = Model.get('party.party')
         party = Party(name='Supplier', account_payable=accounts['payable'])
         party.save()
+        Sequence = Model.get('ir.sequence')
+        SequenceType = Model.get('ir.sequence.type')
+        sequence_type, = SequenceType.find([
+                ('name', '=', 'Papyrus Document')])
+        sequence = Sequence(name='Document Sequence',
+            sequence_type=sequence_type, company=company)
+        sequence.save()
+        Queue = Model.get('papyrus.queue')
+        queue = Queue(name='Invoice Queue', type='document',
+            model_type='invoice', company=company,
+            document_sequence=sequence, source_directory='.',
+            storage_directory='.', scheduler=False)
+        queue.save()
+        PapyrusDocument = Model.get('papyrus.document')
+        document = PapyrusDocument(queue=queue, model_type='invoice')
+        document.save()
         Invoice = Model.get('account.invoice')
-        invoice = Invoice(type='in', party=party)
+        invoice = Invoice(type='in', party=party, document=document)
         invoice.save()
 
         data = {
@@ -56,9 +72,8 @@ class TestInvoiceAmountPrecision(unittest.TestCase):
             BackendInvoice = pool.get('account.invoice')
             backend_invoice = BackendInvoice(invoice.id)
             self.assertEqual(backend_invoice.currency.digits, 2)
-            document = Document(
-                model_type='invoice', invoice=[backend_invoice],
-                extracted_data=json.dumps(data))
+            document = Document(document.id)
+            document.extracted_data = json.dumps(data)
 
             # Reproduce a stored rounding factor with trailing zeros using
             # the actual currency rounding algorithm on every extracted amount.
