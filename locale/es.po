@@ -595,3 +595,7 @@ msgstr "Crear líneas"
 msgctxt "view:purchase.purchase:"
 msgid "Papyrus"
 msgstr "Papyrus"
+
+msgctxt "field:papyrus.shipment.in.line,purchase_number:"
+msgid "Purchase Number"
+msgstr "Número de compra"

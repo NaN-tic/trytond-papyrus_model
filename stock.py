@@ -102,6 +102,15 @@ class Document(metaclass=PoolMeta):
                 "both purchase numbers are present, purchase_number is our "
                 "purchase/order number and purchase_reference is the "
                 "supplier's purchase/order reference. "
+                "When an order reference appears above a group of items, "
+                "apply it to those items until the next order reference. "
+                "Store our purchase number in each item's purchase_number. "
+                "Order-reference headings are not product lines and must "
+                "not be appended to product descriptions. If items belong "
+                "to different purchases, set the document purchase_number "
+                "to null instead of joining their numbers. "
+                "If the document does not show a unit price, return null "
+                "for unit_price instead of inventing a price or using zero. "
                 "If unsure, return the closest values in those fields. If "
                 "a line contains both our/internal product code and the "
                 "supplier's product code, keep them separate: product_code is "
@@ -201,6 +210,8 @@ class Document(metaclass=PoolMeta):
                                 'product_code': {'type': ['string', 'null']},
                                 'party_product_code': {
                                     'type': ['string', 'null']},
+                                'purchase_number': {
+                                    'type': ['string', 'null']},
                                 'description': {'type': 'string'},
                                 'quantity': {'type': 'number'},
                                 'unit': {
@@ -211,7 +222,7 @@ class Document(metaclass=PoolMeta):
                                         'box or pack.'),
                                     },
                                 'unit_price': {
-                                    'type': 'number',
+                                    'type': ['number', 'null'],
                                     'description': ('Net unit price for one '
                                         'billed unit. If the document shows '
                                         'the price for an explicit base '
@@ -228,6 +239,7 @@ class Document(metaclass=PoolMeta):
                             },
                             'required': [
                                 'product_code', 'party_product_code',
+                                 'purchase_number',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
                                  'tax_rate', 'tax_amount',
@@ -285,8 +297,8 @@ class Document(metaclass=PoolMeta):
             shipment.papyrus_lines = []
             shipment.save()
 
+        seller = data.get('seller', {})
         if not getattr(shipment, 'supplier', None):
-            seller = data.get('seller', {})
             shipment.supplier = self.find_shipment_in_party_from_data(
                 seller, data)
             if not shipment.supplier:
@@ -323,9 +335,12 @@ class Document(metaclass=PoolMeta):
             for item in data.get('line_items', []):
                 line = PapyrusShipmentInLine.build(item)
                 lines.append(line)
-            shipment.papyrus_lines = lines
+        else:
+            PapyrusShipmentInLine.update_purchase_numbers(
+                lines, data.get('line_items', []))
         PapyrusShipmentInLine.find_product(shipment.supplier, lines)
         PapyrusShipmentInLine.find_move(shipment, lines, data)
+        shipment.papyrus_lines = lines
         shipment.save()
 
     def find_shipment_in_party_from_data(self, data, extracted_data=None):
@@ -472,6 +487,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
+    purchase_number = fields.Char('Purchase Number')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
     unit_price = fields.Numeric('Unit Price')
@@ -500,6 +516,10 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             description = description.replace('\x00', '').strip()
         line.product_code = product_code
         line.external_code = external_code
+        purchase_number = data.get('purchase_number')
+        if isinstance(purchase_number, str):
+            purchase_number = purchase_number.replace('\x00', '').strip() or None
+        line.purchase_number = purchase_number
         line.description = description
         line.quantity = tools.to_decimal(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
@@ -511,6 +531,26 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         if taxes is not None:
             line.taxes = str(taxes)
         return line
+
+    @classmethod
+    def update_purchase_numbers(cls, lines, items):
+        groups = {}
+        extracted = [cls.build(item) for item in items]
+        for index, records in enumerate((lines, extracted)):
+            for line in records:
+                if not (line.product_code or line.external_code
+                        or line.description):
+                    continue
+                key = (line.product_code, line.external_code, line.quantity)
+                if not (line.product_code or line.external_code):
+                    key += (line.description,)
+                groups.setdefault(key, ([], []))[index].append(line)
+        for existing, extracted in groups.values():
+            if len(existing) == len(extracted) == 1:
+                line, = existing
+                item, = extracted
+                if not line.purchase_number:
+                    line.purchase_number = item.purchase_number
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
@@ -544,7 +584,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             return False
         return True
 
-    def get_line_candidates(self, candidates):
+    def get_line_candidates(self, candidates, purchase=None):
         Document = Pool().get('papyrus.document')
         product = getattr(self, 'product', None)
         if not product:
@@ -585,39 +625,48 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                 ])
         purchase_number = (data.get('purchase_number') or '').strip()
         purchase_reference = (data.get('purchase_reference') or '').strip()
-        purchase_domain = []
-        if purchase_number:
-            purchase_domain.extend([
-                    ('number', '=', purchase_number),
-                    ('reference', '=', purchase_number),
-                    ])
-        if purchase_reference:
-            purchase_domain.extend([
-                    ('number', '=', purchase_reference),
-                    ('reference', '=', purchase_reference),
-                    ])
-        if purchase_domain and Purchase:
+        header_references = {purchase_number, purchase_reference} - {''}
+        references = header_references | {
+            getattr(line, 'purchase_number', None) for line in lines} - {None, ''}
+        purchases = []
+        if Purchase and references:
+            PurchaseLine = pool.get('purchase.line')
             purchases = Purchase.search([
                     ('party', '=', shipment.supplier),
-                    ['OR'] + purchase_domain,
+                    ['OR',
+                        ('number', 'in', sorted(references)),
+                        ('reference', 'in', sorted(references))],
                     ])
-            if purchases:
-                PurchaseLine = pool.get('purchase.line')
-                candidates = [move for move in candidates
-                    if (isinstance(move.origin, PurchaseLine)
-                        and move.origin.purchase in purchases)]
         used = {line.move.id for line in lines if getattr(line, 'move', None)}
+        assignments = {}
 
         for line in lines:
             if getattr(line, 'move', None):
                 continue
-            line_candidates = line.get_line_candidates([
-                    move for move in candidates if move.id not in used])
-            if not line_candidates:
-                continue
-            line_candidates.sort(key=lambda move: move.id)
-            line.move = line_candidates[0]
-            used.add(line_candidates[0].id)
+            line_reference = getattr(line, 'purchase_number', None)
+            line_references = ({line_reference} if line_reference
+                else header_references)
+            available = [move for move in candidates if move.id not in used]
+            line_purchases = []
+            if Purchase and line_references:
+                line_purchases = [purchase for purchase in purchases
+                    if line_references.intersection(
+                        {purchase.number, purchase.reference})]
+                if not line_purchases:
+                    continue
+                available = [move for move in available
+                    if (isinstance(move.origin, PurchaseLine)
+                        and move.origin.purchase in line_purchases)]
+            purchase = line_purchases[0] if len(line_purchases) == 1 else None
+            line_candidates = line.get_line_candidates(
+                available, purchase=purchase)
+            if len(line_candidates) == 1:
+                move, = line_candidates
+                assignments.setdefault(move.id, []).append((line, move))
+        for matches in assignments.values():
+            if len(matches) == 1:
+                line, move = matches[0]
+                line.move = move
 
     @classmethod
     def find_product(cls, party, lines):
