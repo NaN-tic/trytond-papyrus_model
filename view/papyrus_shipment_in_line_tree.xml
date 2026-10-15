@@ -1,5 +1,6 @@
 <tree editable="1">
     <field name="shipment"/>
+    <field name="purchase_number" optional="0"/>
     <field name="product_code"/>
     <field name="external_code" optional="0"/>
     <field name="description"/>
