@@ -2,19 +2,94 @@ import base64
 from decimal import Decimal
 import json
 import logging
-import requests
 from datetime import datetime
 from magic import Magic
 from sql.conditionals import Greatest
-from sql.functions import Upper
-import trytond.config as config
+from sql.functions import Function, Upper
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.modules.widgets.tools import Similarity, create_similarity
 
 logger = logging.getLogger(__name__)
 
-API_KEY = config.get('openrouter', 'api_key')
+CODE_SEPARATORS = '-‐‑‒–—− _./\\\t\r\n\u00a0'
+
+
+class Replace(Function):
+    __slots__ = ()
+    _function = 'REPLACE'
+
+
+def normalize_product_code(code):
+    code = (code or '').upper()
+    for separator in CODE_SEPARATORS:
+        code = code.replace(separator, '')
+    return code
+
+
+def find_product_by_normalized_code(Line, party, lines, related_model,
+        history_party):
+    lines = [line for line in lines if not getattr(line, 'product', None)]
+    codes = {
+        normalize_product_code(getattr(line, name, None))
+        for line in lines for name in ('product_code', 'external_code')
+        } - {''}
+    if not codes:
+        return
+    pool = Pool()
+    Product = pool.get('product.product')
+
+    def search_codes(Model, names, domain):
+        table = Model.__table__()
+        condition = None
+        for name in names:
+            column = Upper(getattr(table, name))
+            for separator in CODE_SEPARATORS:
+                column = Replace(column, separator, '')
+            match = column.in_(sorted(codes))
+            condition = match if condition is None else condition | match
+        query = table.select(table.id, where=condition)
+        return Model.search(domain + [('id', 'in', query)])
+
+    by_code = {}
+    for product in search_codes(Product, ['code'], []):
+        code = normalize_product_code(product.code)
+        by_code.setdefault(code, set()).add(product)
+
+    related_by_code = {}
+    try:
+        Related = pool.get(related_model)
+    except KeyError:
+        Related = None
+    if Related:
+        domain = [('party', '=', party)]
+        for record in search_codes(Related, ['code'], domain):
+            products = ([record.product] if record.product
+                else record.template.products)
+            code = normalize_product_code(record.code)
+            related_by_code.setdefault(code, set()).update(products)
+
+    history_by_code = {}
+    names = [name for name in ('product_code', 'external_code')
+        if name in Line._fields]
+    for record in search_codes(Line, names, [
+            (history_party, '=', party),
+            ('product', '!=', None)]):
+        for name in names:
+            code = normalize_product_code(getattr(record, name))
+            if code in codes:
+                history_by_code.setdefault(code, set()).add(record.product)
+
+    for line in lines:
+        for name in ('product_code', 'external_code'):
+            code = normalize_product_code(getattr(line, name, None))
+            sources = (related_by_code, by_code, history_by_code)
+            candidates = next((source[code] for source in sources
+                    if source.get(code)), set())
+            if candidates:
+                if len(candidates) == 1:
+                    line.product, = candidates
+                break
 
 
 def convert_nulls(obj):
@@ -103,22 +178,10 @@ def find_party_by_similarity(text, role_domain=None, model_name='party.party',
     return parties[0], float(score)
 
 
-def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
+def llm(messages, origin, model=None, pdf_engine=None, schema=None,
+        max_tokens=None,
         referer='trytond', title=None):
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": referer,
-        "X-Title": title,
-        }
-    payload = {
-        "model": model or 'openrouter/auto',
-        "messages": messages,
-        }
-    if max_tokens is not None:
-        payload['max_tokens'] = max_tokens
+    extra_body = {}
     has_file = False
     for message in messages or []:
         if not isinstance(message, dict):
@@ -139,45 +202,25 @@ def llm(messages, model=None, pdf_engine=None, schema=None, max_tokens=None,
         elif pdf_engine:
             logger.warning('Unsupported pdf engine %r, using provider default',
                 pdf_engine)
-        payload['plugins'] = [plugin]
+        extra_body['plugins'] = [plugin]
+    response_format = None
     if schema:
-        payload["response_format"] = {
+        response_format = {
             "type": "json_schema",
             "json_schema": schema
             }
-
-    p = json.dumps(payload)
-    if len(p) > 2000:
-        p = p[:1000] + '........' + p[-1000:]
-
-    for retry in range(3):
-        try:
-            logger.debug('Sending to OpenRouter: %s', p)
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
-            logger.debug('Got response!')
-            if response.status_code == 200:
-                break
-            if response.status_code == 500:
-                logger.debug('Server error, retrying...')
-                continue
-            logger.error(f'OpenRouter error {response.status_code}: {response.text}')
-            raise LLMError(f"OpenRouter error {response.status_code}: {response.text}")
-        except requests.RequestException as e:
-            logger.error(f'Error communicating with OpenRouter: {e}')
-    else:
-        raise LLMError("Failed to get a valid response from OpenRouter after retries.")
-
+    AIModel = Pool().get('ai.model')
+    model = AIModel.get_or_create(model or 'openrouter/auto')
+    response, error = model.get_completion(
+        messages, origin,
+        response_format=response_format, extra_body=extra_body or None,
+        max_tokens=max_tokens)
+    if error:
+        raise LLMError(response)
     try:
-        data = response.json()
-    except Exception:
-        raise LLMError(f"Error converting to json server's response: {response.text}")
-
-    try:
-        content = data["choices"][0]["message"]["content"]
-    except Exception:
-        raise LLMError(f"Malformed OpenRouter response: {json.dumps(data)[:1000]}")
-
-    logger.debug('Tokens consumed: %s', data.get('usage', {}))
+        content = response.choices[0].message.content
+    except (AttributeError, IndexError):
+        raise LLMError(f'Malformed OpenRouter response: {response!r}')
 
     if isinstance(content, list):
         content = ''.join([c.get("text", "") for c in content if isinstance(c, dict) and "text" in c])

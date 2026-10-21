@@ -651,13 +651,12 @@ class PurchaseLine(metaclass=PoolMeta):
         to_write = {}
         actions = iter(args)
         for lines, values in zip(actions, actions):
-            desired = values.get('delivery_date_store')
-            if not desired:
+            if 'delivery_date_store' not in values:
                 continue
-            lines = [line for line in lines
-                if not line.desired_delivery_date]
-            if lines:
-                to_write.setdefault(desired, []).extend(lines)
+            for line in lines:
+                if line.desired_delivery_date or not line.delivery_date_store:
+                    continue
+                to_write.setdefault(line.delivery_date_store, []).append(line)
         super().write(*args)
         for desired, lines in to_write.items():
             cls.write(lines, {'desired_delivery_date': desired})
@@ -767,10 +766,14 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         if not purchase_lines:
             return False
         quantity = getattr(self, 'quantity', None)
-        if (quantity is not None
-                and sum((line.quantity or Decimal(0)
-                    for line in purchase_lines), Decimal(0)) != quantity):
-            return False
+        if quantity is not None:
+            quantity = Decimal(str(quantity))
+            native_quantity = sum(
+                (Decimal(str(line.quantity or 0))
+                    for line in purchase_lines),
+                Decimal(0))
+            if native_quantity != quantity:
+                return False
         unit_price = getattr(self, 'unit_price', None)
         if (unit_price is not None and any(
                 not Document.amounts_match(line.unit_price, unit_price)
@@ -980,3 +983,6 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
+
+        tools.find_product_by_normalized_code(cls, party, lines,
+            'purchase.product_supplier', 'purchase.party')

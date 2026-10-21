@@ -668,6 +668,7 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
+    manufacturer_code = fields.Char('Manufacturer Code')
     ean = fields.Char('EAN')
     previous_sale_reference = fields.Char('Previous Sale Reference')
     delivery_date = fields.Date('Delivery Date')
@@ -979,3 +980,6 @@ class PapyrusSaleLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
+
+        tools.find_product_by_normalized_code(cls, party, lines,
+            'sale.product_customer', 'sale.party')

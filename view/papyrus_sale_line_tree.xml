@@ -2,6 +2,7 @@
     <field name="sale"/>
     <field name="product_code"/>
     <field name="external_code" optional="0"/>
+    <field name="manufacturer_code" optional="1"/>
     <field name="ean" optional="1"/>
     <field name="previous_sale_reference" optional="1"/>
     <field name="delivery_date" optional="1"/>

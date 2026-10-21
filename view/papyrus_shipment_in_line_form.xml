@@ -1,6 +1,8 @@
 <form col="6">
     <label name="shipment"/>
     <field name="shipment"/>
+    <label name="purchase_number"/>
+    <field name="purchase_number"/>
     <newline/>
     <label name="product_code"/>
     <field name="product_code"/>

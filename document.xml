@@ -22,6 +22,16 @@
             <field name="name">document_list</field>
         </record>
 
+        <record model="ir.model.button" id="document_mark_inspected_button">
+            <field name="name">mark_inspected</field>
+            <field name="string">Mark Inspected</field>
+            <field name="model">papyrus.document</field>
+        </record>
+        <record model="ir.model.button-res.group" id="document_mark_inspected_button_group_papyrus_admin">
+            <field name="button" ref="document_mark_inspected_button"/>
+            <field name="group" ref="papyrus.group_papyrus_admin"/>
+        </record>
+
         <record model="ir.rule" id="rule_papyrus_document2">
             <field name="domain"
                 eval="[('guessed_company', 'in', Eval('companies', []))]"

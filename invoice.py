@@ -12,6 +12,7 @@ from trytond.pyson import PYSONEncoder, Eval, Bool, If
 from trytond.exceptions import UserWarning
 from trytond.i18n import gettext
 from trytond.transaction import Transaction
+from trytond.modules.product import price_digits
 from . import tools
 
 
@@ -80,6 +81,9 @@ class Document(metaclass=PoolMeta):
                 "provided schema. Use numbers for monetary/quantitative "
                 "fields; use null when unknown. Extract seller/buyer info "
                 "(names, VAT/tax ID), document number, dates, "
+                "and preserve invoice_number exactly as printed, including "
+                "all internal spaces. Never remove spaces or replace them "
+                "with hyphens or other characters. Extract "
                 "currency, our order number, supplier order number, supplier "
                 "delivery note number, line items (codes, EANs, descriptions, "
                 "quantities, unit prices, taxes), and totals. If a line contains both "
@@ -92,6 +96,9 @@ class Document(metaclass=PoolMeta):
                 "pack, etc., copy that value into unit and use it to "
                 "normalize unit_price to one unit. Never invent or guess a "
                 "quantity base that is not clearly written in the document. "
+                "Extract cost_price only when the document explicitly shows "
+                "a cost or cost base distinct from the unit price; otherwise "
+                "return null. "
                 "quantity must be the real number of billed units, and line "
                 "totals must stay as the full line totals from the document. "
                 "When the document shows withholdings such as IRPF, treat "
@@ -206,13 +213,20 @@ class Document(metaclass=PoolMeta):
                                     },
                                 'line_total_excl_tax': {
                                     'type': 'number'},
+                                'cost_price': {
+                                    'type': ['number', 'null'],
+                                    'description': ('Explicit unit cost or '
+                                        'cost base shown on the document, if '
+                                        'different from the unit price.'),
+                                    },
                                 'tax_rate': {'type': 'number'},
                             },
                             'required': [
                                 'product_code', 'party_product_code', 'ean',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
-                                 'line_total_excl_tax', 'tax_rate',
+                                 'cost_price', 'line_total_excl_tax',
+                                 'tax_rate',
                                  ],
                             'additionalProperties': False
                         }
@@ -239,9 +253,6 @@ class Document(metaclass=PoolMeta):
             }
         }
 
-    def should_import_data(self, data):
-        return bool(data)
-
     def guess_invoice(self):
         pool = Pool()
         Invoice = pool.get('account.invoice')
@@ -254,7 +265,7 @@ class Document(metaclass=PoolMeta):
         messages = self.guess_invoice_messages()
         schema = self.guess_invoice_schema()
         data = self.extract_data_with_llm('invoice', messages, schema)
-        if not self.should_import_data(data):
+        if not data:
             return
 
         if self.invoice:
@@ -300,9 +311,17 @@ class Document(metaclass=PoolMeta):
         if not invoice.papyrus_untaxed_amount:
             invoice.papyrus_untaxed_amount = tools.to_decimal(
                 data['totals']['subtotal'])
+            if invoice.papyrus_untaxed_amount is not None:
+                invoice.papyrus_untaxed_amount = invoice.currency.round(
+                    invoice.papyrus_untaxed_amount).quantize(
+                        Decimal(1).scaleb(-invoice.currency.digits))
         if not invoice.papyrus_total_amount:
             invoice.papyrus_total_amount = tools.to_decimal(
                 data['totals']['total'])
+            if invoice.papyrus_total_amount is not None:
+                invoice.papyrus_total_amount = invoice.currency.round(
+                    invoice.papyrus_total_amount).quantize(
+                        Decimal(1).scaleb(-invoice.currency.digits))
         seller = data.get('seller', {})
         seller_name = (seller.get('name') or '').strip().upper()
         if seller_name:
@@ -315,7 +334,7 @@ class Document(metaclass=PoolMeta):
         else:
             lines = []
             for item in data.get('line_items', []):
-                line = PapyrusInvoiceLine.build(item)
+                line = PapyrusInvoiceLine.build(item, currency=invoice.currency)
                 lines.append(line)
             PapyrusInvoiceLine.find_product(invoice.party, lines)
             if invoice.party.papyrus_group_lines_by_tax:
@@ -415,7 +434,8 @@ class Invoice(metaclass=PoolMeta):
     __name__ = 'account.invoice'
     document = fields.Many2One('papyrus.document', "Document")
     papyrus_name = fields.Char('Papyrus Name')
-    papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount', states={
+    papyrus_untaxed_amount = fields.Numeric('Papyrus Untaxed Amount',
+        digits='currency', states={
             'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
             })
     papyrus_untaxed_amount_matches = fields.Function(fields.Boolean(
@@ -423,10 +443,11 @@ class Invoice(metaclass=PoolMeta):
                 'invisible': ~Bool(Eval('papyrus_untaxed_amount')),
                 }), 'get_papyrus_untaxed_amount_matches')
     papyrus_lines_untaxed_amount = fields.Function(fields.Numeric(
-            'Papyrus Lines Untaxed Amount', states={
+            'Papyrus Lines Untaxed Amount', digits='currency', states={
                 'invisible': Bool(Eval('papyrus_untaxed_amount_matches')),
                 }), 'get_papyrus_lines_untaxed_amount')
-    papyrus_total_amount = fields.Numeric('Papyrus Total Amount', states={
+    papyrus_total_amount = fields.Numeric('Papyrus Total Amount',
+        digits='currency', states={
             'invisible': ~Bool(Eval('papyrus_total_amount')),
             })
     papyrus_total_amount_matches = fields.Function(fields.Boolean(
@@ -574,25 +595,44 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
         ondelete='CASCADE')
+    currency = fields.Function(fields.Many2One('currency.currency', 'Currency'),
+        'on_change_with_currency')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
     ean = fields.Char('EAN')
     description = fields.Text('Description')
-    quantity = fields.Numeric('Quantity')
-    unit_price = fields.Numeric('Unit Price')
-    discount_rate = fields.Numeric('Discount (%)')
+    quantity = fields.Float('Quantity')
+    unit_price = fields.Numeric('Unit Price', digits=price_digits)
+    cost_price = fields.Numeric('Cost Price', digits=price_digits)
+    discount_rate = fields.Numeric('Discount (%)', digits=(16, 4))
     taxes = fields.Char('Taxes')
-    amount = fields.Numeric('Amount')
+    amount = fields.Numeric('Amount', digits='currency')
     amount_matches = fields.Function(fields.Boolean('Amount Matches'),
             'get_amount_matches')
     product = fields.Many2One('product.product', 'Product')
     invoice_line = fields.Many2One('account.invoice.line', 'Invoice Line',
-        ondelete='SET NULL')
+        ondelete='SET NULL', domain=[
+            'OR',
+            ('invoice', '=', None),
+            ('invoice', '=', Eval('invoice', -1)),
+        ])
     invoice_line_issue = fields.Function(fields.Char('Invoice Line Issue'),
             'get_invoice_line_issue')
 
+    @fields.depends('invoice', '_parent_invoice.currency')
+    def on_change_with_currency(self, name=None):
+        return self.invoice.currency if self.invoice else None
+
     @classmethod
-    def build(cls, data):
+    def __register__(cls, module_name):
+        table = cls.__table_handler__(module_name)
+        if (table.column_exist('quantity')
+                and table.column_is_type('quantity', 'numeric')):
+            table.alter_type('quantity', cls.quantity.sql_type().base)
+        super().__register__(module_name)
+
+    @classmethod
+    def build(cls, data, currency=None):
         line = cls()
         product_code = data.get('product_code')
         if isinstance(product_code, str):
@@ -610,12 +650,22 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         line.external_code = external_code
         line.ean = ean_code
         line.description = description
-        line.quantity = tools.to_decimal(data.get('quantity'))
+        line.quantity = float(data.get('quantity'))
         line.unit_price = tools.to_decimal(data.get('unit_price'))
+        line.cost_price = tools.to_decimal(data.get('cost_price'))
+        for name in ('unit_price', 'cost_price'):
+            value = getattr(line, name)
+            if value is not None:
+                setattr(line, name, value.quantize(
+                    Decimal(1).scaleb(-getattr(cls, name).digits[1])))
         line.discount_rate = tools.to_decimal(data.get('discount'))
         line.amount = tools.to_decimal(data.get('line_total_excl_tax'))
-        if line.discount_rate:
-            line.discount_rate = abs(line.discount_rate)
+        if line.amount is not None and currency:
+            line.amount = currency.round(line.amount).quantize(
+                Decimal(1).scaleb(-currency.digits))
+        if line.discount_rate is not None:
+            line.discount_rate = abs(line.discount_rate).quantize(
+                Decimal(1).scaleb(-cls.discount_rate.digits[1]))
         taxes = data.get('tax_rate')
         if taxes is not None:
             line.taxes = str(taxes)
@@ -623,7 +673,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
     def get_amount_matches(self, name):
         Document = Pool().get('papyrus.document')
-        quantity = getattr(self, 'quantity', None)
+        quantity = tools.to_decimal(getattr(self, 'quantity', None))
         unit_price = getattr(self, 'unit_price', None)
         amount = getattr(self, 'amount', None)
         if (not isinstance(quantity, Decimal)
@@ -847,10 +897,14 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             if code_values and history_descriptions:
                 history_domain.append(['OR',
                         ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
                         ('description', 'in', history_descriptions),
                         ])
             elif code_values:
-                history_domain.append(('product_code', 'in', code_values))
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ])
             else:
                 history_domain.append(('description', 'in',
                         history_descriptions))
@@ -860,6 +914,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 product = getattr(line, 'product', None)
                 if line.product_code and product:
                     history_by_code.setdefault(line.product_code, product)
+                if line.external_code and product:
+                    history_by_code.setdefault(line.external_code, product)
                 if line.description and product:
                     history_by_description.setdefault(line.description,
                         product)
@@ -932,6 +988,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     limit=1)
                 if products:
                     line.product, = products
+
+        tools.find_product_by_normalized_code(cls, party, lines,
+            'purchase.product_supplier', 'invoice.party')
 
     @classmethod
     def find_invoice_line(cls, party, lines, data):
@@ -1068,7 +1127,7 @@ class InvoiceDossier(Wizard):
     __name__ = 'invoice.dossier'
 
     start_state = 'open_'
-    open_ = StateAction('papyrus.act_attachment_form')
+    open_ = StateAction('office.action_attachment')
 
     def do_open_(self, action):
         pool = Pool()

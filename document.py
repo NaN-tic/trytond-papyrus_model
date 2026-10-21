@@ -49,7 +49,7 @@ class Document(metaclass=PoolMeta):
         'get_party', searcher='search_party')
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection('_get_model_type', 'Guessed Model Type')
-    extracted_data = fields.Text('Extracted Data', readonly=True)
+    extracted_data = fields.Text('Extracted Data')
 
     @classmethod
     def _get_model_type(cls):
@@ -63,6 +63,12 @@ class Document(metaclass=PoolMeta):
         cls._check_company = set()
         # Fields to check whether the document is already linked
         cls._check_model_exists = set()
+        cls._buttons.update({
+                'mark_inspected': {
+                    'invisible': Eval('state') != 'pending',
+                    'depends': ['state'],
+                    },
+                })
 
     def scan_engines(self):
         super().scan_engines()
@@ -119,7 +125,8 @@ class Document(metaclass=PoolMeta):
         llms = (self.queue.llm_classifier or '').split()
         for llm in llms:
             try:
-                response = tools.llm(messages=self.guess_model_type_messages(),
+                response = tools.llm(
+                    messages=self.guess_model_type_messages(), origin=self,
                     model=llm,
                     pdf_engine=self.queue.llm_pdf_engine,
                     schema=self.guess_model_type_schema(),
@@ -169,24 +176,24 @@ class Document(metaclass=PoolMeta):
 
         if self.company:
             info = self.get_company_info()
-            info = ("In order to understand the type of document take into "
-                "account that the company related to the document is: "
+            info = (
+                "In your classification take into account the following "
+                "information on the company the document was issued to: "
                 f"{info}")
         else:
             info = self.get_company_info()
-            info = ("In order to understand the type of document take into "
-                f"account that possible companies in the system are: {info}")
+            info = (
+                "In your classification you may want to take into account "
+                "the following information on the companies recorded in our "
+                f"system: {info}")
 
         user = {
             "role": "user",
             "content": [{
                     "type": "text",
                     "text": (
-                        "Classify this document text and output STRICT JSON "
-                        "matching the schema. No extra text. Parse this "
-                        "business document and output STRICT JSON matching the "
-                        "schema. No extra text. "
-                        f"{info}\n\n"
+                        "Classify the document attached below."
+                        f"\n\n{info}\n\n"
                         "Here're the document types:"
                         f"\n\n{types}\n\n"
                         ),
@@ -209,10 +216,10 @@ class Document(metaclass=PoolMeta):
         llms = (self.queue.llms or '').split()
         for llm in llms:
             try:
-                data = tools.llm(messages=messages, model=llm,
+                data = tools.llm(messages=messages, origin=self, model=llm,
                     pdf_engine=self.queue.llm_pdf_engine, schema=schema,
                     max_tokens=max_tokens)
-            except Exception as exc:
+            except tools.LLMError as exc:
                 tools.logger.error(
                     'Error extracting %s data for document %s with LLM %s: %s',
                     kind, self.id, llm, exc)
@@ -272,6 +279,21 @@ class Document(metaclass=PoolMeta):
             document.extracted_data = None
         cls.save(documents)
         super().pending(documents)
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('inspected')
+    def mark_inspected(cls, documents):
+        for document in documents:
+            try:
+                data = json.loads(document.extracted_data or '')
+            except ValueError:
+                data = None
+            if not (document.company and document.model_type
+                    and isinstance(data, dict) and data):
+                raise UserError(gettext(
+                    'papyrus_model.msg_incomplete_agent_inspection',
+                    document=document.rec_name))
 
     @classmethod
     def model_exists(cls, documents):
@@ -492,6 +514,8 @@ class Document(metaclass=PoolMeta):
                 record = self.sale[0]
             elif self.model_type == 'shipment_in' and self.shipment_in:
                 record = self.shipment_in[0]
+            elif self.model_type == 'purchase' and self.purchase:
+                record = self.purchase[0]
             else:
                 raise UserError(gettext('papyrus_model.'
                         'msg_cannot_process_without_related_record',
