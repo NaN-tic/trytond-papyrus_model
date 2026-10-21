@@ -784,6 +784,11 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             ]
 
     @classmethod
+    def get_product_search_fields(cls):
+        """Return the extracted fields used to identify a product."""
+        return {'product_code', 'external_code', 'description'}
+
+    @classmethod
     def find_product(cls, party, lines):
         lines = [line for line in lines if not getattr(line, 'product', None)]
         if not lines:
@@ -796,26 +801,18 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         except KeyError:
             ProductSupplier = None
 
-        values = []
+        search_fields = cls.get_product_search_fields()
+        values_by_field = {name: set() for name in search_fields}
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip() or None
-                line.description = description
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-                line.product_code = product_code
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-                line.external_code = external_code
-            if product_code:
-                values.append(product_code)
-            if external_code:
-                values.append(external_code)
-            if description:
-                values.append(description)
+            for name, field_values in values_by_field.items():
+                value = getattr(line, name, None)
+                if isinstance(value, str):
+                    value = value.replace('\x00', '').strip() or None
+                    setattr(line, name, value)
+                if value:
+                    field_values.add(value)
+        values = list({value for field_values in values_by_field.values()
+            for value in field_values})
 
         by_code = {}
         by_name = {}
@@ -849,15 +846,9 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     (record.template.products and record.template.products[0]))
                 if record.name and product:
                     by_name[record.name] = product
-        history_codes = list({
-                getattr(line, 'product_code', None)
-                for line in lines if getattr(line, 'product_code', None)})
-        history_lookup_codes = list({
-                getattr(line, 'external_code', None)
-                for line in lines if getattr(line, 'external_code', None)})
-        history_descriptions = list({
-                getattr(line, 'description', None)
-                for line in lines if getattr(line, 'description', None)})
+        history_codes = list(values_by_field.get('product_code', []))
+        history_lookup_codes = list(values_by_field.get('external_code', []))
+        history_descriptions = list(values_by_field.get('description', []))
         if history_codes or history_lookup_codes or history_descriptions:
             history_domain = [('invoice.party', '=', party),
                 ('product', '!=', None)]
@@ -889,9 +880,12 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                         product)
 
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
+            description = (getattr(line, 'description', None)
+                if 'description' in search_fields else None)
+            product_code = (getattr(line, 'product_code', None)
+                if 'product_code' in search_fields else None)
+            external_code = (getattr(line, 'external_code', None)
+                if 'external_code' in search_fields else None)
             product = None
             if product_code:
                 product = by_code.get(product_code)
