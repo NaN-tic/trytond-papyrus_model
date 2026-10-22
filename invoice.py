@@ -584,6 +584,8 @@ class Invoice(metaclass=PoolMeta):
 class PapyrusInvoiceLine(ModelSQL, ModelView):
     __name__ = 'papyrus.invoice.line'
 
+    _match_invoice_line_party = True
+
     invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
         ondelete='CASCADE')
     currency = fields.Function(fields.Many2One('currency.currency', 'Currency'),
@@ -966,7 +968,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 continue
             origin = getattr(invoice_line, 'origin', None)
             purchase = getattr(origin, 'purchase', None) if origin else None
-            if getattr(purchase, 'party', None) == party:
+            if (getattr(purchase, 'party', None) == party
+                    or (purchase and not cls._match_invoice_line_party)):
                 candidates.append(invoice_line)
                 continue
             for move in getattr(invoice_line, 'stock_moves', []):
@@ -1016,10 +1019,10 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     ('reference', '=', party_order_number_value),
                     ])
         if purchase_domain and Purchase:
-            purchases = Purchase.search([
-                    ('party', '=', party),
-                    ['OR'] + purchase_domain,
-                    ])
+            domain = [['OR'] + purchase_domain]
+            if cls._match_invoice_line_party:
+                domain.append(('party', '=', party))
+            purchases = Purchase.search(domain)
             if purchases:
                 matching = []
                 for invoice_line in candidates:
