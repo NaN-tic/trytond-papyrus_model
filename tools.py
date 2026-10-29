@@ -30,9 +30,11 @@ def normalize_product_code(code):
 def find_product_by_normalized_code(Line, party, lines, related_model,
         history_party):
     lines = [line for line in lines if not getattr(line, 'product', None)]
+    code_fields = [name for name in ('product_code', 'external_code')
+        if name in Line.get_product_search_fields()]
     codes = {
         normalize_product_code(getattr(line, name, None))
-        for line in lines for name in ('product_code', 'external_code')
+        for line in lines for name in code_fields
         } - {''}
     if not codes:
         return
@@ -81,7 +83,7 @@ def find_product_by_normalized_code(Line, party, lines, related_model,
                 history_by_code.setdefault(code, set()).add(record.product)
 
     for line in lines:
-        for name in ('product_code', 'external_code'):
+        for name in code_fields:
             code = normalize_product_code(getattr(line, name, None))
             sources = (related_by_code, by_code, history_by_code)
             candidates = next((source[code] for source in sources
