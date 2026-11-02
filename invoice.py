@@ -378,7 +378,7 @@ class Document(metaclass=PoolMeta):
             invoice.papyrus_lines = lines
 
         PapyrusInvoiceLine.find_invoice_line(
-            invoice.party, lines, data)
+            invoice.party, lines, data, invoice=invoice)
         invoice.create_invoice_lines_from_papyrus_lines()
         invoice.save()
 
@@ -788,13 +788,52 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         return {'product_code', 'external_code', 'description'}
 
     @classmethod
+    def get_history_products(cls, party, values_by_field):
+        """Map extracted codes and descriptions to historical products."""
+        history_by_code = {}
+        history_by_description = {}
+        history_codes = list(values_by_field.get('product_code', []))
+        history_lookup_codes = list(values_by_field.get('external_code', []))
+        history_descriptions = list(values_by_field.get('description', []))
+        if history_codes or history_lookup_codes or history_descriptions:
+            history_domain = [('invoice.party', '=', party),
+                ('product', '!=', None)]
+            code_values = list(dict.fromkeys(history_codes + history_lookup_codes))
+            if code_values and history_descriptions:
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ('description', 'in', history_descriptions),
+                        ])
+            elif code_values:
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ])
+            else:
+                history_domain.append(('description', 'in',
+                        history_descriptions))
+            history_lines = cls.search(history_domain,
+                order=[('id', 'DESC')])
+            for line in history_lines:
+                product = getattr(line, 'product', None)
+                if line.product_code and product:
+                    history_by_code.setdefault(line.product_code, product)
+                if line.external_code and product:
+                    history_by_code.setdefault(line.external_code, product)
+                if line.description and product:
+                    history_by_description.setdefault(line.description,
+                        product)
+
+        return history_by_code, history_by_description
+
+    @classmethod
     def find_product(cls, party, lines):
         lines = [line for line in lines if not getattr(line, 'product', None)]
         if not lines:
             return
         pool = Pool()
         Product = pool.get('product.product')
-        HistoryLine = pool.get('papyrus.invoice.line')
         try:
             ProductSupplier = pool.get('purchase.product_supplier')
         except KeyError:
@@ -815,8 +854,6 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
 
         by_code = {}
         by_name = {}
-        history_by_code = {}
-        history_by_description = {}
         products_by_code = Product.search([('code', 'in', values)])
         for product in products_by_code:
             if product.code:
@@ -845,38 +882,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     (record.template.products and record.template.products[0]))
                 if record.name and product:
                     by_name[record.name] = product
-        history_codes = list(values_by_field.get('product_code', []))
-        history_lookup_codes = list(values_by_field.get('external_code', []))
-        history_descriptions = list(values_by_field.get('description', []))
-        if history_codes or history_lookup_codes or history_descriptions:
-            history_domain = [('invoice.party', '=', party),
-                ('product', '!=', None)]
-            code_values = list(dict.fromkeys(history_codes + history_lookup_codes))
-            if code_values and history_descriptions:
-                history_domain.append(['OR',
-                        ('product_code', 'in', code_values),
-                        ('external_code', 'in', code_values),
-                        ('description', 'in', history_descriptions),
-                        ])
-            elif code_values:
-                history_domain.append(['OR',
-                        ('product_code', 'in', code_values),
-                        ('external_code', 'in', code_values),
-                        ])
-            else:
-                history_domain.append(('description', 'in',
-                        history_descriptions))
-            history_lines = HistoryLine.search(history_domain,
-                order=[('id', 'DESC')])
-            for line in history_lines:
-                product = getattr(line, 'product', None)
-                if line.product_code and product:
-                    history_by_code.setdefault(line.product_code, product)
-                if line.external_code and product:
-                    history_by_code.setdefault(line.external_code, product)
-                if line.description and product:
-                    history_by_description.setdefault(line.description,
-                        product)
+        history_by_code, history_by_description = cls.get_history_products(
+            party, values_by_field)
 
         for line in lines:
             description = (getattr(line, 'description', None)
@@ -951,7 +958,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             'purchase.product_supplier', 'invoice.party')
 
     @classmethod
-    def find_invoice_line(cls, party, lines, data):
+    def find_invoice_line(cls, party, lines, data, invoice=None):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         try:
