@@ -5,7 +5,7 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.pyson import Eval, Bool, If
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
@@ -73,7 +73,10 @@ class Document(metaclass=PoolMeta):
                 "seller/buyer info (names, VAT/tax ID, address, email, "
                 "phone), document number, dates, currency, line items "
                 "(codes, descriptions, quantities, unit prices, discounts, "
-                "taxes, line totals), and totals. If a line contains both "
+                "taxes, line totals), and totals. Return line_items in their "
+                "visual order in the PDF, page by page and top to bottom. "
+                "Do not reorder or group lines by product, tax, code or amount. "
+                "If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
                 "party_product_code is the supplier code. Return in "
@@ -290,8 +293,9 @@ class Document(metaclass=PoolMeta):
         lines = getattr(purchase, 'papyrus_lines', None)
         if not lines:
             lines = []
-            for item in data.get('line_items', []):
+            for sequence, item in enumerate(data.get('line_items', []), 1):
                 line = PapyrusPurchaseLine.build(item)
+                line.sequence = sequence
                 lines.append(line)
             purchase.papyrus_lines = lines
         PapyrusPurchaseLine.find_product(purchase.party, lines)
@@ -355,20 +359,35 @@ class Purchase(metaclass=PoolMeta):
         PurchaseLine = Pool().get('purchase.line')
 
         to_save = []
-        papyrus_lines = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'purchase_line', None):
+        to_update = []
+        new_papyrus_lines = []
+        papyrus_lines = list(getattr(self, 'papyrus_lines', []))
+        next_sequence = max((getattr(line, 'sequence', None) or 0
+            for line in papyrus_lines), default=0) + 1
+        for papyrus_line in papyrus_lines:
+            if getattr(papyrus_line, 'sequence', None) is None:
+                papyrus_line.sequence = next_sequence
+                next_sequence += 1
+            purchase_line = getattr(papyrus_line, 'purchase_line', None)
+            if purchase_line:
+                if (self.state == 'draft'
+                        and purchase_line.sequence != papyrus_line.sequence):
+                    purchase_line.sequence = papyrus_line.sequence
+                    to_update.append(purchase_line)
                 continue
             purchase_line = papyrus_line.get_purchase_line()
             if not purchase_line:
                 continue
             to_save.append(purchase_line)
-            papyrus_lines.append(papyrus_line)
+            new_papyrus_lines.append(papyrus_line)
 
+        if to_update:
+            PurchaseLine.save(to_update)
         if to_save:
             PurchaseLine.save(to_save)
-            for papyrus_line, purchase_line in zip(papyrus_lines, to_save):
+            for papyrus_line, purchase_line in zip(new_papyrus_lines, to_save):
                 papyrus_line.purchase_line = purchase_line
+        self.papyrus_lines = papyrus_lines
 
     @classmethod
     def __setup__(cls):
@@ -455,7 +474,7 @@ class Purchase(metaclass=PoolMeta):
                 super().write([purchase], {'papyrus_name': name})
 
 
-class PapyrusPurchaseLine(ModelSQL, ModelView):
+class PapyrusPurchaseLine(sequence_ordered(), ModelSQL, ModelView):
     __name__ = 'papyrus.purchase.line'
 
     purchase = fields.Many2One('purchase.purchase', 'Purchase', required=True,
@@ -475,6 +494,36 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         ondelete='SET NULL')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        cls.synchronize_purchase_line_sequences(lines)
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_update = []
+        for lines, values in zip(args[::2], args[1::2]):
+            if {'purchase_line', 'sequence'} & values.keys():
+                to_update.extend(lines)
+        super().write(*args)
+        cls.synchronize_purchase_line_sequences(to_update)
+
+    @classmethod
+    def synchronize_purchase_line_sequences(cls, lines):
+        PurchaseLine = Pool().get('purchase.line')
+        writes = []
+        for line in lines:
+            purchase_line = line.purchase_line
+            if (line.sequence is None or not purchase_line
+                    or purchase_line.sequence == line.sequence):
+                continue
+            if purchase_line.purchase.state != 'draft':
+                continue
+            writes.extend(([purchase_line], {'sequence': line.sequence}))
+        if writes:
+            PurchaseLine.write(*writes)
 
     @classmethod
     def build(cls, data):
@@ -514,6 +563,7 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         exp = Decimal(str(10.0 ** -digits))
         purchase_line = PurchaseLine()
         purchase_line.purchase = purchase
+        purchase_line.sequence = getattr(self, 'sequence', None)
         purchase_line.product = product
         purchase_line.on_change_product()
         purchase_line.description = getattr(self, 'description', None)
