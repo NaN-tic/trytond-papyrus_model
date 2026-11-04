@@ -5,7 +5,7 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.wizard import Wizard, StateAction
 from trytond.pyson import PYSONEncoder, Eval, Bool, If
 from trytond.exceptions import UserError
@@ -85,7 +85,10 @@ class Document(metaclass=PoolMeta):
                 "with hyphens or other characters. Extract "
                 "currency, our order number, supplier order number, supplier "
                 "delivery note number, line items (codes, descriptions, "
-                "quantities, unit prices, taxes), and totals. If a line contains both "
+                "quantities, unit prices, taxes), and totals. Return line_items "
+                "in their visual order in the PDF, page by page and top to bottom. "
+                "Do not reorder or group lines by product, tax, code or amount. "
+                "If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
                 "party_product_code is the supplier code. Return in "
@@ -329,8 +332,9 @@ class Document(metaclass=PoolMeta):
             PapyrusInvoiceLine.find_product(invoice.party, lines)
         else:
             lines = []
-            for item in data.get('line_items', []):
+            for sequence, item in enumerate(data.get('line_items', []), 1):
                 line = PapyrusInvoiceLine.build(item, currency=invoice.currency)
+                line.sequence = sequence
                 lines.append(line)
             PapyrusInvoiceLine.find_product(invoice.party, lines)
             if invoice.party.papyrus_group_lines_by_tax:
@@ -367,6 +371,7 @@ class Document(metaclass=PoolMeta):
                         if product:
                             products.add(product)
                     line = PapyrusInvoiceLine()
+                    line.sequence = tax_lines[0].sequence
                     line.description = 'Taxes %s' % (tax or '0')
                     line.quantity = Decimal(1)
                     line.unit_price = amount
@@ -487,18 +492,32 @@ class Invoice(metaclass=PoolMeta):
 
         to_save = []
         to_update = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
+        papyrus_lines = list(getattr(self, 'papyrus_lines', []))
+        next_sequence = max((getattr(line, 'sequence', None) or 0
+            for line in papyrus_lines), default=0) + 1
+        for papyrus_line in papyrus_lines:
+            if getattr(papyrus_line, 'sequence', None) is None:
+                papyrus_line.sequence = next_sequence
+                next_sequence += 1
+                to_save.append(papyrus_line)
             invoice_line = getattr(papyrus_line, 'invoice_line', None)
             if invoice_line:
+                changed = False
                 if not invoice_line.invoice:
                     invoice_line.invoice = self
+                    changed = True
+                if invoice_line.sequence != papyrus_line.sequence:
+                    invoice_line.sequence = papyrus_line.sequence
+                    changed = True
+                if changed:
                     to_update.append(invoice_line)
                 continue
             invoice_line = papyrus_line.get_invoice_line()
             if not invoice_line:
                 continue
             papyrus_line.invoice_line = invoice_line
-            to_save.append(papyrus_line)
+            if papyrus_line not in to_save:
+                to_save.append(papyrus_line)
 
         if to_save:
             PapyrusInvoiceLine.save(to_save)
@@ -581,7 +600,7 @@ class Invoice(metaclass=PoolMeta):
                     continue
                 super().write([invoice], {'papyrus_name': name})
 
-class PapyrusInvoiceLine(ModelSQL, ModelView):
+class PapyrusInvoiceLine(sequence_ordered(), ModelSQL, ModelView):
     __name__ = 'papyrus.invoice.line'
 
     _match_invoice_line_party = True
@@ -622,6 +641,36 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 and table.column_is_type('quantity', 'numeric')):
             table.alter_type('quantity', cls.quantity.sql_type().base)
         super().__register__(module_name)
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        cls.synchronize_invoice_line_sequences(lines)
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_update = []
+        for lines, values in zip(args[::2], args[1::2]):
+            if {'invoice_line', 'sequence'} & values.keys():
+                to_update.extend(lines)
+        super().write(*args)
+        cls.synchronize_invoice_line_sequences(to_update)
+
+    @classmethod
+    def synchronize_invoice_line_sequences(cls, lines):
+        InvoiceLine = Pool().get('account.invoice.line')
+        writes = []
+        for line in lines:
+            invoice_line = line.invoice_line
+            if (line.sequence is None or not invoice_line
+                    or invoice_line.sequence == line.sequence):
+                continue
+            if invoice_line.invoice and invoice_line.invoice.state != 'draft':
+                continue
+            writes.extend(([invoice_line], {'sequence': line.sequence}))
+        if writes:
+            InvoiceLine.write(*writes)
 
     @classmethod
     def build(cls, data, currency=None):
@@ -684,6 +733,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         exp = Decimal(str(10.0 ** -digits))
         invoice_line = InvoiceLine()
         invoice_line.invoice = invoice
+        invoice_line.sequence = getattr(self, 'sequence', None)
         invoice_line.product = product
         invoice_line.on_change_product()
         invoice_line.description = getattr(self, 'description', None)
