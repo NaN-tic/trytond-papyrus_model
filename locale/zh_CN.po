@@ -1,0 +1,578 @@
+#
+msgid ""
+msgstr ""
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "field:account.invoice,document:"
+msgid "Document"
+msgstr "文档"
+
+msgctxt "field:account.invoice,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus 明细"
+
+msgctxt "field:account.invoice,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "Papyrus 明细未税金额"
+
+msgctxt "field:account.invoice,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus 名称"
+
+msgctxt "field:account.invoice,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "Papyrus 总金额"
+
+msgctxt "field:account.invoice,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "Papyrus 总金额匹配"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "Papyrus 未税金额"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "Papyrus 未税金额匹配"
+
+msgctxt "field:papyrus.document,extracted_data:"
+msgid "Extracted Data"
+msgstr "已提取数据"
+
+msgctxt "field:papyrus.document,guessed_company:"
+msgid "Guessed Company"
+msgstr "推断的公司"
+
+msgctxt "field:papyrus.document,guessed_model_type:"
+msgid "Guessed Model Type"
+msgstr "推断的模型类型"
+
+msgctxt "field:papyrus.document,invoice:"
+msgid "Account Invoice"
+msgstr "发票"
+
+msgctxt "field:papyrus.document,model_type:"
+msgid "Model Type"
+msgstr "模型类型"
+
+msgctxt "field:papyrus.document,party:"
+msgid "Party"
+msgstr "参与者"
+
+msgctxt "field:papyrus.document,purchase:"
+msgid "Purchase"
+msgstr "采购"
+
+msgctxt "field:papyrus.document,sale:"
+msgid "Sale"
+msgstr "销售"
+
+msgctxt "field:papyrus.document,shipment_in:"
+msgid "Shipment In"
+msgstr "入库单"
+
+msgctxt "field:papyrus.invoice.line,amount:"
+msgid "Amount"
+msgstr "数额"
+
+msgctxt "field:papyrus.invoice.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "金额匹配"
+
+msgctxt "field:papyrus.invoice.line,currency:"
+msgid "Currency"
+msgstr "货币"
+
+msgctxt "field:papyrus.invoice.line,description:"
+msgid "Description"
+msgstr "描述"
+
+msgctxt "field:papyrus.invoice.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "折扣 (%)"
+
+msgctxt "field:papyrus.invoice.line,cost_price:"
+msgid "Cost Price"
+msgstr "成本价"
+
+msgctxt "field:papyrus.invoice.line,external_code:"
+msgid "External Code"
+msgstr "外部编码"
+
+msgctxt "field:papyrus.invoice.line,invoice:"
+msgid "Invoice"
+msgstr "原始凭证"
+
+msgctxt "field:papyrus.invoice.line,invoice_line:"
+msgid "Invoice Line"
+msgstr "发票明细"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_issue:"
+msgid "Invoice Line Issue"
+msgstr "发票明细问题"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_matches:"
+msgid "Invoice Line Matches"
+msgstr "发票明细匹配"
+
+msgctxt "field:papyrus.invoice.line,product:"
+msgid "Product"
+msgstr "产品"
+
+msgctxt "field:papyrus.invoice.line,product_code:"
+msgid "Product Code"
+msgstr "产品代码"
+
+msgctxt "field:papyrus.invoice.line,quantity:"
+msgid "Quantity"
+msgstr "数量"
+
+msgctxt "field:papyrus.invoice.line,taxes:"
+msgid "Taxes"
+msgstr "税"
+
+msgctxt "field:papyrus.invoice.line,unit_price:"
+msgid "Unit Price"
+msgstr "单价"
+
+msgctxt "field:papyrus.purchase.line,amount:"
+msgid "Amount"
+msgstr "数额"
+
+msgctxt "field:papyrus.purchase.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "金额匹配"
+
+msgctxt "field:papyrus.purchase.line,description:"
+msgid "Description"
+msgstr "描述"
+
+msgctxt "field:papyrus.purchase.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "折扣 (%)"
+
+msgctxt "field:papyrus.purchase.line,external_code:"
+msgid "External Code"
+msgstr "外部编码"
+
+msgctxt "field:papyrus.purchase.line,product:"
+msgid "Product"
+msgstr "产品"
+
+msgctxt "field:papyrus.purchase.line,product_code:"
+msgid "Product Code"
+msgstr "产品代码"
+
+msgctxt "field:papyrus.purchase.line,purchase:"
+msgid "Purchase"
+msgstr "采购"
+
+msgctxt "field:papyrus.purchase.line,purchase_line:"
+msgid "Purchase Line"
+msgstr "采购明细"
+
+msgctxt "field:papyrus.purchase.line,purchase_line_matches:"
+msgid "Purchase Line Matches"
+msgstr "采购明细匹配"
+
+msgctxt "field:papyrus.purchase.line,quantity:"
+msgid "Quantity"
+msgstr "数量"
+
+msgctxt "field:papyrus.purchase.line,taxes:"
+msgid "Taxes"
+msgstr "税"
+
+msgctxt "field:papyrus.purchase.line,unit_price:"
+msgid "Unit Price"
+msgstr "单价"
+
+msgctxt "field:papyrus.queue,llm_classifier:"
+msgid "Classifier LLM"
+msgstr "分类大语言模型"
+
+msgctxt "field:papyrus.queue,llm_pdf_engine:"
+msgid "LLM PDF Engine"
+msgstr "大语言模型 PDF 引擎"
+
+msgctxt "field:papyrus.queue,llms:"
+msgid "LLMs"
+msgstr "大语言模型"
+
+msgctxt "field:papyrus.queue,model_type:"
+msgid "Model Type"
+msgstr "模型类型"
+
+msgctxt "field:papyrus.sale.line,amount:"
+msgid "Amount"
+msgstr "数额"
+
+msgctxt "field:papyrus.sale.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "金额匹配"
+
+msgctxt "field:papyrus.sale.line,description:"
+msgid "Description"
+msgstr "描述"
+
+msgctxt "field:papyrus.sale.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "折扣 (%)"
+
+msgctxt "field:papyrus.sale.line,external_code:"
+msgid "External Code"
+msgstr "外部编码"
+
+msgctxt "field:papyrus.sale.line,product:"
+msgid "Product"
+msgstr "产品"
+
+msgctxt "field:papyrus.sale.line,product_code:"
+msgid "Product Code"
+msgstr "产品代码"
+
+msgctxt "field:papyrus.sale.line,quantity:"
+msgid "Quantity"
+msgstr "数量"
+
+msgctxt "field:papyrus.sale.line,sale:"
+msgid "Sale"
+msgstr "销售"
+
+msgctxt "field:papyrus.sale.line,sale_line:"
+msgid "Sale Line"
+msgstr "销售明细"
+
+msgctxt "field:papyrus.sale.line,sale_line_matches:"
+msgid "Sale Line Matches"
+msgstr "销售明细匹配"
+
+msgctxt "field:papyrus.sale.line,taxes:"
+msgid "Taxes"
+msgstr "税"
+
+msgctxt "field:papyrus.sale.line,unit_price:"
+msgid "Unit Price"
+msgstr "单价"
+
+msgctxt "field:papyrus.shipment.in.line,amount:"
+msgid "Amount"
+msgstr "数额"
+
+msgctxt "field:papyrus.shipment.in.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "金额匹配"
+
+msgctxt "field:papyrus.shipment.in.line,description:"
+msgid "Description"
+msgstr "描述"
+
+msgctxt "field:papyrus.shipment.in.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "折扣 (%)"
+
+msgctxt "field:papyrus.shipment.in.line,external_code:"
+msgid "External Code"
+msgstr "外部编码"
+
+msgctxt "field:papyrus.shipment.in.line,move:"
+msgid "Move"
+msgstr "记账凭证"
+
+msgctxt "field:papyrus.shipment.in.line,move_matches:"
+msgid "Move Matches"
+msgstr "库存移动匹配"
+
+msgctxt "field:papyrus.shipment.in.line,product:"
+msgid "Product"
+msgstr "产品"
+
+msgctxt "field:papyrus.shipment.in.line,product_code:"
+msgid "Product Code"
+msgstr "产品代码"
+
+msgctxt "field:papyrus.shipment.in.line,quantity:"
+msgid "Quantity"
+msgstr "数量"
+
+msgctxt "field:papyrus.shipment.in.line,shipment:"
+msgid "Shipment"
+msgstr "收发货"
+
+msgctxt "field:papyrus.shipment.in.line,taxes:"
+msgid "Taxes"
+msgstr "税"
+
+msgctxt "field:papyrus.shipment.in.line,unit_price:"
+msgid "Unit Price"
+msgstr "单价"
+
+msgctxt "field:party.party,papyrus_group_lines_by_tax:"
+msgid "Papyrus Group Lines by Tax"
+msgstr "Papyrus 按税项分组明细"
+
+msgctxt "field:purchase.purchase,document:"
+msgid "Document"
+msgstr "文档"
+
+msgctxt "field:purchase.purchase,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus 明细"
+
+msgctxt "field:purchase.purchase,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus 名称"
+
+msgctxt "field:sale.sale,document:"
+msgid "Document"
+msgstr "文档"
+
+msgctxt "field:sale.sale,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus 明细"
+
+msgctxt "field:sale.sale,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "Papyrus 明细未税金额"
+
+msgctxt "field:sale.sale,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus 名称"
+
+msgctxt "field:sale.sale,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "Papyrus 总金额"
+
+msgctxt "field:sale.sale,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "Papyrus 总金额匹配"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "Papyrus 未税金额"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "Papyrus 未税金额匹配"
+
+msgctxt "field:stock.shipment.in,document:"
+msgid "Document"
+msgstr "文档"
+
+msgctxt "field:stock.shipment.in,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus 明细"
+
+msgctxt "field:stock.shipment.in,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus 名称"
+
+msgctxt "model:ir.action,name:act_open_dossier"
+msgid "Invoice Dossier"
+msgstr "发票档案"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_invoice"
+msgid ""
+"The company of the document \"%(document)s\" and invoice \"%(model)s\" do "
+"not match"
+msgstr "文档“%(document)s”与发票“%(model)s”的公司不一致"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_sale"
+msgid ""
+"The company of the document \"%(document)s\" and sale \"%(model)s\" do not "
+"match"
+msgstr "文档“%(document)s”与销售单“%(model)s”的公司不一致"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_shipment_in"
+msgid ""
+"The company of the document \"%(document)s\" and shipment \"%(model)s\" do "
+"not match"
+msgstr "文档“%(document)s”与发运单“%(model)s”的公司不一致"
+
+#, python-format
+msgctxt ""
+"model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
+msgid ""
+"Document \"%(document)s\" still has %(total)s lines without product. Match "
+"or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines"
+" tab) before creating final lines."
+msgstr ""
+"文档“%(document)s”仍有 %(total)s 条明细未指定产品。创建最终明细前，请在关联记录（发票/销售单/发运单的 Papyrus "
+"明细选项卡）中匹配或填写产品。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot be removed because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"无法删除文档“%(document)s”，因为记录“%(record)s”（%(model_type)s）与其关联。必须先删除相关记录或解除关联。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_pending_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot move to \"Pending\" because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"无法将文档“%(document)s”设为“待处理”，因为记录“%(record)s”（%(model_type)s）与其关联。必须先删除相关记录或解除关联。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_process_without_related_record"
+msgid ""
+"Document \"%(document)s\" has model type \"%(model_type)s\" but no related "
+"record has been created yet."
+msgstr "文档“%(document)s”的模型类型为“%(model_type)s”，但尚未创建关联记录。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_missing_product"
+msgid ""
+"No product is assigned to \"%(line)s\" in invoice \"%(invoice)s\", so no "
+"invoice line can be matched."
+msgstr "发票“%(invoice)s”的“%(line)s”未指定产品，因此无法匹配发票明细。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_not_found"
+msgid ""
+"No invoice line candidate was found for \"%(line)s\" in invoice "
+"\"%(invoice)s\"."
+msgstr "未找到发票“%(invoice)s”中“%(line)s”的候选发票明细。"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_product"
+msgid "Product mismatch: Papyrus \"%(papyrus)s\" vs Invoice Line \"%(invoice)s\""
+msgstr "产品不匹配：Papyrus“%(papyrus)s”与发票明细“%(invoice)s”"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_quantity"
+msgid "Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr "数量不匹配：Papyrus %(papyrus)s 与发票明细 %(invoice)s"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_unit_price"
+msgid "Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr "单价不匹配：Papyrus %(papyrus)s 与发票明细 %(invoice)s"
+
+msgctxt "model:ir.model.button,string:invoice_create_lines_button"
+msgid "Create Lines"
+msgstr "创建明细"
+
+msgctxt "model:ir.model.button,string:purchase_create_lines_button"
+msgid "Create Lines"
+msgstr "创建明细"
+
+msgctxt "model:ir.model.button,string:sale_create_lines_button"
+msgid "Create Lines"
+msgstr "创建明细"
+
+msgctxt "model:ir.model.button,string:shipment_in_sync_moves_button"
+msgid "Synchronize Papyrus Moves"
+msgstr "同步 Papyrus 库存移动"
+
+msgctxt "model:papyrus.invoice.line,string:"
+msgid "Papyrus Invoice Line"
+msgstr "Papyrus 发票明细"
+
+msgctxt "model:papyrus.purchase.line,string:"
+msgid "Papyrus Purchase Line"
+msgstr "Papyrus 采购明细"
+
+msgctxt "model:papyrus.sale.line,string:"
+msgid "Papyrus Sale Line"
+msgstr "Papyrus 销售明细"
+
+msgctxt "model:papyrus.shipment.in.line,string:"
+msgid "Papyrus Shipment In Line"
+msgstr "Papyrus 入库单明细"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Invoice"
+msgstr "原始凭证"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Supplier Invoice"
+msgstr "供应商发票"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Purchase"
+msgstr "采购"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Sale"
+msgstr "销售"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Shipment In"
+msgstr "入库单"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Invoice"
+msgstr "原始凭证"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Supplier Invoice"
+msgstr "供应商发票"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Purchase"
+msgstr "采购"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Sale"
+msgstr "销售"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Shipment In"
+msgstr "入库单"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Mistral OCR (best for scanned documents)"
+msgstr "Mistral OCR（最适合扫描文档）"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Native (best for born-digital PDFs)"
+msgstr "原生（最适合原生数字 PDF）"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "PDF Text (balanced)"
+msgstr "PDF 文本（均衡）"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Invoice"
+msgstr "原始凭证"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Supplier Invoice"
+msgstr "供应商发票"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Purchase"
+msgstr "采购"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Sale"
+msgstr "销售"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Shipment In"
+msgstr "入库单"
+
+msgctxt "view:purchase.purchase:"
+msgid "Create Lines"
+msgstr "创建明细"
+
+msgctxt "view:purchase.purchase:"
+msgid "Papyrus"
+msgstr "Papyrus"
+
+msgctxt "field:papyrus.shipment.in.line,purchase_number:"
+msgid "Purchase Number"
+msgstr "采购编号"
