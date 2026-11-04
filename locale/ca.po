@@ -590,3 +590,7 @@ msgstr "Crea línies"
 msgctxt "view:purchase.purchase:"
 msgid "Papyrus"
 msgstr "Papyrus"
+
+msgctxt "field:papyrus.invoice.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"
