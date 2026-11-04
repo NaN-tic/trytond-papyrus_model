@@ -598,3 +598,11 @@ msgstr "Número de compra"
 msgctxt "field:papyrus.invoice.line,sequence:"
 msgid "Sequence"
 msgstr "Seqüència"
+
+msgctxt "field:papyrus.purchase.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"
+
+msgctxt "field:papyrus.sale.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"

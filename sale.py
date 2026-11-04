@@ -5,7 +5,7 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.pyson import Eval, Bool, If
 from trytond.exceptions import UserError
 from trytond.i18n import gettext
@@ -73,7 +73,10 @@ class Document(metaclass=PoolMeta):
                 "seller/buyer info (names, VAT/tax ID, address, email, "
                 "phone), document number, dates, currency, line items "
                 "(codes, descriptions, quantities, unit prices, discounts, "
-                "taxes, line totals), and totals. If a line contains both "
+                "taxes, line totals), and totals. Return line_items in their "
+                "visual order in the PDF, page by page and top to bottom. "
+                "Do not reorder or group lines by product, tax, code or amount. "
+                "If a line contains both "
                 "our/internal product code and the customer's product code, "
                 "keep them separate: product_code is our/internal code and "
                 "party_product_code is the customer code. Return in "
@@ -291,8 +294,9 @@ class Document(metaclass=PoolMeta):
         lines = getattr(sale, 'papyrus_lines', None)
         if not lines:
             lines = []
-            for item in data.get('line_items', []):
+            for sequence, item in enumerate(data.get('line_items', []), 1):
                 line = PapyrusSaleLine.build(item)
+                line.sequence = sequence
                 lines.append(line)
             sale.papyrus_lines = lines
         PapyrusSaleLine.find_product(sale.party, lines)
@@ -388,20 +392,35 @@ class Sale(metaclass=PoolMeta):
         SaleLine = Pool().get('sale.line')
 
         to_save = []
-        papyrus_lines = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
-            if getattr(papyrus_line, 'sale_line', None):
+        to_update = []
+        new_papyrus_lines = []
+        papyrus_lines = list(getattr(self, 'papyrus_lines', []))
+        next_sequence = max((getattr(line, 'sequence', None) or 0
+            for line in papyrus_lines), default=0) + 1
+        for papyrus_line in papyrus_lines:
+            if getattr(papyrus_line, 'sequence', None) is None:
+                papyrus_line.sequence = next_sequence
+                next_sequence += 1
+            sale_line = getattr(papyrus_line, 'sale_line', None)
+            if sale_line:
+                if (self.state == 'draft'
+                        and sale_line.sequence != papyrus_line.sequence):
+                    sale_line.sequence = papyrus_line.sequence
+                    to_update.append(sale_line)
                 continue
             sale_line = papyrus_line.get_sale_line()
             if not sale_line:
                 continue
             to_save.append(sale_line)
-            papyrus_lines.append(papyrus_line)
+            new_papyrus_lines.append(papyrus_line)
 
+        if to_update:
+            SaleLine.save(to_update)
         if to_save:
             SaleLine.save(to_save)
-            for papyrus_line, sale_line in zip(papyrus_lines, to_save):
+            for papyrus_line, sale_line in zip(new_papyrus_lines, to_save):
                 papyrus_line.sale_line = sale_line
+        self.papyrus_lines = papyrus_lines
 
     @classmethod
     def __setup__(cls):
@@ -488,7 +507,7 @@ class Sale(metaclass=PoolMeta):
                 super().write([sale], {'papyrus_name': name})
 
 
-class PapyrusSaleLine(ModelSQL, ModelView):
+class PapyrusSaleLine(sequence_ordered(), ModelSQL, ModelView):
     __name__ = 'papyrus.sale.line'
 
     sale = fields.Many2One('sale.sale', 'Sale', required=True,
@@ -508,6 +527,36 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         ondelete='SET NULL')
     sale_line_matches = fields.Function(fields.Boolean('Sale Line Matches'),
             'get_sale_line_matches')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        cls.synchronize_sale_line_sequences(lines)
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_update = []
+        for lines, values in zip(args[::2], args[1::2]):
+            if {'sale_line', 'sequence'} & values.keys():
+                to_update.extend(lines)
+        super().write(*args)
+        cls.synchronize_sale_line_sequences(to_update)
+
+    @classmethod
+    def synchronize_sale_line_sequences(cls, lines):
+        SaleLine = Pool().get('sale.line')
+        writes = []
+        for line in lines:
+            sale_line = line.sale_line
+            if (line.sequence is None or not sale_line
+                    or sale_line.sequence == line.sequence):
+                continue
+            if sale_line.sale.state != 'draft':
+                continue
+            writes.extend(([sale_line], {'sequence': line.sequence}))
+        if writes:
+            SaleLine.write(*writes)
 
     @classmethod
     def build(cls, data):
@@ -547,6 +596,7 @@ class PapyrusSaleLine(ModelSQL, ModelView):
         exp = Decimal(str(10.0 ** -digits))
         sale_line = SaleLine()
         sale_line.sale = sale
+        sale_line.sequence = getattr(self, 'sequence', None)
         sale_line.product = product
         sale_line.on_change_product()
         sale_line.description = getattr(self, 'description', None)
