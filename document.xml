@@ -39,4 +39,11 @@
             <field name="rule_group" ref="papyrus.rule_group_papyrus_document"/>
         </record>
     </data>
+    <data depends="nantic_connection">
+        <record model="ir.ui.view" id="agent_document_view_form">
+            <field name="model">papyrus.document</field>
+            <field name="inherit" ref="papyrus.papyrus_document_view_form"/>
+            <field name="name">agent_document_form</field>
+        </record>
+    </data>
 </tryton>

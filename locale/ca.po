@@ -13,6 +13,18 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Lokalize 25.04.0\n"
 
+msgctxt "field:papyrus.document,inspection_history:"
+msgid "Inspection Conversations"
+msgstr "Converses d'inspecció"
+
+msgctxt "field:papyrus.document,inspection_history_filename:"
+msgid "Inspection History Filename"
+msgstr "Nom del fitxer de l'historial"
+
+msgctxt "field:nantic.chat.conversation,papyrus_document:"
+msgid "Papyrus Document"
+msgstr "Document de Papyrus"
+
 msgctxt "field:account.invoice,document:"
 msgid "Document"
 msgstr "Document"
