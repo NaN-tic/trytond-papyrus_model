@@ -10,7 +10,7 @@ from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.pyson import Eval, Bool, If
 from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
-from trytond.transaction import Transaction
+from trytond.transaction import Transaction, without_check_access
 from . import tools
 
 
@@ -463,7 +463,8 @@ class Purchase(metaclass=PoolMeta):
             self._reconcile_purchase_lines(purchase_lines, papyrus_lines)
 
         if purchase_lines:
-            PurchaseLine.save(purchase_lines)
+            with without_check_access():
+                PurchaseLine.save(purchase_lines)
         if all_papyrus_lines:
             PapyrusPurchaseLine.save(all_papyrus_lines)
         self.papyrus_lines = all_papyrus_lines
@@ -495,12 +496,13 @@ class Purchase(metaclass=PoolMeta):
                     continue
                 amount = min(quantity, available)
                 if amount < available:
-                    residual, = PurchaseLine.copy([line], default={
-                        'quantity': available - amount,
-                        'delivery_date_edit': True,
-                        'delivery_date_store': line.delivery_date,
-                        'papyrus_line': None,
-                        })
+                    with without_check_access():
+                        residual, = PurchaseLine.copy([line], default={
+                            'quantity': available - amount,
+                            'delivery_date_edit': True,
+                            'delivery_date_store': line.delivery_date,
+                            'papyrus_line': None,
+                            })
                     residual.desired_delivery_date = (
                         line.desired_delivery_date)
                     candidates.insert(candidates.index(line) + 1, residual)
@@ -541,6 +543,9 @@ class Purchase(metaclass=PoolMeta):
     def quote(cls, purchases):
         Warning = Pool().get('res.user.warning')
         for purchase in purchases:
+            if not (purchase.document or purchase.papyrus_lines
+                    or any(line.papyrus_line for line in purchase.lines)):
+                continue
             pending = [line for line in purchase.papyrus_lines
                 if not line.purchase_line]
             if pending:
@@ -565,6 +570,9 @@ class Purchase(metaclass=PoolMeta):
     def confirm(cls, purchases):
         Warning = Pool().get('res.user.warning')
         for purchase in purchases:
+            if not (purchase.document or purchase.papyrus_lines
+                    or any(line.papyrus_line for line in purchase.lines)):
+                continue
             pending = [line for line in purchase.papyrus_lines
                 if not line.purchase_line]
             if pending:
@@ -659,7 +667,8 @@ class PurchaseLine(metaclass=PoolMeta):
                 continue
             to_write.setdefault(desired, []).append(line)
         for desired, lines in to_write.items():
-            cls.write(lines, {'desired_delivery_date': desired})
+            with without_check_access():
+                cls.write(lines, {'desired_delivery_date': desired})
         return lines
 
     @classmethod
@@ -675,7 +684,8 @@ class PurchaseLine(metaclass=PoolMeta):
                 to_write.setdefault(line.delivery_date_store, []).append(line)
         super().write(*args)
         for desired, lines in to_write.items():
-            cls.write(lines, {'desired_delivery_date': desired})
+            with without_check_access():
+                cls.write(lines, {'desired_delivery_date': desired})
 
 
 class PapyrusPurchaseLine(sequence_ordered(), ModelSQL, ModelView):
