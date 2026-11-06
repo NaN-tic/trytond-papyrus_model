@@ -47,6 +47,9 @@ class TestShipmentPurchaseMatching(unittest.TestCase):
             purchase.lines.new(product=product, quantity=2,
                 unit_price=Decimal('10'))
             purchase.save()
+            Model.get('res.user.warning').skip(
+                f'papyrus_missing_purchase_lines.{purchase.id}',
+                config.get_config().context)
             purchase.click('quote')
             purchase_numbers.append(purchase.number)
             move = Move(product=product, unit=unit, quantity=2,

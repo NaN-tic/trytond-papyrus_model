@@ -49,7 +49,7 @@ class Document(metaclass=PoolMeta):
         'get_party', searcher='search_party')
     guessed_company = fields.Many2One('company.company', 'Guessed Company')
     guessed_model_type = fields.Selection('_get_model_type', 'Guessed Model Type')
-    extracted_data = fields.Text('Extracted Data', readonly=True)
+    extracted_data = fields.Text('Extracted Data')
 
     @classmethod
     def _get_model_type(cls):
@@ -63,6 +63,12 @@ class Document(metaclass=PoolMeta):
         cls._check_company = set()
         # Fields to check whether the document is already linked
         cls._check_model_exists = set()
+        cls._buttons.update({
+                'mark_inspected': {
+                    'invisible': Eval('state') != 'pending',
+                    'depends': ['state'],
+                    },
+                })
 
     def scan_engines(self):
         super().scan_engines()
@@ -219,6 +225,7 @@ class Document(metaclass=PoolMeta):
                     kind, self.id, llm, exc)
                 continue
             self.extracted_data = json.dumps(data, indent=4)
+            self.guess_company(data)
             with without_check_access():
                 self.save()
             return data
@@ -276,6 +283,21 @@ class Document(metaclass=PoolMeta):
         super().pending(documents)
 
     @classmethod
+    @ModelView.button
+    @Workflow.transition('inspected')
+    def mark_inspected(cls, documents):
+        for document in documents:
+            try:
+                data = json.loads(document.extracted_data or '')
+            except ValueError:
+                data = None
+            if not (document.company and document.model_type
+                    and isinstance(data, dict) and data):
+                raise UserError(gettext(
+                    'papyrus_model.msg_incomplete_agent_inspection',
+                    document=document.rec_name))
+
+    @classmethod
     def model_exists(cls, documents):
         with Transaction().set_user(0, set_context=True):
             for document in cls.browse([x.id for x in documents]):
@@ -306,9 +328,57 @@ class Document(metaclass=PoolMeta):
                         model=field_to_check[0].rec_name))
 
 
-    def guess_company(self):
-        if self.company:
+    def guess_company(self, data=None):
+        if getattr(self, 'company', None):
             return
+
+        if data is None and self.extracted_data:
+            try:
+                data = json.loads(self.extracted_data)
+            except (TypeError, ValueError):
+                return
+        if not data:
+            return
+
+        buyer = data.get('buyer') or {}
+        vat = buyer.get('vat') or ''
+        vat = ''.join(char for char in vat.upper() if char.isalnum())
+
+        Company = Pool().get('company.company')
+        companies = Company.search([])
+        if vat:
+            vat_codes = {vat}
+            if vat.startswith('ES'):
+                vat_codes.add(vat[2:])
+            else:
+                vat_codes.add('ES' + vat)
+            for company in companies:
+                for identifier in company.party.identifiers:
+                    code = ''.join(
+                        char for char in identifier.code.upper()
+                        if char.isalnum())
+                    if code in vat_codes:
+                        self.company = company
+                        self.guessed_company = company
+                        return
+
+        name = buyer.get('name') or ''
+        name = ''.join(char for char in name.upper() if char.isalnum())
+        if not name:
+            return
+        matches = []
+        for company in companies:
+            names = [company.party.name, company.party.trade_name]
+            for candidate in names:
+                candidate = candidate or ''
+                candidate = ''.join(
+                    char for char in candidate.upper() if char.isalnum())
+                if candidate == name:
+                    matches.append(company)
+                    break
+        if len(matches) == 1:
+            self.company = matches[0]
+            self.guessed_company = matches[0]
 
     def guess_party(self, type_=None):
         pool = Pool()
@@ -446,6 +516,8 @@ class Document(metaclass=PoolMeta):
                 record = self.sale[0]
             elif self.model_type == 'shipment_in' and self.shipment_in:
                 record = self.shipment_in[0]
+            elif self.model_type == 'purchase' and self.purchase:
+                record = self.purchase[0]
             else:
                 raise UserError(gettext('papyrus_model.'
                         'msg_cannot_process_without_related_record',
