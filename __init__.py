@@ -1,6 +1,7 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
 from trytond.pool import Pool
+from . import agent
 from . import document
 from . import invoice
 from . import sale
@@ -14,6 +15,10 @@ def register():
         document.Queue,
         document.Document,
         module=module, type_='model')
+    Pool.register(
+        agent.Agent,
+        agent.Conversation,
+        module=module, type_='model', depends=['nantic_connection'])
     Pool.register(
         invoice.Party,
         invoice.Queue,
@@ -32,13 +37,17 @@ def register():
         module=module, type_='model', depends=['stock'])
     Pool.register(
         sale.Queue,
+        sale.Configuration,
         sale.Document,
         sale.Sale,
+        sale.SaleLine,
+        sale.SalePreviousSale,
         sale.PapyrusSaleLine,
         module=module, type_='model', depends=['sale'])
     Pool.register(
         purchase.Queue,
         purchase.Document,
         purchase.Purchase,
+        purchase.PurchaseLine,
         purchase.PapyrusPurchaseLine,
         module=module, type_='model', depends=['purchase'])

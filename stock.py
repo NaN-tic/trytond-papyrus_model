@@ -4,9 +4,12 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal
+from stdnum import ean
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields, ModelSQL, ModelView
 from trytond.pyson import Eval, Bool, If
+from trytond.exceptions import UserWarning
+from trytond.i18n import gettext
 from trytond.transaction import Transaction
 from . import tools
 
@@ -97,7 +100,7 @@ class Document(metaclass=PoolMeta):
                 "fields; use null when unknown. Extract seller/buyer info "
                 "(names, VAT/tax ID, address, email, phone), document number, "
                 "our purchase number, supplier purchase reference, dates, "
-                "currency, line items (codes, descriptions, quantities, "
+                "currency, line items (codes, EANs, descriptions, quantities, "
                 "unit prices, discounts, taxes, line totals), and totals. If "
                 "both purchase numbers are present, purchase_number is our "
                 "purchase/order number and purchase_reference is the "
@@ -210,6 +213,7 @@ class Document(metaclass=PoolMeta):
                                 'product_code': {'type': ['string', 'null']},
                                 'party_product_code': {
                                     'type': ['string', 'null']},
+                                'ean': {'type': ['string', 'null']},
                                 'purchase_number': {
                                     'type': ['string', 'null']},
                                 'description': {'type': 'string'},
@@ -238,7 +242,7 @@ class Document(metaclass=PoolMeta):
                                 'line_total_incl_tax': {'type': 'number'}
                             },
                             'required': [
-                                'product_code', 'party_product_code',
+                                'product_code', 'party_product_code', 'ean',
                                  'purchase_number',
                                  'description', 'quantity',
                                  'unit', 'unit_price', 'discount',
@@ -425,6 +429,34 @@ class ShipmentIn(metaclass=PoolMeta):
             Move.save(to_save)
 
     @classmethod
+    def receive(cls, shipments):
+        Warning = Pool().get('res.user.warning')
+        for shipment in shipments:
+            pending = [line for line in shipment.papyrus_lines
+                if not line.move]
+            if pending:
+                key = 'papyrus_pending_shipment_lines.%s' % shipment.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_pending_lines',
+                            document=shipment.rec_name, total=len(pending)))
+        super().receive(shipments)
+
+    @classmethod
+    def do(cls, shipments):
+        Warning = Pool().get('res.user.warning')
+        for shipment in shipments:
+            pending = [line for line in shipment.papyrus_lines
+                if not line.move]
+            if pending:
+                key = 'papyrus_pending_shipment_lines.%s' % shipment.id
+                if Warning.check(key):
+                    raise UserWarning(key, gettext(
+                            'papyrus_model.msg_papyrus_pending_lines',
+                            document=shipment.rec_name, total=len(pending)))
+        super().do(shipments)
+
+    @classmethod
     def copy(cls, shipments, default=None):
         if default is None:
             default = {}
@@ -487,6 +519,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         ondelete='CASCADE')
     product_code = fields.Char('Product Code')
     external_code = fields.Char('External Code')
+    ean = fields.Char('EAN')
     purchase_number = fields.Char('Purchase Number')
     description = fields.Text('Description')
     quantity = fields.Numeric('Quantity')
@@ -511,11 +544,15 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
         external_code = data.get('party_product_code')
         if isinstance(external_code, str):
             external_code = external_code.replace('\x00', '').strip() or None
+        ean_code = data.get('ean')
+        if isinstance(ean_code, str):
+            ean_code = ean_code.replace('\x00', '').strip() or None
         description = data.get('description')
         if isinstance(description, str):
             description = description.replace('\x00', '').strip()
         line.product_code = product_code
         line.external_code = external_code
+        line.ean = ean_code
         purchase_number = data.get('purchase_number')
         if isinstance(purchase_number, str):
             purchase_number = purchase_number.replace('\x00', '').strip() or None
@@ -671,7 +708,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
     @classmethod
     def get_product_search_fields(cls):
         """Return the extracted fields used to identify a product."""
-        return {'product_code', 'external_code', 'description'}
+        return {'product_code', 'external_code', 'description', 'ean'}
 
     @classmethod
     def find_product(cls, party, lines):
@@ -680,6 +717,7 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
             return
         pool = Pool()
         Product = pool.get('product.product')
+        Identifier = pool.get('product.identifier')
         HistoryLine = pool.get('papyrus.shipment.in.line')
         try:
             ProductSupplier = pool.get('purchase.product_supplier')
@@ -696,13 +734,27 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                     setattr(line, name, value)
                 if value:
                     field_values.add(value)
+        ean_codes = {ean.compact(code)
+            for code in values_by_field.get('ean', ()) if ean.is_valid(code)}
         values = list({value for field_values in values_by_field.values()
-            for value in field_values})
+            for value in field_values} | ean_codes)
 
         by_code = {}
         by_name = {}
+        by_ean = {}
         history_by_code = {}
         history_by_description = {}
+        if ean_codes:
+            identifiers = Identifier.search([
+                    ('type', '=', 'ean'),
+                    ('code', 'in', list(set(ean_codes))),
+                    ])
+            for identifier in identifiers:
+                code = ean.compact(identifier.code)
+                if code in by_ean:
+                    by_ean[code] = None
+                else:
+                    by_ean[code] = identifier.product
         products_by_code = Product.search([('code', 'in', values)])
         for product in products_by_code:
             if product.code:
@@ -765,9 +817,13 @@ class PapyrusShipmentInLine(ModelSQL, ModelView):
                 if 'product_code' in search_fields else None)
             external_code = (getattr(line, 'external_code', None)
                 if 'external_code' in search_fields else None)
-            product = None
+            ean_code = (getattr(line, 'ean', None)
+                if 'ean' in search_fields else None)
+            product = (
+                by_ean.get(ean.compact(ean_code))
+                if ean_code and ean.is_valid(ean_code) else None)
             if product_code:
-                product = by_code.get(product_code)
+                product = product or by_code.get(product_code)
             if not product and external_code:
                 product = by_code.get(external_code)
             if not product and description:

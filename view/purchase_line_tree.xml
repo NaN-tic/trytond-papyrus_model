@@ -1,0 +1,5 @@
+<data>
+    <xpath expr="//field[@name='quantity']" position="after">
+        <field name="desired_delivery_date" optional="1"/>
+    </xpath>
+</data>

@@ -12,5 +12,11 @@
             </group>
             <field name="papyrus_lines" colspan="4"/>
         </page>
+        <page name="previous_sales">
+            <group id="previous_sales" colspan="4" col="2">
+                <label name="previous_sales"/>
+                <field name="previous_sales" colspan="3"/>
+            </group>
+        </page>
     </xpath>
 </data>

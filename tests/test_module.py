@@ -1,12 +1,13 @@
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from trytond.modules.company.tests import create_company, set_company
 from trytond.modules.account.tests import create_chart, get_fiscalyear
 from trytond.modules.account_invoice.tests import set_invoice_sequences
 from trytond.modules.papyrus.tests import PapyrusCompanyTestMixin
 from trytond.pool import Pool
+from trytond.exceptions import UserError
 from trytond.tests.test_tryton import ModuleTestCase, with_transaction
 from trytond.transaction import Transaction
 
@@ -132,6 +133,24 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
             line = Line()
             line.product_code = code
 
+            Line.find_product(company.party, [line])
+            self.assertEqual(line.product, product)
+
+    def _assert_find_product_by_ean(self, model_name):
+        Identifier = Pool().get('product.identifier')
+        Line = Pool().get(model_name)
+
+        company = create_company()
+        with set_company(company):
+            product = self._create_product('%s-EAN' % model_name)
+            identifier = Identifier()
+            identifier.product = product
+            identifier.type = 'ean'
+            identifier.code = '4006381333931'
+            identifier.save()
+
+            line = Line()
+            line.ean = '4006381333931'
             Line.find_product(company.party, [line])
             self.assertEqual(line.product, product)
 
@@ -361,9 +380,48 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
             self.assertEqual(line.product, product)
 
     @with_transaction()
+    def test_guess_company_from_buyer_vat(self):
+        Document = Pool().get('papyrus.document')
+        Identifier = Pool().get('party.identifier')
+
+        company = create_company()
+        identifier = Identifier()
+        identifier.party = company.party
+        identifier.type = 'eu_vat'
+        identifier.code = 'ESB64836372'
+        identifier.save()
+
+        document = Document()
+        document.guess_company({
+                'buyer': {
+                    'name': 'Dama Electronic',
+                    'vat': 'B64836372',
+                    },
+                })
+
+        self.assertEqual(document.company, company)
+        self.assertEqual(document.guessed_company, company)
+
+    @with_transaction()
+    def test_default_sale_quotation_validity(self):
+        Configuration = Pool().get('sale.configuration')
+
+        company = create_company()
+        with set_company(company):
+            configuration = Configuration(1)
+            self.assertEqual(
+                configuration.get_multivalue(
+                    'sale_quotation_validity', company=company.id),
+                timedelta(weeks=1))
+
+    @with_transaction()
     def test_invoice_line_find_product_by_code(self):
         self._assert_find_product_by_code('papyrus.invoice.line',
             'PM-INV-001')
+
+    @with_transaction()
+    def test_invoice_line_find_product_by_ean(self):
+        self._assert_find_product_by_ean('papyrus.invoice.line')
 
     @with_transaction()
     def test_invoice_party_find_by_papyrus_name(self):
@@ -387,6 +445,27 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
             'PM-SALE-001')
 
     @with_transaction()
+    def test_sale_line_find_product_by_ean(self):
+        self._assert_find_product_by_ean('papyrus.sale.line')
+
+    @with_transaction()
+    def test_sale_links_explicit_previous_quotation(self):
+        Sale = Pool().get('sale.sale')
+
+        company = create_company()
+        with set_company(company):
+            party = self._create_party(company)
+            previous = self._create_sale(company, party)
+            Sale.quote([previous])
+
+            sale = self._create_sale(company, party)
+            sale.previous_sale_reference = previous.number
+            sale.save()
+            sale.link_previous_sales()
+
+            self.assertEqual(sale.previous_sales, (previous,))
+
+    @with_transaction()
     def test_sale_party_find_by_papyrus_name(self):
         self._assert_find_party_by_papyrus_name(
             'find_sale_party_from_data', {
@@ -398,6 +477,10 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
     def test_shipment_line_find_product_by_code(self):
         self._assert_find_product_by_code('papyrus.shipment.in.line',
             'PM-SHIP-001')
+
+    @with_transaction()
+    def test_shipment_line_find_product_by_ean(self):
+        self._assert_find_product_by_ean('papyrus.shipment.in.line')
 
     @with_transaction()
     def test_shipment_party_find_by_papyrus_name(self):
@@ -413,12 +496,125 @@ class PapyrusModelTestCase(PapyrusCompanyTestMixin, ModuleTestCase):
             'PM-PUR-001')
 
     @with_transaction()
+    def test_purchase_line_find_product_by_ean(self):
+        self._assert_find_product_by_ean('papyrus.purchase.line')
+
+    @with_transaction()
     def test_purchase_party_find_by_papyrus_name(self):
         self._assert_find_party_by_papyrus_name(
             'find_purchase_party_from_data', {
                 'name': 'Papyrus Purchase Supplier Alias',
                 'vat': None,
                 }, self._create_purchase, 'purchase_date')
+
+    @with_transaction()
+    def test_purchase_reconciles_papyrus_delivery_splits(self):
+        PapyrusLine = Pool().get('papyrus.purchase.line')
+
+        company = create_company()
+        with set_company(company):
+            party = self._create_party(company, name='Split Supplier')
+            product = self._create_product('PM-SPLIT-001')
+            purchase = self._create_purchase(company, party)
+            first = self._create_purchase_line(
+                purchase, product, Decimal('10'), Decimal('10'))
+            first.delivery_date_edit = True
+            first.delivery_date_store = date(2026, 9, 15)
+            first.save()
+            second = self._create_purchase_line(
+                purchase, product, Decimal('10'), Decimal('10'))
+            second.delivery_date_edit = True
+            second.delivery_date_store = date(2026, 10, 15)
+            second.save()
+
+            PapyrusLine.create([
+                    {
+                        'purchase': purchase.id,
+                        'product': product.id,
+                        'quantity': Decimal('8'),
+                        'unit_price': Decimal('10'),
+                        'delivery_date': date(2026, 9, 30),
+                    }, {
+                        'purchase': purchase.id,
+                        'product': product.id,
+                        'quantity': Decimal('10'),
+                        'unit_price': Decimal('10'),
+                        'delivery_date': date(2026, 10, 15),
+                    }])
+            purchase.create_purchase_lines_from_papyrus_lines()
+            purchase.save()
+
+            result = sorted(
+                [line for line in purchase.lines if line.product == product],
+                key=lambda line: (line.desired_delivery_date,
+                    line.delivery_date_store, -(line.quantity or 0)))
+            self.assertEqual(
+                [(line.desired_delivery_date, line.delivery_date_store,
+                    line.quantity, bool(line.papyrus_line))
+                    for line in result], [
+                    (date(2026, 9, 15), date(2026, 9, 30), 8, True),
+                    (date(2026, 9, 15), date(2026, 10, 15), 2, True),
+                    (date(2026, 10, 15), date(2026, 10, 15), 8, True),
+                    (date(2026, 10, 15), date(2026, 10, 15), 2, False),
+                    ])
+            self.assertEqual(
+                len([line for line in purchase.papyrus_lines
+                    if line.purchase_line]), 2)
+
+    @with_transaction()
+    def test_purchase_creates_lines_from_papyrus_delivery_splits(self):
+        PapyrusLine = Pool().get('papyrus.purchase.line')
+
+        company = create_company()
+        with set_company(company):
+            party = self._create_party(company, name='New Split Supplier')
+            product = self._create_product('PM-NEW-SPLIT-001')
+            purchase = self._create_purchase(company, party)
+            papyrus_line, = PapyrusLine.create([{
+                    'purchase': purchase.id,
+                    'product': product.id,
+                    'quantity': Decimal('8'),
+                    'unit_price': Decimal('10'),
+                    'delivery_date': date(2026, 9, 30),
+                    }])
+
+            purchase.create_purchase_lines_from_papyrus_lines()
+            purchase.save()
+            papyrus_line = PapyrusLine(papyrus_line.id)
+
+            self.assertIsNotNone(papyrus_line.purchase_line)
+            self.assertEqual(len(papyrus_line.purchase_lines), 1)
+            purchase_line, = papyrus_line.purchase_lines
+            self.assertEqual(purchase_line.delivery_date_store,
+                date(2026, 9, 30))
+            self.assertEqual(purchase_line.desired_delivery_date,
+                date(2026, 9, 30))
+
+    @with_transaction()
+    def test_purchase_does_not_reconcile_lines_with_moves(self):
+        PapyrusLine = Pool().get('papyrus.purchase.line')
+
+        company = create_company()
+        with set_company(company):
+            party = self._create_party(company, name='Moved Split Supplier')
+            product = self._create_product('PM-MOVED-SPLIT-001')
+            purchase = self._create_purchase(company, party)
+            purchase_line = self._create_purchase_line(
+                purchase, product, Decimal('10'), Decimal('10'))
+            shipment = self._create_shipment_in(company, party)
+            self._create_shipment_move(
+                shipment, product, Decimal('1'), purchase_line)
+            papyrus_line, = PapyrusLine.create([{
+                    'purchase': purchase.id,
+                    'product': product.id,
+                    'quantity': Decimal('8'),
+                    'unit_price': Decimal('10'),
+                    'delivery_date': date(2026, 9, 30),
+                    }])
+
+            with self.assertRaises(UserError):
+                purchase._reconcile_purchase_lines(
+                    [purchase_line], [papyrus_line])
 
     @with_transaction()
     def test_invoice_line_find_product_from_previous_papyrus_line(self):
