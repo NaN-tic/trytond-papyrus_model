@@ -35,8 +35,10 @@ def get_papyrus_company_context(document_id, agent, company_ids=None):
         'employee': None,
         'warehouse': None,
         }
-    with transaction.set_context(context):
-        context['warehouse'] = agent.get_papyrus_company_warehouse(company_id)
+    if hasattr(User, 'get_company_warehouse'):
+        with transaction.set_context(context):
+            warehouse = User(agent.owner.id).get_company_warehouse(company_id)
+            context['warehouse'] = warehouse.id if warehouse else None
     return context
 
 
@@ -44,9 +46,6 @@ class Agent(metaclass=PoolMeta):
     __name__ = 'nantic.agent'
 
     papyrus_multicompany = fields.Boolean('Shared Papyrus Inbox')
-
-    def get_papyrus_company_warehouse(self, company_id):
-        return None
 
     def get_run_context(self, **extra_context):
         context = super().get_run_context(**extra_context)
@@ -96,15 +95,6 @@ class Agent(metaclass=PoolMeta):
                 super().trigger_run([record], trigger)
         else:
             super().trigger_run(records, trigger)
-
-
-class AgentWarehouse(metaclass=PoolMeta):
-    __name__ = 'nantic.agent'
-
-    def get_papyrus_company_warehouse(self, company_id):
-        User = Pool().get('res.user')
-        warehouse = User(self.owner.id).get_company_warehouse(company_id)
-        return warehouse.id if warehouse else None
 
 
 class Conversation(metaclass=PoolMeta):
