@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<data>
-    <xpath expr="//notebook" position="inside">
-        <page name="inspection_history">
-            <field name="inspection_history" widget="document" height="550" colspan="4"/>
-        </page>
-    </xpath>
-</data>

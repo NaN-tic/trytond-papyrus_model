@@ -1,5 +1,8 @@
 <tryton>
     <data>
+        <record model="ir.message" id="msg_papyrus_company_access">
+            <field name="text">You are not allowed to access this Papyrus document's company.</field>
+        </record>
         <record model="ir.message" id="msg_cannot_delete_with_related_record">
             <field name="text">Document "%(document)s" cannot be removed because "%(record)s" (%(model_type)s) is linked to it. You must remove or unlink the related record first.</field>
         </record>

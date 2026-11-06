@@ -3,7 +3,6 @@ import json
 import unittest
 from unittest.mock import patch
 
-from lxml import etree
 from proteus import Model
 from trytond.exceptions import UserError
 from trytond.model.modelstorage import AccessError
@@ -126,11 +125,6 @@ class TestAgentInspection(unittest.TestCase):
                         LLM_CONTENT_ATTACHMENT_DESCRIPTION)
                     self.assertEqual(conversation.get_source_record_reference(),
                         ('papyrus.document', document.id))
-                    self.assertEqual(conversation.papyrus_document, document)
-                    pool.get('nantic.chat.conversation').write([conversation], {
-                        'title': '<Inspection> & history'})
-                    conversation.add_message({'content': 'Document adjunt.',
-                        'metadata': {'nantic_agent': {'id': agent.id}}}, 'user')
                     content, _, _, error = UserContext.execute(conversation)
                     self.assertFalse(error)
                     self.assertIn('Active model: papyrus.document', content)
@@ -144,7 +138,6 @@ class TestAgentInspection(unittest.TestCase):
                 get_data.assert_not_called()
                 self.assertFalse(any(message.attachments
                     for message in conversation.messages))
-                self.assertFalse(conversation.papyrus_document)
             other_company = pool.get('company.company')(
                 party=supplier.id,
                 currency=pool.get('company.company')(company.id).currency.id)
@@ -152,47 +145,6 @@ class TestAgentInspection(unittest.TestCase):
             restricted = Document(queue=pool.get('papyrus.queue')(queue.id),
                 company=other_company)
             restricted.save()
-            Conversation = pool.get('nantic.chat.conversation')
-            Conversation.create([{
-                'identifier': 'private-inspection', 'title': 'Private title',
-                'papyrus_document': document.id, 'creation_origin': 'manual',
-                }])
-            other_conversation, = Conversation.create([{
-                'identifier': 'restricted-inspection', 'title': 'Restricted title',
-                'papyrus_document': restricted.id, 'creation_origin': 'trigger',
-                }])
-            other_conversation.add_message({'content': 'Restricted content'},
-                'assistant')
-            reader, = pool.get('res.user').create([{
-                'name': 'Document Reader', 'login': 'document_reader',
-                'company': company.id,
-                'companies': [('add', [company.id])],
-                'groups': [('add', [pool.get('ir.model.data').get_id(
-                    'papyrus', 'group_papyrus')])],
-                }])
-            transaction.commit()
-            with transaction.set_user(reader.id), transaction.set_context(
-                    _companies=[company.id], _check_access=True):
-                values, = Document.read([document.id],
-                    ['inspection_history', 'inspection_history_filename'])
-                history = values['inspection_history']
-                self.assertIn(b'Document adjunt.', history)
-                self.assertNotIn(b'Private title', history)
-                self.assertNotIn(b'Restricted content', history)
-                self.assertIn(b'&lt;Inspection&gt; &amp; history', history)
-                self.assertEqual(len(etree.HTML(history).xpath('//section')), 2)
-                self.assertEqual(values['inspection_history_filename'],
-                    'inspection-history.html')
-                with self.assertRaises(AccessError):
-                    Document.read([restricted.id], ['inspection_history'])
-                self.assertFalse(Conversation.search([
-                    ('papyrus_document', '=', document.id)]))
-                view = Document.fields_view_get(view_type='form')
-                tree = etree.fromstring(view['arch'].encode())
-                self.assertTrue(tree.xpath(
-                    '//field[@name="inspection_history"][@widget="document"]'))
-                self.assertTrue(view['fields']['inspection_history']['readonly'])
-                self.assertNotIn('get_inspection_history', Document.__rpc__)
             with transaction.set_context(current_model='papyrus.document',
                     current_record=restricted.id), patch.object(
                         Document, 'get_data') as get_data:

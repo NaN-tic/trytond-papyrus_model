@@ -18,8 +18,11 @@ def register():
     Pool.register(
         agent.Agent,
         agent.Conversation,
-        agent.Document,
         module=module, type_='model', depends=['nantic_connection'])
+    Pool.register(
+        agent.AgentWarehouse,
+        module=module, type_='model',
+        depends=['nantic_connection', 'stock_location_company'])
     Pool.register(
         invoice.Party,
         invoice.Queue,
