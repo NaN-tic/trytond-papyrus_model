@@ -691,7 +691,7 @@ msgctxt "field:nantic.agent,papyrus_multicompany:"
 msgid "Shared Papyrus Inbox"
 msgstr "Bandeja de entrada Papyrus compartida"
 
-msgctxt "model:ir.message,text:papyrus_model.msg_papyrus_company_access"
+msgctxt "model:ir.message,text:msg_papyrus_company_access"
 msgid "You are not allowed to access this Papyrus document's company."
 msgstr "No tiene permiso para acceder a la empresa de este documento Papyrus."
 
