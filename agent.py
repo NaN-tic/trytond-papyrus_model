@@ -1,8 +1,6 @@
 from trytond.i18n import gettext
 from trytond.model import fields
 from trytond.model.modelstorage import AccessError
-from trytond.modules.nantic_connection.chat_tools import (
-    LLM_CONTENT_ATTACHMENT_DESCRIPTION)
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 
@@ -65,6 +63,9 @@ class Agent(metaclass=PoolMeta):
         return metadata
 
     def create_conversation(self, action_summary, now):
+        from trytond.modules.nantic_connection.chat_tools import (
+            LLM_CONTENT_ATTACHMENT_DESCRIPTION)
+
         conversation = super().create_conversation(action_summary, now)
         context = Transaction().context
         if (context.get('current_model') == 'papyrus.document'

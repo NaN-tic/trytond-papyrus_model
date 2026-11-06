@@ -1,20 +1,22 @@
 import datetime
 import json
 import unittest
+from importlib.util import find_spec
 from unittest.mock import patch
 
 from proteus import Model
 from trytond.exceptions import UserError
 from trytond.model.modelstorage import AccessError
 from trytond.modules.company.tests.tools import create_company, get_company
-from trytond.modules.nantic_connection.chat_tools import (
-    LLM_CONTENT_ATTACHMENT_DESCRIPTION, UserContext, format_tag)
 from trytond.pool import Pool
 from trytond.tests.test_tryton import drop_db
 from trytond.tests.tools import activate_modules
 from trytond.transaction import Transaction
 
 
+@unittest.skipUnless(
+    find_spec('trytond.modules.nantic_connection') is not None,
+    'nantic_connection is not installed')
 class TestAgentInspection(unittest.TestCase):
 
     def setUp(self):
@@ -26,6 +28,9 @@ class TestAgentInspection(unittest.TestCase):
         super().tearDown()
 
     def test(self):
+        from trytond.modules.nantic_connection.chat_tools import (
+            LLM_CONTENT_ATTACHMENT_DESCRIPTION, UserContext, format_tag)
+
         config = activate_modules(
             ['papyrus_model', 'purchase', 'party_supplier', 'nantic_connection'])
 
