@@ -10,6 +10,16 @@
             <field name="inherit" ref="purchase.purchase_view_tree"/>
             <field name="name">purchase_tree</field>
         </record>
+        <record model="ir.ui.view" id="purchase_line_view_form">
+            <field name="model">purchase.line</field>
+            <field name="inherit" ref="purchase.purchase_line_view_form"/>
+            <field name="name">purchase_line_form</field>
+        </record>
+        <record model="ir.ui.view" id="purchase_line_view_tree">
+            <field name="model">purchase.line</field>
+            <field name="inherit" ref="purchase.purchase_line_view_tree"/>
+            <field name="name">purchase_line_tree</field>
+        </record>
 
         <record model="ir.ui.view" id="purchase_document_view_form">
             <field name="model">papyrus.document</field>
