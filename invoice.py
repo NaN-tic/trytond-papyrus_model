@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from stdnum import ean
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.wizard import Wizard, StateAction
 from trytond.pyson import PYSONEncoder, Eval, Bool, If
 from trytond.exceptions import UserWarning
@@ -86,7 +86,10 @@ class Document(metaclass=PoolMeta):
                 "with hyphens or other characters. Extract "
                 "currency, our order number, supplier order number, supplier "
                 "delivery note number, line items (codes, EANs, descriptions, "
-                "quantities, unit prices, taxes), and totals. If a line contains both "
+                "quantities, unit prices, taxes), and totals. Return line_items "
+                "in their visual order in the PDF, page by page and top to bottom. "
+                "Do not reorder or group lines by product, tax, code or amount. "
+                "If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
                 "party_product_code is the supplier code. Return in "
@@ -333,8 +336,9 @@ class Document(metaclass=PoolMeta):
             PapyrusInvoiceLine.find_product(invoice.party, lines)
         else:
             lines = []
-            for item in data.get('line_items', []):
+            for sequence, item in enumerate(data.get('line_items', []), 1):
                 line = PapyrusInvoiceLine.build(item, currency=invoice.currency)
+                line.sequence = sequence
                 lines.append(line)
             PapyrusInvoiceLine.find_product(invoice.party, lines)
             if invoice.party.papyrus_group_lines_by_tax:
@@ -371,6 +375,7 @@ class Document(metaclass=PoolMeta):
                         if product:
                             products.add(product)
                     line = PapyrusInvoiceLine()
+                    line.sequence = tax_lines[0].sequence
                     line.description = 'Taxes %s' % (tax or '0')
                     line.quantity = Decimal(1)
                     line.unit_price = amount
@@ -382,7 +387,7 @@ class Document(metaclass=PoolMeta):
             invoice.papyrus_lines = lines
 
         PapyrusInvoiceLine.find_invoice_line(
-            invoice.party, lines, data)
+            invoice.party, lines, data, invoice=invoice)
         invoice.create_invoice_lines_from_papyrus_lines()
         invoice.save()
 
@@ -491,18 +496,32 @@ class Invoice(metaclass=PoolMeta):
 
         to_save = []
         to_update = []
-        for papyrus_line in getattr(self, 'papyrus_lines', []):
+        papyrus_lines = list(getattr(self, 'papyrus_lines', []))
+        next_sequence = max((getattr(line, 'sequence', None) or 0
+            for line in papyrus_lines), default=0) + 1
+        for papyrus_line in papyrus_lines:
+            if getattr(papyrus_line, 'sequence', None) is None:
+                papyrus_line.sequence = next_sequence
+                next_sequence += 1
+                to_save.append(papyrus_line)
             invoice_line = getattr(papyrus_line, 'invoice_line', None)
             if invoice_line:
+                changed = False
                 if not invoice_line.invoice:
                     invoice_line.invoice = self
+                    changed = True
+                if invoice_line.sequence != papyrus_line.sequence:
+                    invoice_line.sequence = papyrus_line.sequence
+                    changed = True
+                if changed:
                     to_update.append(invoice_line)
                 continue
             invoice_line = papyrus_line.get_invoice_line()
             if not invoice_line:
                 continue
             papyrus_line.invoice_line = invoice_line
-            to_save.append(papyrus_line)
+            if papyrus_line not in to_save:
+                to_save.append(papyrus_line)
 
         if to_save:
             PapyrusInvoiceLine.save(to_save)
@@ -590,8 +609,10 @@ class Invoice(metaclass=PoolMeta):
                     continue
                 super().write([invoice], {'papyrus_name': name})
 
-class PapyrusInvoiceLine(ModelSQL, ModelView):
+class PapyrusInvoiceLine(sequence_ordered(), ModelSQL, ModelView):
     __name__ = 'papyrus.invoice.line'
+
+    _match_invoice_line_party = True
 
     invoice = fields.Many2One('account.invoice', 'Invoice', required=True,
         ondelete='CASCADE')
@@ -630,6 +651,36 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 and table.column_is_type('quantity', 'numeric')):
             table.alter_type('quantity', cls.quantity.sql_type().base)
         super().__register__(module_name)
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        cls.synchronize_invoice_line_sequences(lines)
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_update = []
+        for lines, values in zip(args[::2], args[1::2]):
+            if {'invoice_line', 'sequence'} & values.keys():
+                to_update.extend(lines)
+        super().write(*args)
+        cls.synchronize_invoice_line_sequences(to_update)
+
+    @classmethod
+    def synchronize_invoice_line_sequences(cls, lines):
+        InvoiceLine = Pool().get('account.invoice.line')
+        writes = []
+        for line in lines:
+            invoice_line = line.invoice_line
+            if (line.sequence is None or not invoice_line
+                    or invoice_line.sequence == line.sequence):
+                continue
+            if invoice_line.invoice and invoice_line.invoice.state != 'draft':
+                continue
+            writes.extend(([invoice_line], {'sequence': line.sequence}))
+        if writes:
+            InvoiceLine.write(*writes)
 
     @classmethod
     def build(cls, data, currency=None):
@@ -697,6 +748,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         exp = Decimal(str(10.0 ** -digits))
         invoice_line = InvoiceLine()
         invoice_line.invoice = invoice
+        invoice_line.sequence = getattr(self, 'sequence', None)
         invoice_line.product = product
         invoice_line.on_change_product()
         invoice_line.description = getattr(self, 'description', None)
@@ -796,6 +848,51 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             ]
 
     @classmethod
+    def get_product_search_fields(cls):
+        """Return the extracted fields used to identify a product."""
+        return {'product_code', 'external_code', 'description', 'ean'}
+
+    @classmethod
+    def get_history_products(cls, party, values_by_field):
+        """Map extracted codes and descriptions to historical products."""
+        history_by_code = {}
+        history_by_description = {}
+        history_codes = list(values_by_field.get('product_code', []))
+        history_lookup_codes = list(values_by_field.get('external_code', []))
+        history_descriptions = list(values_by_field.get('description', []))
+        if history_codes or history_lookup_codes or history_descriptions:
+            history_domain = [('invoice.party', '=', party),
+                ('product', '!=', None)]
+            code_values = list(dict.fromkeys(history_codes + history_lookup_codes))
+            if code_values and history_descriptions:
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ('description', 'in', history_descriptions),
+                        ])
+            elif code_values:
+                history_domain.append(['OR',
+                        ('product_code', 'in', code_values),
+                        ('external_code', 'in', code_values),
+                        ])
+            else:
+                history_domain.append(('description', 'in',
+                        history_descriptions))
+            history_lines = cls.search(history_domain,
+                order=[('id', 'DESC')])
+            for line in history_lines:
+                product = getattr(line, 'product', None)
+                if line.product_code and product:
+                    history_by_code.setdefault(line.product_code, product)
+                if line.external_code and product:
+                    history_by_code.setdefault(line.external_code, product)
+                if line.description and product:
+                    history_by_description.setdefault(line.description,
+                        product)
+
+        return history_by_code, history_by_description
+
+    @classmethod
     def find_product(cls, party, lines):
         lines = [line for line in lines if not getattr(line, 'product', None)]
         if not lines:
@@ -803,49 +900,33 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
         pool = Pool()
         Product = pool.get('product.product')
         Identifier = pool.get('product.identifier')
-        HistoryLine = pool.get('papyrus.invoice.line')
         try:
             ProductSupplier = pool.get('purchase.product_supplier')
         except KeyError:
             ProductSupplier = None
 
-        values = []
-        ean_codes = []
+        search_fields = cls.get_product_search_fields()
+        values_by_field = {name: set() for name in search_fields}
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
-            ean_code = getattr(line, 'ean', None)
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip() or None
-                line.description = description
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-                line.product_code = product_code
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-                line.external_code = external_code
-            if isinstance(ean_code, str):
-                ean_code = ean_code.replace('\x00', '').strip() or None
-                line.ean = ean_code
-            if product_code:
-                values.append(product_code)
-            if external_code:
-                values.append(external_code)
-            if description:
-                values.append(description)
-            if ean_code and ean.is_valid(ean_code):
-                ean_codes.append(ean.compact(ean_code))
-                values.append(ean.compact(ean_code))
+            for name, field_values in values_by_field.items():
+                value = getattr(line, name, None)
+                if isinstance(value, str):
+                    value = value.replace('\x00', '').strip() or None
+                    setattr(line, name, value)
+                if value:
+                    field_values.add(value)
+        ean_codes = {ean.compact(code)
+            for code in values_by_field.get('ean', ()) if ean.is_valid(code)}
+        values = list({value for field_values in values_by_field.values()
+            for value in field_values} | ean_codes)
+
         by_code = {}
         by_name = {}
         by_ean = {}
-        history_by_code = {}
-        history_by_description = {}
         if ean_codes:
             identifiers = Identifier.search([
                     ('type', '=', 'ean'),
-                    ('code', 'in', list(set(ean_codes))),
+                    ('code', 'in', list(ean_codes)),
                     ])
             for identifier in identifiers:
                 code = ean.compact(identifier.code)
@@ -881,50 +962,18 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     (record.template.products and record.template.products[0]))
                 if record.name and product:
                     by_name[record.name] = product
-        history_codes = list({
-                getattr(line, 'product_code', None)
-                for line in lines if getattr(line, 'product_code', None)})
-        history_lookup_codes = list({
-                getattr(line, 'external_code', None)
-                for line in lines if getattr(line, 'external_code', None)})
-        history_descriptions = list({
-                getattr(line, 'description', None)
-                for line in lines if getattr(line, 'description', None)})
-        if history_codes or history_lookup_codes or history_descriptions:
-            history_domain = [('invoice.party', '=', party),
-                ('product', '!=', None)]
-            code_values = list(dict.fromkeys(history_codes + history_lookup_codes))
-            if code_values and history_descriptions:
-                history_domain.append(['OR',
-                        ('product_code', 'in', code_values),
-                        ('external_code', 'in', code_values),
-                        ('description', 'in', history_descriptions),
-                        ])
-            elif code_values:
-                history_domain.append(['OR',
-                        ('product_code', 'in', code_values),
-                        ('external_code', 'in', code_values),
-                        ])
-            else:
-                history_domain.append(('description', 'in',
-                        history_descriptions))
-            history_lines = HistoryLine.search(history_domain,
-                order=[('id', 'DESC')])
-            for line in history_lines:
-                product = getattr(line, 'product', None)
-                if line.product_code and product:
-                    history_by_code.setdefault(line.product_code, product)
-                if line.external_code and product:
-                    history_by_code.setdefault(line.external_code, product)
-                if line.description and product:
-                    history_by_description.setdefault(line.description,
-                        product)
+        history_by_code, history_by_description = cls.get_history_products(
+            party, values_by_field)
 
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
-            ean_code = getattr(line, 'ean', None)
+            description = (getattr(line, 'description', None)
+                if 'description' in search_fields else None)
+            product_code = (getattr(line, 'product_code', None)
+                if 'product_code' in search_fields else None)
+            external_code = (getattr(line, 'external_code', None)
+                if 'external_code' in search_fields else None)
+            ean_code = (getattr(line, 'ean', None)
+                if 'ean' in search_fields else None)
             product = (
                 by_ean.get(ean.compact(ean_code))
                 if ean_code and ean.is_valid(ean_code) else None)
@@ -993,7 +1042,7 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
             'purchase.product_supplier', 'invoice.party')
 
     @classmethod
-    def find_invoice_line(cls, party, lines, data):
+    def find_invoice_line(cls, party, lines, data, invoice=None):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         try:
@@ -1010,7 +1059,8 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                 continue
             origin = getattr(invoice_line, 'origin', None)
             purchase = getattr(origin, 'purchase', None) if origin else None
-            if getattr(purchase, 'party', None) == party:
+            if (getattr(purchase, 'party', None) == party
+                    or (purchase and not cls._match_invoice_line_party)):
                 candidates.append(invoice_line)
                 continue
             for move in getattr(invoice_line, 'stock_moves', []):
@@ -1060,10 +1110,10 @@ class PapyrusInvoiceLine(ModelSQL, ModelView):
                     ('reference', '=', party_order_number_value),
                     ])
         if purchase_domain and Purchase:
-            purchases = Purchase.search([
-                    ('party', '=', party),
-                    ['OR'] + purchase_domain,
-                    ])
+            domain = [['OR'] + purchase_domain]
+            if cls._match_invoice_line_party:
+                domain.append(('party', '=', party))
+            purchases = Purchase.search(domain)
             if purchases:
                 matching = []
                 for invoice_line in candidates:

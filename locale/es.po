@@ -81,10 +81,6 @@ msgctxt "field:papyrus.document,shipment_in:"
 msgid "Shipment In"
 msgstr "Albarán de proveedor"
 
-msgctxt "field:account.invoice.line,papyrus_created:"
-msgid "Papyrus Created"
-msgstr "Creada por Papyrus"
-
 msgctxt "field:papyrus.invoice.line,amount:"
 msgid "Amount"
 msgstr "Importe"
@@ -698,3 +694,15 @@ msgstr "Bandeja de entrada Papyrus compartida"
 msgctxt "model:ir.message,text:papyrus_model.msg_papyrus_company_access"
 msgid "You are not allowed to access this Papyrus document's company."
 msgstr "No tiene permiso para acceder a la empresa de este documento Papyrus."
+
+msgctxt "field:papyrus.invoice.line,sequence:"
+msgid "Sequence"
+msgstr "Secuencia"
+
+msgctxt "field:papyrus.purchase.line,sequence:"
+msgid "Sequence"
+msgstr "Secuencia"
+
+msgctxt "field:papyrus.sale.line,sequence:"
+msgid "Sequence"
+msgstr "Secuencia"

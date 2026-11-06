@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from stdnum import ean
 from trytond.pool import PoolMeta, Pool
-from trytond.model import fields, ModelSQL, ModelView
+from trytond.model import fields, ModelSQL, ModelView, sequence_ordered
 from trytond.pyson import Eval, Bool, If
 from trytond.exceptions import UserError, UserWarning
 from trytond.i18n import gettext
@@ -75,7 +75,10 @@ class Document(metaclass=PoolMeta):
                 "phone), document number, our purchase number, supplier "
                 "purchase reference, dates, currency, line items "
                 "(codes, EANs, descriptions, quantities, unit prices, discounts, "
-                "taxes, line totals), and totals. If a line contains both "
+                "taxes, line totals), and totals. Return line_items in their "
+                "visual order in the PDF, page by page and top to bottom. "
+                "Do not reorder or group lines by product, tax, code or amount. "
+                "If a line contains both "
                 "our/internal product code and the supplier's product code, "
                 "keep them separate: product_code is our/internal code and "
                 "party_product_code is the supplier code. Return in "
@@ -352,8 +355,9 @@ class Document(metaclass=PoolMeta):
         lines = getattr(purchase, 'papyrus_lines', None)
         if not lines:
             lines = []
-            for item in data.get('line_items', []):
+            for sequence, item in enumerate(data.get('line_items', []), 1):
                 line = PapyrusPurchaseLine.build(item)
+                line.sequence = sequence
                 lines.append(line)
             purchase.papyrus_lines = lines
         PapyrusPurchaseLine.find_product(purchase.party, lines)
@@ -417,19 +421,26 @@ class Purchase(metaclass=PoolMeta):
         PurchaseLine = Pool().get('purchase.line')
         PapyrusPurchaseLine = Pool().get('papyrus.purchase.line')
 
+        all_papyrus_lines = list(self.papyrus_lines)
+        next_sequence = max((line.sequence or 0 for line in all_papyrus_lines),
+            default=0) + 1
         purchase_lines = list(self.lines)
         for line in purchase_lines:
             if not line.desired_delivery_date:
                 line.desired_delivery_date = (
                     line.delivery_date_store or line.delivery_date)
-
-        papyrus_lines = sorted(
-            [line for line in self.papyrus_lines
-                if not line.purchase_line],
-            key=lambda line: (
-                line.product.id if line.product else 0,
-                line.delivery_date or date.max,
-                line.id or 0))
+        papyrus_lines = []
+        for line in all_papyrus_lines:
+            if line.sequence is None:
+                line.sequence = next_sequence
+                next_sequence += 1
+            if line.purchase_line:
+                if self.state == 'draft':
+                    line.purchase_line.sequence = line.sequence
+                    if line.purchase_line not in purchase_lines:
+                        purchase_lines.append(line.purchase_line)
+            else:
+                papyrus_lines.append(line)
         if not purchase_lines:
             for papyrus_line in papyrus_lines:
                 purchase_line = papyrus_line.get_purchase_line()
@@ -444,14 +455,18 @@ class Purchase(metaclass=PoolMeta):
                 # determine whether a Papyrus line has been materialized.
                 papyrus_line.purchase_line = purchase_line
                 purchase_lines.append(purchase_line)
-        else:
+        elif papyrus_lines:
+            papyrus_lines.sort(key=lambda line: (
+                line.product.id if line.product else 0,
+                line.delivery_date or date.max,
+                line.id or 0))
             self._reconcile_purchase_lines(purchase_lines, papyrus_lines)
 
         if purchase_lines:
             PurchaseLine.save(purchase_lines)
-        PapyrusPurchaseLine.save([
-                line for line in papyrus_lines
-                if line.purchase_line])
+        if all_papyrus_lines:
+            PapyrusPurchaseLine.save(all_papyrus_lines)
+        self.papyrus_lines = all_papyrus_lines
 
     def _reconcile_purchase_lines(self, purchase_lines, papyrus_lines):
         PurchaseLine = Pool().get('purchase.line')
@@ -495,6 +510,7 @@ class Purchase(metaclass=PoolMeta):
                 line.delivery_date_edit = True
                 line.delivery_date_store = papyrus_line.delivery_date
                 line.papyrus_line = papyrus_line
+                line.sequence = papyrus_line.sequence
                 papyrus_line.purchase_line = line
                 remaining[line] = Decimal(0)
                 quantity -= amount
@@ -662,7 +678,7 @@ class PurchaseLine(metaclass=PoolMeta):
             cls.write(lines, {'desired_delivery_date': desired})
 
 
-class PapyrusPurchaseLine(ModelSQL, ModelView):
+class PapyrusPurchaseLine(sequence_ordered(), ModelSQL, ModelView):
     __name__ = 'papyrus.purchase.line'
 
     purchase = fields.Many2One('purchase.purchase', 'Purchase', required=True,
@@ -686,6 +702,36 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
     delivery_date = fields.Date('Delivery Date')
     purchase_line_matches = fields.Function(
         fields.Boolean('Purchase Line Matches'), 'get_purchase_line_matches')
+
+    @classmethod
+    def create(cls, vlist):
+        lines = super().create(vlist)
+        cls.synchronize_purchase_line_sequences(lines)
+        return lines
+
+    @classmethod
+    def write(cls, *args):
+        to_update = []
+        for lines, values in zip(args[::2], args[1::2]):
+            if {'purchase_line', 'sequence'} & values.keys():
+                to_update.extend(lines)
+        super().write(*args)
+        cls.synchronize_purchase_line_sequences(to_update)
+
+    @classmethod
+    def synchronize_purchase_line_sequences(cls, lines):
+        PurchaseLine = Pool().get('purchase.line')
+        writes = []
+        for line in lines:
+            purchase_line = line.purchase_line
+            if (line.sequence is None or not purchase_line
+                    or purchase_line.sequence == line.sequence):
+                continue
+            if purchase_line.purchase.state != 'draft':
+                continue
+            writes.extend(([purchase_line], {'sequence': line.sequence}))
+        if writes:
+            PurchaseLine.write(*writes)
 
     @classmethod
     def build(cls, data):
@@ -732,6 +778,7 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         exp = Decimal(str(10.0 ** -digits))
         purchase_line = PurchaseLine()
         purchase_line.purchase = purchase
+        purchase_line.sequence = getattr(self, 'sequence', None)
         purchase_line.product = product
         purchase_line.on_change_product()
         purchase_line.description = getattr(self, 'description', None)
@@ -797,6 +844,11 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
             ]
 
     @classmethod
+    def get_product_search_fields(cls):
+        """Return the extracted fields used to identify a product."""
+        return {'product_code', 'external_code', 'description', 'ean'}
+
+    @classmethod
     def find_product(cls, party, lines):
         lines = [line for line in lines if not getattr(line, 'product', None)]
         if not lines:
@@ -810,34 +862,20 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
         except KeyError:
             ProductSupplier = None
 
-        values = []
-        ean_codes = []
+        search_fields = cls.get_product_search_fields()
+        values_by_field = {name: set() for name in search_fields}
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
-            ean_code = getattr(line, 'ean', None)
-            if isinstance(description, str):
-                description = description.replace('\x00', '').strip() or None
-                line.description = description
-            if isinstance(product_code, str):
-                product_code = product_code.replace('\x00', '').strip() or None
-                line.product_code = product_code
-            if isinstance(external_code, str):
-                external_code = external_code.replace('\x00', '').strip() or None
-                line.external_code = external_code
-            if isinstance(ean_code, str):
-                ean_code = ean_code.replace('\x00', '').strip() or None
-                line.ean = ean_code
-            if product_code:
-                values.append(product_code)
-            if external_code:
-                values.append(external_code)
-            if description:
-                values.append(description)
-            if ean_code and ean.is_valid(ean_code):
-                ean_codes.append(ean.compact(ean_code))
-                values.append(ean.compact(ean_code))
+            for name, field_values in values_by_field.items():
+                value = getattr(line, name, None)
+                if isinstance(value, str):
+                    value = value.replace('\x00', '').strip() or None
+                    setattr(line, name, value)
+                if value:
+                    field_values.add(value)
+        ean_codes = {ean.compact(value)
+            for value in values_by_field.get('ean', ()) if ean.is_valid(value)}
+        values = list({value for name, field_values in values_by_field.items()
+            if name != 'ean' for value in field_values} | ean_codes)
         by_code = {}
         by_name = {}
         by_ean = {}
@@ -882,15 +920,9 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                     (record.template.products and record.template.products[0]))
                 if record.name and product:
                     by_name[record.name] = product
-        history_codes = list({
-                getattr(line, 'product_code', None)
-                for line in lines if getattr(line, 'product_code', None)})
-        history_lookup_codes = list({
-                getattr(line, 'external_code', None)
-                for line in lines if getattr(line, 'external_code', None)})
-        history_descriptions = list({
-                getattr(line, 'description', None)
-                for line in lines if getattr(line, 'description', None)})
+        history_codes = list(values_by_field.get('product_code', []))
+        history_lookup_codes = list(values_by_field.get('external_code', []))
+        history_descriptions = list(values_by_field.get('description', []))
         if history_codes or history_lookup_codes or history_descriptions:
             history_domain = [('purchase.party', '=', party),
                 ('product', '!=', None)]
@@ -916,10 +948,14 @@ class PapyrusPurchaseLine(ModelSQL, ModelView):
                         product)
 
         for line in lines:
-            description = getattr(line, 'description', None)
-            product_code = getattr(line, 'product_code', None)
-            external_code = getattr(line, 'external_code', None)
-            ean_code = getattr(line, 'ean', None)
+            description = (getattr(line, 'description', None)
+                if 'description' in search_fields else None)
+            product_code = (getattr(line, 'product_code', None)
+                if 'product_code' in search_fields else None)
+            external_code = (getattr(line, 'external_code', None)
+                if 'external_code' in search_fields else None)
+            ean_code = (getattr(line, 'ean', None)
+                if 'ean' in search_fields else None)
             product = (
                 by_ean.get(ean.compact(ean_code))
                 if ean_code and ean.is_valid(ean_code) else None)

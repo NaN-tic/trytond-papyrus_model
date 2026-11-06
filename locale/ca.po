@@ -81,10 +81,6 @@ msgctxt "field:papyrus.document,shipment_in:"
 msgid "Shipment In"
 msgstr "Albarà de proveïdor"
 
-msgctxt "field:account.invoice.line,papyrus_created:"
-msgid "Papyrus Created"
-msgstr "Creada per Papyrus"
-
 msgctxt "field:papyrus.invoice.line,amount:"
 msgid "Amount"
 msgstr "Import"
@@ -697,3 +693,15 @@ msgstr "Safata d'entrada Papyrus compartida"
 msgctxt "model:ir.message,text:papyrus_model.msg_papyrus_company_access"
 msgid "You are not allowed to access this Papyrus document's company."
 msgstr "No teniu permís per accedir a l'empresa d'aquest document Papyrus."
+
+msgctxt "field:papyrus.invoice.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"
+
+msgctxt "field:papyrus.purchase.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"
+
+msgctxt "field:papyrus.sale.line,sequence:"
+msgid "Sequence"
+msgstr "Seqüència"
