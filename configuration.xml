@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <record model="res.group" id="group_papyrus_configuration">
+            <field name="name">Papyrus Configuration</field>
+        </record>
+        <record model="ir.ui.view" id="configuration_view_form">
+            <field name="model">papyrus.configuration</field>
+            <field name="type">form</field>
+            <field name="name">configuration_form</field>
+        </record>
+        <record model="ir.action.act_window" id="act_configuration">
+            <field name="name">Papyrus Configuration</field>
+            <field name="res_model">papyrus.configuration</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_configuration_view_form">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="configuration_view_form"/>
+            <field name="act_window" ref="act_configuration"/>
+        </record>
+        <record model="ir.action-res.group" id="act_configuration_group">
+            <field name="action" ref="act_configuration"/>
+            <field name="group" ref="group_papyrus_configuration"/>
+        </record>
+        <menuitem id="menu_configuration" name="Configuration"
+            parent="papyrus.menu_papyrus_configuration"
+            action="act_configuration" sequence="5" icon="tryton-settings"/>
+        <record model="ir.ui.menu-res.group" id="menu_configuration_group">
+            <field name="menu" ref="menu_configuration"/>
+            <field name="group" ref="group_papyrus_configuration"/>
+        </record>
+        <record model="ir.model.access" id="access_configuration">
+            <field name="model">papyrus.configuration</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+        <record model="ir.model.access" id="access_configuration_group">
+            <field name="model">papyrus.configuration</field>
+            <field name="group" ref="group_papyrus_configuration"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+    </data>
+</tryton>
