@@ -110,16 +110,27 @@ class TestProductCodes(unittest.TestCase):
                         'company': other_company.id,
                         'currency': currency_id,
                         'code': 'REMOTE-88 02'}])
+            parent_fields = {
+                'papyrus.purchase.line': 'purchase',
+                'papyrus.sale.line': 'sale',
+                'papyrus.invoice.line': 'invoice',
+                'papyrus.shipment.in.line': 'shipment',
+                }
             for model_name, parent in parents:
                 Line = pool.get(model_name)
                 Parent = pool.get(parent.__class__.__name__)
-                defaults = {
-                        'company': other_company.id,
-                        'papyrus_lines.product_code': 'OTHER-55 01',
-                        'papyrus_lines.description': 'Other company item'}
+                defaults = {'company': other_company.id}
                 if model_name == 'papyrus.invoice.line':
                     defaults['account'] = other_payable_id
-                Parent.copy([Parent(parent.id)], defaults)
+                copied_parent, = Parent.copy([Parent(parent.id)], defaults)
+                self.assertFalse(copied_parent.papyrus_lines)
+                Line.create([{
+                            parent_fields[model_name]: copied_parent.id,
+                            'product': products['HISTORY-1'].id,
+                            'product_code': 'OTHER-55 01',
+                            'description': 'Other company item',
+                            'quantity': Decimal('1'),
+                            }])
                 for code in ('ab 12-34', 'AB1234', 'AB_12/34',
                         'AB\u00a012–34'):
                     line = Line.build({'product_code': code, 'quantity': 1})
