@@ -1,0 +1,736 @@
+#
+msgid ""
+msgstr ""
+"Language: hu\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "field:account.invoice,document:"
+msgid "Document"
+msgstr "Dokumentum"
+
+msgctxt "field:account.invoice,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus-tételek"
+
+msgctxt "field:account.invoice,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "Papyrus-tételek nettó összege"
+
+msgctxt "field:account.invoice,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus neve"
+
+msgctxt "field:account.invoice,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "Papyrus végösszege"
+
+msgctxt "field:account.invoice,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "Papyrus végösszegének egyezése"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "Papyrus nettó összege"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "Papyrus nettó összegének egyezése"
+
+msgctxt "field:papyrus.document,extracted_data:"
+msgid "Extracted Data"
+msgstr "Kinyert adatok"
+
+msgctxt "field:papyrus.document,guessed_company:"
+msgid "Guessed Company"
+msgstr "Feltételezett vállalat"
+
+msgctxt "field:papyrus.document,guessed_model_type:"
+msgid "Guessed Model Type"
+msgstr "Feltételezett modelltípus"
+
+msgctxt "field:papyrus.document,invoice:"
+msgid "Account Invoice"
+msgstr "Számla"
+
+msgctxt "field:papyrus.document,model_type:"
+msgid "Model Type"
+msgstr "Modelltípus"
+
+msgctxt "field:papyrus.document,party:"
+msgid "Party"
+msgstr "Ügyfél"
+
+msgctxt "field:papyrus.document,purchase:"
+msgid "Purchase"
+msgstr "Beszerzési rendelés"
+
+msgctxt "field:papyrus.document,sale:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "field:papyrus.document,shipment_in:"
+msgid "Shipment In"
+msgstr "Beszállítás"
+
+msgctxt "field:papyrus.invoice.line,amount:"
+msgid "Amount"
+msgstr "Összeg"
+
+msgctxt "field:papyrus.invoice.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "Összegegyezés"
+
+msgctxt "field:papyrus.invoice.line,currency:"
+msgid "Currency"
+msgstr "Pénznem"
+
+msgctxt "field:papyrus.invoice.line,description:"
+msgid "Description"
+msgstr "Leírás"
+
+msgctxt "field:papyrus.invoice.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Kedvezmény (%)"
+
+msgctxt "field:papyrus.invoice.line,cost_price:"
+msgid "Cost Price"
+msgstr "Költségár"
+
+msgctxt "field:papyrus.invoice.line,external_code:"
+msgid "External Code"
+msgstr "Külső kód"
+
+msgctxt "field:papyrus.invoice.line,invoice:"
+msgid "Invoice"
+msgstr "Számla"
+
+msgctxt "field:papyrus.invoice.line,invoice_line:"
+msgid "Invoice Line"
+msgstr "Számlasor"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_issue:"
+msgid "Invoice Line Issue"
+msgstr "Számlatétel problémája"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_matches:"
+msgid "Invoice Line Matches"
+msgstr "Számlatétel egyezése"
+
+msgctxt "field:papyrus.invoice.line,product:"
+msgid "Product"
+msgstr "Termék"
+
+msgctxt "field:papyrus.invoice.line,product_code:"
+msgid "Product Code"
+msgstr "Termékkód"
+
+msgctxt "field:papyrus.invoice.line,quantity:"
+msgid "Quantity"
+msgstr "Mennyiség"
+
+msgctxt "field:papyrus.invoice.line,taxes:"
+msgid "Taxes"
+msgstr "Adók"
+
+msgctxt "field:papyrus.invoice.line,unit_price:"
+msgid "Unit Price"
+msgstr "Egységár"
+
+msgctxt "field:papyrus.purchase.line,amount:"
+msgid "Amount"
+msgstr "Összeg"
+
+msgctxt "field:papyrus.purchase.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "Összegegyezés"
+
+msgctxt "field:papyrus.purchase.line,description:"
+msgid "Description"
+msgstr "Leírás"
+
+msgctxt "field:papyrus.purchase.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Kedvezmény (%)"
+
+msgctxt "field:papyrus.purchase.line,external_code:"
+msgid "External Code"
+msgstr "Külső kód"
+
+msgctxt "field:papyrus.purchase.line,product:"
+msgid "Product"
+msgstr "Termék"
+
+msgctxt "field:papyrus.purchase.line,product_code:"
+msgid "Product Code"
+msgstr "Termékkód"
+
+msgctxt "field:papyrus.purchase.line,purchase:"
+msgid "Purchase"
+msgstr "Beszerzési rendelés"
+
+msgctxt "field:papyrus.purchase.line,purchase_line:"
+msgid "Purchase Line"
+msgstr "Beszerzési rendelés sora"
+
+msgctxt "field:papyrus.purchase.line,purchase_line_matches:"
+msgid "Purchase Line Matches"
+msgstr "Beszerzési tétel egyezése"
+
+msgctxt "field:papyrus.purchase.line,quantity:"
+msgid "Quantity"
+msgstr "Mennyiség"
+
+msgctxt "field:papyrus.purchase.line,taxes:"
+msgid "Taxes"
+msgstr "Adók"
+
+msgctxt "field:papyrus.purchase.line,unit_price:"
+msgid "Unit Price"
+msgstr "Egységár"
+
+msgctxt "field:papyrus.queue,llm_classifier:"
+msgid "Classifier LLM"
+msgstr "Osztályozó nyelvi modell"
+
+msgctxt "field:papyrus.queue,llm_pdf_engine:"
+msgid "LLM PDF Engine"
+msgstr "LLM PDF-feldolgozó"
+
+msgctxt "field:papyrus.queue,llms:"
+msgid "LLMs"
+msgstr "Nagy nyelvi modellek"
+
+msgctxt "field:papyrus.queue,model_type:"
+msgid "Model Type"
+msgstr "Modelltípus"
+
+msgctxt "field:papyrus.sale.line,amount:"
+msgid "Amount"
+msgstr "Összeg"
+
+msgctxt "field:papyrus.sale.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "Összegegyezés"
+
+msgctxt "field:papyrus.sale.line,description:"
+msgid "Description"
+msgstr "Leírás"
+
+msgctxt "field:papyrus.sale.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Kedvezmény (%)"
+
+msgctxt "field:papyrus.sale.line,external_code:"
+msgid "External Code"
+msgstr "Külső kód"
+
+msgctxt "field:papyrus.sale.line,product:"
+msgid "Product"
+msgstr "Termék"
+
+msgctxt "field:papyrus.sale.line,product_code:"
+msgid "Product Code"
+msgstr "Termékkód"
+
+msgctxt "field:papyrus.sale.line,quantity:"
+msgid "Quantity"
+msgstr "Mennyiség"
+
+msgctxt "field:papyrus.sale.line,sale:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "field:papyrus.sale.line,sale_line:"
+msgid "Sale Line"
+msgstr "Vevői rendelés sora"
+
+msgctxt "field:papyrus.sale.line,sale_line_matches:"
+msgid "Sale Line Matches"
+msgstr "Értékesítési tétel egyezése"
+
+msgctxt "field:papyrus.sale.line,taxes:"
+msgid "Taxes"
+msgstr "Adók"
+
+msgctxt "field:papyrus.sale.line,unit_price:"
+msgid "Unit Price"
+msgstr "Egységár"
+
+msgctxt "field:papyrus.shipment.in.line,amount:"
+msgid "Amount"
+msgstr "Összeg"
+
+msgctxt "field:papyrus.shipment.in.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "Összegegyezés"
+
+msgctxt "field:papyrus.shipment.in.line,description:"
+msgid "Description"
+msgstr "Leírás"
+
+msgctxt "field:papyrus.shipment.in.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "Kedvezmény (%)"
+
+msgctxt "field:papyrus.shipment.in.line,external_code:"
+msgid "External Code"
+msgstr "Külső kód"
+
+msgctxt "field:papyrus.shipment.in.line,move:"
+msgid "Move"
+msgstr "Bizonylat"
+
+msgctxt "field:papyrus.shipment.in.line,move_matches:"
+msgid "Move Matches"
+msgstr "Készletmozgás egyezése"
+
+msgctxt "field:papyrus.shipment.in.line,product:"
+msgid "Product"
+msgstr "Termék"
+
+msgctxt "field:papyrus.shipment.in.line,product_code:"
+msgid "Product Code"
+msgstr "Termékkód"
+
+msgctxt "field:papyrus.shipment.in.line,quantity:"
+msgid "Quantity"
+msgstr "Mennyiség"
+
+msgctxt "field:papyrus.shipment.in.line,shipment:"
+msgid "Shipment"
+msgstr "Szállítmány"
+
+msgctxt "field:papyrus.shipment.in.line,taxes:"
+msgid "Taxes"
+msgstr "Adók"
+
+msgctxt "field:papyrus.shipment.in.line,unit_price:"
+msgid "Unit Price"
+msgstr "Egységár"
+
+msgctxt "field:party.party,papyrus_group_lines_by_tax:"
+msgid "Papyrus Group Lines by Tax"
+msgstr "Papyrus-tételek csoportosítása adó szerint"
+
+msgctxt "field:purchase.purchase,document:"
+msgid "Document"
+msgstr "Dokumentum"
+
+msgctxt "field:purchase.purchase,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus-tételek"
+
+msgctxt "field:purchase.purchase,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus neve"
+
+msgctxt "field:sale.sale,document:"
+msgid "Document"
+msgstr "Dokumentum"
+
+msgctxt "field:sale.sale,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus-tételek"
+
+msgctxt "field:sale.sale,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "Papyrus-tételek nettó összege"
+
+msgctxt "field:sale.sale,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus neve"
+
+msgctxt "field:sale.sale,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "Papyrus végösszege"
+
+msgctxt "field:sale.sale,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "Papyrus végösszegének egyezése"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "Papyrus nettó összege"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "Papyrus nettó összegének egyezése"
+
+msgctxt "field:stock.shipment.in,document:"
+msgid "Document"
+msgstr "Dokumentum"
+
+msgctxt "field:stock.shipment.in,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "Papyrus-tételek"
+
+msgctxt "field:stock.shipment.in,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "Papyrus neve"
+
+msgctxt "model:ir.action,name:act_open_dossier"
+msgid "Invoice Dossier"
+msgstr "Számladosszié"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_invoice"
+msgid ""
+"The company of the document \"%(document)s\" and invoice \"%(model)s\" do "
+"not match"
+msgstr ""
+"A(z) „%(document)s” dokumentum és a(z) „%(model)s” számla vállalata nem "
+"egyezik"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_sale"
+msgid ""
+"The company of the document \"%(document)s\" and sale \"%(model)s\" do not "
+"match"
+msgstr ""
+"A(z) „%(document)s” dokumentum és a(z) „%(model)s” értékesítés vállalata nem"
+" egyezik"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_shipment_in"
+msgid ""
+"The company of the document \"%(document)s\" and shipment \"%(model)s\" do "
+"not match"
+msgstr ""
+"A(z) „%(document)s” dokumentum és a(z) „%(model)s” szállítmány vállalata nem"
+" egyezik"
+
+#, python-format
+msgctxt ""
+"model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
+msgid ""
+"Document \"%(document)s\" still has %(total)s lines without product. Match "
+"or fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines"
+" tab) before creating final lines."
+msgstr ""
+"A(z) „%(document)s” dokumentumban még %(total)s tételhez nincs termék "
+"rendelve. A végleges tételek létrehozása előtt párosítsa vagy töltse ki a "
+"termékeket a kapcsolódó rekord Papyrus-tételek lapján "
+"(Számla/Értékesítés/Szállítmány)."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot be removed because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"A(z) „%(document)s” dokumentum nem törölhető, mert a(z) „%(record)s” "
+"(%(model_type)s) kapcsolódik hozzá. Előbb törölje a kapcsolódó rekordot vagy"
+" szüntesse meg a kapcsolatot."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_pending_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot move to \"Pending\" because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"A(z) „%(document)s” dokumentum nem állítható „Függőben” állapotba, mert a(z)"
+" „%(record)s” (%(model_type)s) kapcsolódik hozzá. Előbb törölje a kapcsolódó"
+" rekordot vagy szüntesse meg a kapcsolatot."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_process_without_related_record"
+msgid ""
+"Document \"%(document)s\" has model type \"%(model_type)s\" but no related "
+"record has been created yet."
+msgstr ""
+"A(z) „%(document)s” dokumentum modelltípusa „%(model_type)s”, de még nem "
+"jött létre kapcsolódó rekord."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_missing_product"
+msgid ""
+"No product is assigned to \"%(line)s\" in invoice \"%(invoice)s\", so no "
+"invoice line can be matched."
+msgstr ""
+"A(z) „%(invoice)s” számla „%(line)s” tételéhez nincs termék rendelve, ezért "
+"nem párosítható számlatétel."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_not_found"
+msgid ""
+"No invoice line candidate was found for \"%(line)s\" in invoice "
+"\"%(invoice)s\"."
+msgstr ""
+"Nem található párosítható számlatétel a(z) „%(invoice)s” számla „%(line)s” "
+"tételéhez."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_product"
+msgid "Product mismatch: Papyrus \"%(papyrus)s\" vs Invoice Line \"%(invoice)s\""
+msgstr "Eltérő termék: Papyrus „%(papyrus)s”, számlatétel „%(invoice)s”"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_quantity"
+msgid "Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr "Eltérő mennyiség: Papyrus %(papyrus)s, számlatétel %(invoice)s"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_unit_price"
+msgid "Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr "Eltérő egységár: Papyrus %(papyrus)s, számlatétel %(invoice)s"
+
+msgctxt "model:ir.model.button,string:invoice_create_lines_button"
+msgid "Create Lines"
+msgstr "Sorok létrehozása"
+
+msgctxt "model:ir.model.button,string:purchase_create_lines_button"
+msgid "Create Lines"
+msgstr "Sorok létrehozása"
+
+msgctxt "model:ir.model.button,string:sale_create_lines_button"
+msgid "Create Lines"
+msgstr "Sorok létrehozása"
+
+msgctxt "model:ir.model.button,string:shipment_in_sync_moves_button"
+msgid "Synchronize Papyrus Moves"
+msgstr "Papyrus-készletmozgások szinkronizálása"
+
+msgctxt "model:papyrus.invoice.line,string:"
+msgid "Papyrus Invoice Line"
+msgstr "Papyrus-számlatétel"
+
+msgctxt "model:papyrus.purchase.line,string:"
+msgid "Papyrus Purchase Line"
+msgstr "Papyrus-beszerzési tétel"
+
+msgctxt "model:papyrus.sale.line,string:"
+msgid "Papyrus Sale Line"
+msgstr "Papyrus-értékesítési tétel"
+
+msgctxt "model:papyrus.shipment.in.line,string:"
+msgid "Papyrus Shipment In Line"
+msgstr "Papyrus-beszállítási tétel"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Invoice"
+msgstr "Számla"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Supplier Invoice"
+msgstr "Szállítói számla"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Purchase"
+msgstr "Beszerzési rendelés"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Shipment In"
+msgstr "Beszállítás"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Invoice"
+msgstr "Számla"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Supplier Invoice"
+msgstr "Szállítói számla"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Purchase"
+msgstr "Beszerzési rendelés"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Shipment In"
+msgstr "Beszállítás"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Mistral OCR (best for scanned documents)"
+msgstr "Mistral OCR (szkennelt dokumentumokhoz a legjobb)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Native (best for born-digital PDFs)"
+msgstr "Natív (eredetileg digitális PDF-ekhez a legjobb)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "PDF Text (balanced)"
+msgstr "PDF-szöveg (kiegyensúlyozott)"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Invoice"
+msgstr "Számla"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Supplier Invoice"
+msgstr "Szállítói számla"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Purchase"
+msgstr "Beszerzési rendelés"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Shipment In"
+msgstr "Beszállítás"
+
+msgctxt "view:purchase.purchase:"
+msgid "Create Lines"
+msgstr "Sorok létrehozása"
+
+msgctxt "view:purchase.purchase:"
+msgid "Papyrus"
+msgstr "Papyrus"
+
+msgctxt "field:papyrus.shipment.in.line,purchase_number:"
+msgid "Purchase Number"
+msgstr "Beszerzés száma"
+
+msgctxt "field:papyrus.invoice.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.purchase.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.shipment.in.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_pending_lines"
+msgid ""
+"Document \"%(document)s\" still has %(total)s pending Papyrus lines. Review "
+"them before continuing, or confirm this warning to continue with the lines "
+"already created."
+msgstr ""
+"A(z) „%(document)s” dokumentumban még %(total)s függőben lévő Papyrus-tétel "
+"van. Ellenőrizze őket a folytatás előtt, vagy hagyja jóvá ezt a "
+"figyelmeztetést a már létrehozott tételekkel való folytatáshoz."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_not_quotation"
+msgid ""
+"Previous sale \"%(sale)s\" is not an active quotation and cannot be linked."
+msgstr ""
+"A korábbi „%(sale)s” értékesítés nem aktív ajánlat, ezért nem kapcsolható."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_expired"
+msgid ""
+"Sale \"%(sale)s\" refers to expired quotation(s) %(quotations)s. Review the "
+"prices before confirming."
+msgstr ""
+"A(z) „%(sale)s” értékesítés lejárt ajánlatokra hivatkozik: %(quotations)s. "
+"Jóváhagyás előtt ellenőrizze az árakat."
+
+msgctxt "model:ir.message,text:msg_sale_previous_sale_unique"
+msgid "A previous sale can only be linked once to the same sale."
+msgstr ""
+"Egy korábbi értékesítés csak egyszer kapcsolható ugyanahhoz az "
+"értékesítéshez."
+
+msgctxt "field:papyrus.sale.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Korábbi értékesítés hivatkozása"
+
+msgctxt "field:sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Korábbi értékesítés hivatkozása"
+
+msgctxt "field:sale.sale,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "Korábbi értékesítés hivatkozása"
+
+msgctxt "field:sale.sale,previous_sales:"
+msgid "Previous Sales"
+msgstr "Korábbi értékesítések"
+
+msgctxt "field:sale.sale-previous.sale,sale:"
+msgid "Sale"
+msgstr "Vevői rendelés"
+
+msgctxt "field:sale.sale-previous.sale,previous_sale:"
+msgid "Previous Sale"
+msgstr "Korábbi értékesítés"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_incomplete_agent_inspection"
+msgid ""
+"Document \"%(document)s\" needs a company, model type and valid extracted "
+"data before it can be marked inspected."
+msgstr ""
+"A(z) „%(document)s” dokumentumhoz vállalat, modelltípus és érvényes kinyert "
+"adatok szükségesek, mielőtt ellenőrzöttként jelölhető."
+
+msgctxt "model:ir.model.button,string:document_mark_inspected_button"
+msgid "Mark Inspected"
+msgstr "Megjelölés ellenőrzöttként"
+
+msgctxt "field:papyrus.purchase.line,delivery_date:"
+msgid "Delivery Date"
+msgstr "Leszállítás dátuma"
+
+msgctxt "field:papyrus.purchase.line,purchase_lines:"
+msgid "Purchase Lines"
+msgstr "Beszerzési tételek"
+
+msgctxt "field:purchase.line,desired_delivery_date:"
+msgid "Desired Delivery Date"
+msgstr "Kívánt szállítási dátum"
+
+msgctxt "field:purchase.line,papyrus_line:"
+msgid "Papyrus Line"
+msgstr "Papyrus-tétel"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_missing_purchase_lines"
+msgid ""
+"Purchase \"%(document)s\" has %(total)s order lines that were not read by "
+"Papyrus. Review them before continuing, or confirm this warning to continue."
+msgstr ""
+"A(z) „%(document)s” beszerzésben %(total)s olyan rendelési tétel van, "
+"amelyet a Papyrus nem olvasott be. Ellenőrizze őket a folytatás előtt, vagy "
+"hagyja jóvá ezt a figyelmeztetést a folytatáshoz."
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_purchase_lines_too_late"
+msgid ""
+"Purchase \"%(purchase)s\" cannot be reconciled because it is no longer "
+"editable."
+msgstr ""
+"A(z) „%(purchase)s” beszerzés nem egyeztethető, mert már nem szerkeszthető."
+
+msgctxt "field:nantic.agent,papyrus_multicompany:"
+msgid "Shared Papyrus Inbox"
+msgstr "Közös Papyrus-postaláda"
+
+msgctxt "model:ir.message,text:msg_papyrus_company_access"
+msgid "You are not allowed to access this Papyrus document's company."
+msgstr "Nincs jogosultsága hozzáférni e Papyrus-dokumentum vállalatához."
+
+msgctxt "field:papyrus.invoice.line,sequence:"
+msgid "Sequence"
+msgstr "Sorszám"
+
+msgctxt "field:papyrus.purchase.line,sequence:"
+msgid "Sequence"
+msgstr "Sorszám"
+
+msgctxt "field:papyrus.sale.line,sequence:"
+msgid "Sequence"
+msgstr "Sorszám"
