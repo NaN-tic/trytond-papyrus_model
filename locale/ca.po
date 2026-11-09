@@ -606,3 +606,19 @@ msgstr "Seqüència"
 msgctxt "field:papyrus.sale.line,sequence:"
 msgid "Sequence"
 msgstr "Seqüència"
+
+msgctxt "model:papyrus.configuration,string:"
+msgid "Papyrus Configuration"
+msgstr "Configuració de Papyrus"
+
+msgctxt "model:res.group,name:group_papyrus_configuration"
+msgid "Papyrus Configuration"
+msgstr "Configuració de Papyrus"
+
+msgctxt "model:ir.action,name:act_configuration"
+msgid "Papyrus Configuration"
+msgstr "Configuració de Papyrus"
+
+msgctxt "model:ir.ui.menu,name:menu_configuration"
+msgid "Configuration"
+msgstr "Configuració"
