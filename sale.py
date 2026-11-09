@@ -607,6 +607,7 @@ class Sale(metaclass=PoolMeta):
         else:
             default = default.copy()
         default.setdefault('document', None)
+        default.setdefault('papyrus_lines', None)
         return super().copy(sales, default=default)
 
     @classmethod
