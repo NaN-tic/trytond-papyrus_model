@@ -23,7 +23,7 @@
             <field name="group" ref="group_papyrus_configuration"/>
         </record>
         <menuitem id="menu_configuration" name="Configuration"
-            parent="papyrus.menu_papyrus_configuration"
+            parent="office.menu_configuration"
             action="act_configuration" sequence="5" icon="tryton-settings"/>
         <record model="ir.ui.menu-res.group" id="menu_configuration_group">
             <field name="menu" ref="menu_configuration"/>
