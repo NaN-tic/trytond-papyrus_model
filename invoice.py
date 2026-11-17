@@ -38,6 +38,7 @@ class Document(metaclass=PoolMeta):
         size=1, add_remove=[('document', '=', None)],
         context={
             'type': 'in',
+            'default_type': 'in',
             'company': Eval('document_company', -1),
         }, states={
             'invisible': (Eval('model_type') != 'invoice'),
