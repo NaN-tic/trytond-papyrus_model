@@ -214,7 +214,7 @@ def llm(messages, origin, model=None, pdf_engine=None, schema=None,
     AIModel = Pool().get('ai.model')
     model = AIModel.get_or_create(model or 'openrouter/auto')
     response, error = model.get_completion(
-        messages, origin, fallback_origin=model,
+        messages, origin, parent_origin=model,
         response_format=response_format, extra_body=extra_body or None,
         max_tokens=max_tokens)
     if error:
