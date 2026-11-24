@@ -58,7 +58,6 @@ class Test(unittest.TestCase):
         queue.type = 'document'
         queue.name = 'Purchase Queue'
         queue.source_directory = '/tmp'
-        queue.storage_directory = '/tmp'
         queue.document_sequence = document_sequence
         queue.company = company
         queue.save()

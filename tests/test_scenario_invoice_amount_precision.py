@@ -41,8 +41,7 @@ class TestInvoiceAmountPrecision(unittest.TestCase):
         Queue = Model.get('papyrus.queue')
         queue = Queue(name='Invoice Queue', type='document',
             model_type='invoice', company=company,
-            document_sequence=sequence, source_directory='.',
-            storage_directory='.', scheduler=False)
+            document_sequence=sequence, source_directory='.', scheduler=False)
         queue.save()
         PapyrusDocument = Model.get('papyrus.document')
         document = PapyrusDocument(queue=queue, model_type='invoice')

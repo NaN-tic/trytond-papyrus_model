@@ -31,8 +31,8 @@ class Queue(metaclass=PoolMeta):
     def _get_model_type(cls):
         return [(None, '')]
 
-    def get_document(self, filename):
-        document = super().get_document(filename)
+    def get_document(self, filename, data):
+        document = super().get_document(filename, data)
         document.model_type = self.model_type
         return document
 
@@ -71,17 +71,7 @@ class Document(metaclass=PoolMeta):
                 })
 
     def scan_engines(self):
-        super().scan_engines()
         return []
-        # TODO: We should make it configurable per queue
-        # but it makes no sense to have all engines enabled
-        # right now
-
-        #yield 'text'
-        #if self.text and self.text.strip():
-        #    yield 'textboxes'
-        #else:
-        #    yield 'tesseract'
 
     def scan(self):
         if Transaction().context.get('papyrus_reinspect'):

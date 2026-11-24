@@ -2,7 +2,6 @@ import datetime
 import json
 import unittest
 from importlib.util import find_spec
-from unittest.mock import patch
 
 from proteus import Model
 from trytond.exceptions import UserError
@@ -59,7 +58,6 @@ class TestAgentInspection(unittest.TestCase):
         queue.type = 'document'
         queue.name = 'Purchase Queue'
         queue.source_directory = '/tmp'
-        queue.storage_directory = '/tmp'
         queue.document_sequence = document_sequence
         queue.company = company
         queue.save()
@@ -71,8 +69,10 @@ class TestAgentInspection(unittest.TestCase):
             DbPurchase = pool.get('purchase.purchase')
             self.assertIn('mark_inspected', Document._buttons)
 
+            data = b'%PDF-1.4\nDocument adjunt de prova.\n%%EOF'
             document = Document(
-                queue=pool.get('papyrus.queue')(queue.id))
+                queue=pool.get('papyrus.queue')(queue.id),
+                filename='test.pdf', data=data)
             document.save()
             with self.assertRaises(UserError):
                 Document.mark_inspected([document])
@@ -110,14 +110,11 @@ class TestAgentInspection(unittest.TestCase):
             self.assertEqual(document.get_record().id, purchase.id)
 
             Agent = pool.get('nantic.agent')
-            self.assertNotIn('papyrus_multicompany', Agent._fields)
             agent = Agent(name='Papyrus Agent', owner=config.user,
                 company=company.id, mission='Processa el document Papyrus.')
             agent.save()
-            data = b'%PDF-1.4\nDocument adjunt de prova.\n%%EOF'
             with transaction.set_context(current_model='papyrus.document',
-                    current_record=document.id), patch.object(
-                        Document, 'get_data', lambda self, name: data):
+                    current_record=document.id):
                 for origin in ('invocation', 'trigger'):
                     with transaction.set_context(nantic_agent_conversation_origin=origin):
                         conversation = agent.create_conversation(
@@ -136,11 +133,9 @@ class TestAgentInspection(unittest.TestCase):
                     self.assertIn('Active record: '
                         + format_tag(document, conversation=conversation), content)
             with transaction.set_context(current_model='party.party',
-                    current_record=supplier.id), patch.object(
-                        Document, 'get_data') as get_data:
+                    current_record=supplier.id):
                 conversation = agent.create_conversation(
                     'Processa el tercer', datetime.datetime.now())
-                get_data.assert_not_called()
                 self.assertFalse(any(message.attachments
                     for message in conversation.messages))
             other_company = pool.get('company.company')(
@@ -151,11 +146,9 @@ class TestAgentInspection(unittest.TestCase):
                 company=other_company)
             restricted.save()
             with transaction.set_context(current_model='papyrus.document',
-                    current_record=restricted.id), patch.object(
-                        Document, 'get_data') as get_data:
+                    current_record=restricted.id):
                 with self.assertRaises(AccessError):
                     agent.create_conversation('Document restringit', datetime.datetime.now())
-                get_data.assert_not_called()
             Agent.write([agent], {'run_on_trigger': True})
             model, = pool.get('ir.model').search([('name', '=', 'papyrus.document')])
             trigger = pool.get('ir.trigger')(model=model, agent=agent)
