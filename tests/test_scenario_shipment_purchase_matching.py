@@ -71,7 +71,7 @@ class TestShipmentPurchaseMatching(unittest.TestCase):
         Queue = Model.get('papyrus.queue')
         queue = Queue(name='Shipments', type='document',
             source_type='directory', source_directory='/unused',
-            storage_directory='/unused', document_sequence=sequence)
+            document_sequence=sequence)
         queue.save()
         ProteusDocument = Model.get('papyrus.document')
         document = ProteusDocument(queue=queue, company=company,
