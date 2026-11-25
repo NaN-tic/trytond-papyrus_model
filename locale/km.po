@@ -1,0 +1,728 @@
+#
+msgid ""
+msgstr ""
+"Language: km\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "field:account.invoice,document:"
+msgid "Document"
+msgstr "ឯកសារ"
+
+msgctxt "field:account.invoice,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "បន្ទាត់ Papyrus"
+
+msgctxt "field:account.invoice,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "ចំនួនទឹកប្រាក់មិនរួមបញ្ចូលពន្ធនៃបន្ទាត់ Papyrus"
+
+msgctxt "field:account.invoice,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "ឈ្មោះ Papyrus"
+
+msgctxt "field:account.invoice,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus សរុប"
+
+msgctxt "field:account.invoice,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus សរុបត្រូវគ្នា"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus មិនរួមបញ្ចូលពន្ធ"
+
+msgctxt "field:account.invoice,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus មិនរួមបញ្ចូលពន្ធត្រូវគ្នា"
+
+msgctxt "field:papyrus.document,extracted_data:"
+msgid "Extracted Data"
+msgstr "ទិន្នន័យដែលបានស្រង់ចេញ"
+
+msgctxt "field:papyrus.document,guessed_company:"
+msgid "Guessed Company"
+msgstr "ក្រុមហ៊ុនដែលបានសន្និដ្ឋាន"
+
+msgctxt "field:papyrus.document,guessed_model_type:"
+msgid "Guessed Model Type"
+msgstr "ប្រភេទម៉ូដែលដែលបានសន្និដ្ឋាន"
+
+msgctxt "field:papyrus.document,invoice:"
+msgid "Account Invoice"
+msgstr "វិក្កយបត្រគណនេយ្យ"
+
+msgctxt "field:papyrus.document,model_type:"
+msgid "Model Type"
+msgstr "ប្រភេទម៉ូដែល"
+
+msgctxt "field:papyrus.document,party:"
+msgid "Party"
+msgstr "ភាគី"
+
+msgctxt "field:papyrus.document,purchase:"
+msgid "Purchase"
+msgstr "បញ្ជាទិញ"
+
+msgctxt "field:papyrus.document,sale:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "field:papyrus.document,shipment_in:"
+msgid "Shipment In"
+msgstr "ការដឹកជញ្ជូនចូល"
+
+msgctxt "field:papyrus.invoice.line,amount:"
+msgid "Amount"
+msgstr "ចំនួនទឹកប្រាក់"
+
+msgctxt "field:papyrus.invoice.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ត្រូវគ្នា"
+
+msgctxt "field:papyrus.invoice.line,currency:"
+msgid "Currency"
+msgstr "រូបិយប័ណ្ណ"
+
+msgctxt "field:papyrus.invoice.line,description:"
+msgid "Description"
+msgstr "សេចក្តីពិពណ៌នា"
+
+msgctxt "field:papyrus.invoice.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "ការបញ្ចុះតម្លៃ (%)"
+
+msgctxt "field:papyrus.invoice.line,cost_price:"
+msgid "Cost Price"
+msgstr "ថ្លៃដើម"
+
+msgctxt "field:papyrus.invoice.line,external_code:"
+msgid "External Code"
+msgstr "កូដខាងក្រៅ"
+
+msgctxt "field:papyrus.invoice.line,invoice:"
+msgid "Invoice"
+msgstr "វិក្កយបត្រ"
+
+msgctxt "field:papyrus.invoice.line,invoice_line:"
+msgid "Invoice Line"
+msgstr "បន្ទាត់វិក្កយបត្រ"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_issue:"
+msgid "Invoice Line Issue"
+msgstr "បញ្ហាបន្ទាត់វិក្កយបត្រ"
+
+msgctxt "field:papyrus.invoice.line,invoice_line_matches:"
+msgid "Invoice Line Matches"
+msgstr "បន្ទាត់វិក្កយបត្រដែលត្រូវគ្នា"
+
+msgctxt "field:papyrus.invoice.line,product:"
+msgid "Product"
+msgstr "ផលិតផល"
+
+msgctxt "field:papyrus.invoice.line,product_code:"
+msgid "Product Code"
+msgstr "កូដផលិតផល"
+
+msgctxt "field:papyrus.invoice.line,quantity:"
+msgid "Quantity"
+msgstr "បរិមាណ"
+
+msgctxt "field:papyrus.invoice.line,taxes:"
+msgid "Taxes"
+msgstr "ពន្ធ"
+
+msgctxt "field:papyrus.invoice.line,unit_price:"
+msgid "Unit Price"
+msgstr "តម្លៃឯកតា"
+
+msgctxt "field:papyrus.purchase.line,amount:"
+msgid "Amount"
+msgstr "ចំនួនទឹកប្រាក់"
+
+msgctxt "field:papyrus.purchase.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ត្រូវគ្នា"
+
+msgctxt "field:papyrus.purchase.line,description:"
+msgid "Description"
+msgstr "សេចក្តីពិពណ៌នា"
+
+msgctxt "field:papyrus.purchase.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "ការបញ្ចុះតម្លៃ (%)"
+
+msgctxt "field:papyrus.purchase.line,external_code:"
+msgid "External Code"
+msgstr "កូដខាងក្រៅ"
+
+msgctxt "field:papyrus.purchase.line,product:"
+msgid "Product"
+msgstr "ផលិតផល"
+
+msgctxt "field:papyrus.purchase.line,product_code:"
+msgid "Product Code"
+msgstr "កូដផលិតផល"
+
+msgctxt "field:papyrus.purchase.line,purchase:"
+msgid "Purchase"
+msgstr "បញ្ជាទិញ"
+
+msgctxt "field:papyrus.purchase.line,purchase_line:"
+msgid "Purchase Line"
+msgstr "បន្ទាត់ការទិញ"
+
+msgctxt "field:papyrus.purchase.line,purchase_line_matches:"
+msgid "Purchase Line Matches"
+msgstr "បន្ទាត់ការទិញដែលត្រូវគ្នា"
+
+msgctxt "field:papyrus.purchase.line,quantity:"
+msgid "Quantity"
+msgstr "បរិមាណ"
+
+msgctxt "field:papyrus.purchase.line,taxes:"
+msgid "Taxes"
+msgstr "ពន្ធ"
+
+msgctxt "field:papyrus.purchase.line,unit_price:"
+msgid "Unit Price"
+msgstr "តម្លៃឯកតា"
+
+msgctxt "field:papyrus.queue,llm_classifier:"
+msgid "Classifier LLM"
+msgstr "ម៉ូដែល LLM សម្រាប់ចាត់ថ្នាក់"
+
+msgctxt "field:papyrus.queue,llm_pdf_engine:"
+msgid "LLM PDF Engine"
+msgstr "កម្មវិធីដំណើរការ PDF សម្រាប់ LLM"
+
+msgctxt "field:papyrus.queue,llms:"
+msgid "LLMs"
+msgstr "ម៉ូដែល LLM"
+
+msgctxt "field:papyrus.queue,model_type:"
+msgid "Model Type"
+msgstr "ប្រភេទម៉ូដែល"
+
+msgctxt "field:papyrus.sale.line,amount:"
+msgid "Amount"
+msgstr "ចំនួនទឹកប្រាក់"
+
+msgctxt "field:papyrus.sale.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ត្រូវគ្នា"
+
+msgctxt "field:papyrus.sale.line,description:"
+msgid "Description"
+msgstr "សេចក្តីពិពណ៌នា"
+
+msgctxt "field:papyrus.sale.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "ការបញ្ចុះតម្លៃ (%)"
+
+msgctxt "field:papyrus.sale.line,external_code:"
+msgid "External Code"
+msgstr "កូដខាងក្រៅ"
+
+msgctxt "field:papyrus.sale.line,product:"
+msgid "Product"
+msgstr "ផលិតផល"
+
+msgctxt "field:papyrus.sale.line,product_code:"
+msgid "Product Code"
+msgstr "កូដផលិតផល"
+
+msgctxt "field:papyrus.sale.line,quantity:"
+msgid "Quantity"
+msgstr "បរិមាណ"
+
+msgctxt "field:papyrus.sale.line,sale:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "field:papyrus.sale.line,sale_line:"
+msgid "Sale Line"
+msgstr "បន្ទាត់ការលក់"
+
+msgctxt "field:papyrus.sale.line,sale_line_matches:"
+msgid "Sale Line Matches"
+msgstr "បន្ទាត់ការលក់ដែលត្រូវគ្នា"
+
+msgctxt "field:papyrus.sale.line,taxes:"
+msgid "Taxes"
+msgstr "ពន្ធ"
+
+msgctxt "field:papyrus.sale.line,unit_price:"
+msgid "Unit Price"
+msgstr "តម្លៃឯកតា"
+
+msgctxt "field:papyrus.shipment.in.line,amount:"
+msgid "Amount"
+msgstr "ចំនួនទឹកប្រាក់"
+
+msgctxt "field:papyrus.shipment.in.line,amount_matches:"
+msgid "Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ត្រូវគ្នា"
+
+msgctxt "field:papyrus.shipment.in.line,description:"
+msgid "Description"
+msgstr "សេចក្តីពិពណ៌នា"
+
+msgctxt "field:papyrus.shipment.in.line,discount_rate:"
+msgid "Discount (%)"
+msgstr "ការបញ្ចុះតម្លៃ (%)"
+
+msgctxt "field:papyrus.shipment.in.line,external_code:"
+msgid "External Code"
+msgstr "កូដខាងក្រៅ"
+
+msgctxt "field:papyrus.shipment.in.line,move:"
+msgid "Move"
+msgstr "កំណត់ត្រាគណនេយ្យ"
+
+msgctxt "field:papyrus.shipment.in.line,move_matches:"
+msgid "Move Matches"
+msgstr "ចលនាស្តុកដែលត្រូវគ្នា"
+
+msgctxt "field:papyrus.shipment.in.line,product:"
+msgid "Product"
+msgstr "ផលិតផល"
+
+msgctxt "field:papyrus.shipment.in.line,product_code:"
+msgid "Product Code"
+msgstr "កូដផលិតផល"
+
+msgctxt "field:papyrus.shipment.in.line,quantity:"
+msgid "Quantity"
+msgstr "បរិមាណ"
+
+msgctxt "field:papyrus.shipment.in.line,shipment:"
+msgid "Shipment"
+msgstr "ការដឹកជញ្ជូន"
+
+msgctxt "field:papyrus.shipment.in.line,taxes:"
+msgid "Taxes"
+msgstr "ពន្ធ"
+
+msgctxt "field:papyrus.shipment.in.line,unit_price:"
+msgid "Unit Price"
+msgstr "តម្លៃឯកតា"
+
+msgctxt "field:party.party,papyrus_group_lines_by_tax:"
+msgid "Papyrus Group Lines by Tax"
+msgstr "ដាក់បន្ទាត់ Papyrus ជាក្រុមតាមពន្ធ"
+
+msgctxt "field:purchase.purchase,document:"
+msgid "Document"
+msgstr "ឯកសារ"
+
+msgctxt "field:purchase.purchase,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "បន្ទាត់ Papyrus"
+
+msgctxt "field:purchase.purchase,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "ឈ្មោះ Papyrus"
+
+msgctxt "field:sale.sale,document:"
+msgid "Document"
+msgstr "ឯកសារ"
+
+msgctxt "field:sale.sale,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "បន្ទាត់ Papyrus"
+
+msgctxt "field:sale.sale,papyrus_lines_untaxed_amount:"
+msgid "Papyrus Lines Untaxed Amount"
+msgstr "ចំនួនទឹកប្រាក់មិនរួមបញ្ចូលពន្ធនៃបន្ទាត់ Papyrus"
+
+msgctxt "field:sale.sale,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "ឈ្មោះ Papyrus"
+
+msgctxt "field:sale.sale,papyrus_total_amount:"
+msgid "Papyrus Total Amount"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus សរុប"
+
+msgctxt "field:sale.sale,papyrus_total_amount_matches:"
+msgid "Papyrus Total Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus សរុបត្រូវគ្នា"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount:"
+msgid "Papyrus Untaxed Amount"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus មិនរួមបញ្ចូលពន្ធ"
+
+msgctxt "field:sale.sale,papyrus_untaxed_amount_matches:"
+msgid "Papyrus Untaxed Amount Matches"
+msgstr "ចំនួនទឹកប្រាក់ Papyrus មិនរួមបញ្ចូលពន្ធត្រូវគ្នា"
+
+msgctxt "field:stock.shipment.in,document:"
+msgid "Document"
+msgstr "ឯកសារ"
+
+msgctxt "field:stock.shipment.in,papyrus_lines:"
+msgid "Papyrus Lines"
+msgstr "បន្ទាត់ Papyrus"
+
+msgctxt "field:stock.shipment.in,papyrus_name:"
+msgid "Papyrus Name"
+msgstr "ឈ្មោះ Papyrus"
+
+msgctxt "model:ir.action,name:act_open_dossier"
+msgid "Invoice Dossier"
+msgstr "សំណុំឯកសារវិក្កយបត្រ"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_invoice"
+msgid ""
+"The company of the document \"%(document)s\" and invoice \"%(model)s\" do not"
+" match"
+msgstr ""
+"ក្រុមហ៊ុនរបស់ឯកសារ «%(document)s» និងរបស់វិក្កយបត្រ «%(model)s» មិនត្រូវគ្នា។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_sale"
+msgid ""
+"The company of the document \"%(document)s\" and sale \"%(model)s\" do not "
+"match"
+msgstr ""
+"ក្រុមហ៊ុនរបស់ឯកសារ «%(document)s» និងរបស់ការលក់ «%(model)s» មិនត្រូវគ្នា។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_change_company_shipment_in"
+msgid ""
+"The company of the document \"%(document)s\" and shipment \"%(model)s\" do "
+"not match"
+msgstr ""
+"ក្រុមហ៊ុនរបស់ឯកសារ «%(document)s» និងរបស់ការដឹកជញ្ជូន «%(model)s» "
+"មិនត្រូវគ្នា។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_create_lines_with_unmatched_products"
+msgid ""
+"Document \"%(document)s\" still has %(total)s lines without product. Match or"
+" fill products in the related record (Invoice/Sale/Shipment, Papyrus Lines "
+"tab) before creating final lines."
+msgstr ""
+"ឯកសារ «%(document)s» នៅមានបន្ទាត់គ្មានផលិតផលចំនួន %(total)s។ ផ្គូផ្គង "
+"ឬបញ្ចូលផលិតផលក្នុងកំណត់ត្រាពាក់ព័ន្ធ (វិក្កយបត្រ/ការលក់/ការដឹកជញ្ជូន "
+"ក្នុងផ្ទាំង «បន្ទាត់ Papyrus») មុននឹងបង្កើតបន្ទាត់ចុងក្រោយ។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_delete_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot be removed because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"មិនអាចលុបឯកសារ «%(document)s» បានទេ ព្រោះ «%(record)s» (%(model_type)s) "
+"ភ្ជាប់ជាមួយវា។ សូមលុបកំណត់ត្រាពាក់ព័ន្ធ ឬផ្ដាច់តំណរបស់វាជាមុន។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_pending_with_related_record"
+msgid ""
+"Document \"%(document)s\" cannot move to \"Pending\" because \"%(record)s\" "
+"(%(model_type)s) is linked to it. You must remove or unlink the related "
+"record first."
+msgstr ""
+"មិនអាចកំណត់ឯកសារ «%(document)s» ទៅស្ថានភាព «កំពុងរង់ចាំ» បានទេ ព្រោះ "
+"«%(record)s» (%(model_type)s) ភ្ជាប់ជាមួយវា។ សូមលុបកំណត់ត្រាពាក់ព័ន្ធ "
+"ឬផ្ដាច់តំណរបស់វាជាមុន។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_cannot_process_without_related_record"
+msgid ""
+"Document \"%(document)s\" has model type \"%(model_type)s\" but no related "
+"record has been created yet."
+msgstr ""
+"ឯកសារ «%(document)s» មានប្រភេទម៉ូដែល «%(model_type)s» "
+"ប៉ុន្តែមិនទាន់បានបង្កើតកំណត់ត្រាពាក់ព័ន្ធ។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_missing_product"
+msgid ""
+"No product is assigned to \"%(line)s\" in invoice \"%(invoice)s\", so no "
+"invoice line can be matched."
+msgstr ""
+"មិនបានកំណត់ផលិតផលសម្រាប់ «%(line)s» ក្នុងវិក្កយបត្រ «%(invoice)s» "
+"ដូច្នេះមិនអាចផ្គូផ្គងបន្ទាត់វិក្កយបត្របានទេ។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_invoice_line_not_found"
+msgid ""
+"No invoice line candidate was found for \"%(line)s\" in invoice "
+"\"%(invoice)s\"."
+msgstr ""
+"រកមិនឃើញបន្ទាត់វិក្កយបត្រសម្រាប់ផ្គូផ្គង «%(line)s» ក្នុងវិក្កយបត្រ "
+"«%(invoice)s» ទេ។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_product"
+msgid "Product mismatch: Papyrus \"%(papyrus)s\" vs Invoice Line \"%(invoice)s\""
+msgstr ""
+"ផលិតផលមិនត្រូវគ្នា៖ Papyrus «%(papyrus)s» និងបន្ទាត់វិក្កយបត្រ «%(invoice)s»"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_quantity"
+msgid "Quantity mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr ""
+"បរិមាណមិនត្រូវគ្នា៖ Papyrus %(papyrus)s និងបន្ទាត់វិក្កយបត្រ %(invoice)s"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_mismatch_unit_price"
+msgid "Unit price mismatch: Papyrus %(papyrus)s vs Invoice Line %(invoice)s"
+msgstr ""
+"តម្លៃឯកតាមិនត្រូវគ្នា៖ Papyrus %(papyrus)s និងបន្ទាត់វិក្កយបត្រ %(invoice)s"
+
+msgctxt "model:ir.model.button,string:invoice_create_lines_button"
+msgid "Create Lines"
+msgstr "បង្កើតបន្ទាត់"
+
+msgctxt "model:ir.model.button,string:purchase_create_lines_button"
+msgid "Create Lines"
+msgstr "បង្កើតបន្ទាត់"
+
+msgctxt "model:ir.model.button,string:sale_create_lines_button"
+msgid "Create Lines"
+msgstr "បង្កើតបន្ទាត់"
+
+msgctxt "model:ir.model.button,string:shipment_in_sync_moves_button"
+msgid "Synchronize Papyrus Moves"
+msgstr "ធ្វើសមកាលកម្មចលនាស្តុក Papyrus"
+
+msgctxt "model:papyrus.invoice.line,string:"
+msgid "Papyrus Invoice Line"
+msgstr "បន្ទាត់វិក្កយបត្រ Papyrus"
+
+msgctxt "model:papyrus.purchase.line,string:"
+msgid "Papyrus Purchase Line"
+msgstr "បន្ទាត់ការទិញ Papyrus"
+
+msgctxt "model:papyrus.sale.line,string:"
+msgid "Papyrus Sale Line"
+msgstr "បន្ទាត់ការលក់ Papyrus"
+
+msgctxt "model:papyrus.shipment.in.line,string:"
+msgid "Papyrus Shipment In Line"
+msgstr "បន្ទាត់ដឹកជញ្ជូនចូល Papyrus"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Invoice"
+msgstr "វិក្កយបត្រ"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Supplier Invoice"
+msgstr "វិក្កយបត្រអ្នកផ្គត់ផ្គង់"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Purchase"
+msgstr "បញ្ជាទិញ"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "selection:papyrus.document,guessed_model_type:"
+msgid "Shipment In"
+msgstr "ការដឹកជញ្ជូនចូល"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Invoice"
+msgstr "វិក្កយបត្រ"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Supplier Invoice"
+msgstr "វិក្កយបត្រអ្នកផ្គត់ផ្គង់"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Purchase"
+msgstr "បញ្ជាទិញ"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "selection:papyrus.document,model_type:"
+msgid "Shipment In"
+msgstr "ការដឹកជញ្ជូនចូល"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Mistral OCR (best for scanned documents)"
+msgstr "Mistral OCR (សមស្របបំផុតសម្រាប់ឯកសារដែលបានស្កេន)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "Native (best for born-digital PDFs)"
+msgstr "មានស្រាប់ក្នុងម៉ូដែល (សមស្របបំផុតសម្រាប់ PDF ដែលបានបង្កើតជាឌីជីថល)"
+
+msgctxt "selection:papyrus.queue,llm_pdf_engine:"
+msgid "PDF Text (balanced)"
+msgstr "អត្ថបទ PDF (មានតុល្យភាព)"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Invoice"
+msgstr "វិក្កយបត្រ"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Supplier Invoice"
+msgstr "វិក្កយបត្រអ្នកផ្គត់ផ្គង់"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Purchase"
+msgstr "បញ្ជាទិញ"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "selection:papyrus.queue,model_type:"
+msgid "Shipment In"
+msgstr "ការដឹកជញ្ជូនចូល"
+
+msgctxt "view:purchase.purchase:"
+msgid "Create Lines"
+msgstr "បង្កើតបន្ទាត់"
+
+msgctxt "view:purchase.purchase:"
+msgid "Papyrus"
+msgstr "Papyrus"
+
+msgctxt "field:papyrus.shipment.in.line,purchase_number:"
+msgid "Purchase Number"
+msgstr "លេខបញ្ជាទិញ"
+
+msgctxt "field:papyrus.invoice.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.purchase.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.shipment.in.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_pending_lines"
+msgid ""
+"Document \"%(document)s\" still has %(total)s pending Papyrus lines. Review "
+"them before continuing, or confirm this warning to continue with the lines "
+"already created."
+msgstr ""
+"ឯកសារ «%(document)s» នៅមានបន្ទាត់ Papyrus កំពុងរង់ចាំចំនួន %(total)s។ "
+"សូមពិនិត្យបន្ទាត់ទាំងនោះមុនបន្ត "
+"ឬបញ្ជាក់ការព្រមាននេះដើម្បីបន្តជាមួយបន្ទាត់ដែលបានបង្កើតរួច។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_not_quotation"
+msgid "Previous sale \"%(sale)s\" is not an active quotation and cannot be linked."
+msgstr "ការលក់ពីមុន «%(sale)s» មិនមែនជាសម្រង់តម្លៃសកម្មទេ ហើយមិនអាចភ្ជាប់បាន។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_previous_sale_expired"
+msgid ""
+"Sale \"%(sale)s\" refers to expired quotation(s) %(quotations)s. Review the "
+"prices before confirming."
+msgstr ""
+"ការលក់ «%(sale)s» យោងទៅសម្រង់តម្លៃដែលផុតកំណត់ %(quotations)s។ "
+"សូមពិនិត្យតម្លៃមុននឹងបញ្ជាក់។"
+
+msgctxt "model:ir.message,text:msg_sale_previous_sale_unique"
+msgid "A previous sale can only be linked once to the same sale."
+msgstr "ការលក់ពីមុនអាចភ្ជាប់ទៅការលក់ដូចគ្នាបានតែម្តង។"
+
+msgctxt "field:papyrus.sale.line,ean:"
+msgid "EAN"
+msgstr "EAN"
+
+msgctxt "field:papyrus.sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "ឯកសារយោងការលក់មុន"
+
+msgctxt "field:sale.line,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "ឯកសារយោងការលក់មុន"
+
+msgctxt "field:sale.sale,previous_sale_reference:"
+msgid "Previous Sale Reference"
+msgstr "ឯកសារយោងការលក់មុន"
+
+msgctxt "field:sale.sale,previous_sales:"
+msgid "Previous Sales"
+msgstr "ការលក់ពីមុន"
+
+msgctxt "field:sale.sale-previous.sale,sale:"
+msgid "Sale"
+msgstr "បញ្ជាលក់"
+
+msgctxt "field:sale.sale-previous.sale,previous_sale:"
+msgid "Previous Sale"
+msgstr "ការលក់ពីមុន"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_incomplete_agent_inspection"
+msgid ""
+"Document \"%(document)s\" needs a company, model type and valid extracted "
+"data before it can be marked inspected."
+msgstr ""
+"ឯកសារ «%(document)s» ត្រូវមានក្រុមហ៊ុន ប្រភេទម៉ូដែល "
+"និងទិន្នន័យដែលស្រង់ចេញបានត្រឹមត្រូវ មុននឹងអាចសម្គាល់ថាបានត្រួតពិនិត្យ។"
+
+msgctxt "model:ir.model.button,string:document_mark_inspected_button"
+msgid "Mark Inspected"
+msgstr "សម្គាល់ថាបានត្រួតពិនិត្យ"
+
+msgctxt "field:papyrus.purchase.line,delivery_date:"
+msgid "Delivery Date"
+msgstr "កាលបរិច្ឆេទប្រគល់ទំនិញ"
+
+msgctxt "field:papyrus.purchase.line,purchase_lines:"
+msgid "Purchase Lines"
+msgstr "បន្ទាត់ការទិញ"
+
+msgctxt "field:purchase.line,desired_delivery_date:"
+msgid "Desired Delivery Date"
+msgstr "កាលបរិច្ឆេទដឹកជញ្ជូនដែលចង់បាន"
+
+msgctxt "field:purchase.line,papyrus_line:"
+msgid "Papyrus Line"
+msgstr "បន្ទាត់ Papyrus"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_missing_purchase_lines"
+msgid ""
+"Purchase \"%(document)s\" has %(total)s order lines that were not read by "
+"Papyrus. Review them before continuing, or confirm this warning to continue."
+msgstr ""
+"ការទិញ «%(document)s» មានបន្ទាត់បញ្ជាទិញចំនួន %(total)s ដែល Papyrus "
+"មិនបានអាន។ សូមពិនិត្យមុននឹងបន្ត ឬបញ្ជាក់ការព្រមាននេះដើម្បីបន្ត។"
+
+#, python-format
+msgctxt "model:ir.message,text:msg_papyrus_purchase_lines_too_late"
+msgid ""
+"Purchase \"%(purchase)s\" cannot be reconciled because it is no longer "
+"editable."
+msgstr "មិនអាចផ្ទៀងផ្ទាត់ការទិញ «%(purchase)s» បានទេ ព្រោះវាលែងអាចកែសម្រួលបាន។"
+
+msgctxt "field:nantic.agent,papyrus_multicompany:"
+msgid "Shared Papyrus Inbox"
+msgstr "ប្រអប់ទទួល Papyrus ដែលប្រើរួម"
+
+msgctxt "model:ir.message,text:msg_papyrus_company_access"
+msgid "You are not allowed to access this Papyrus document's company."
+msgstr "អ្នកមិនមានសិទ្ធិចូលប្រើក្រុមហ៊ុនរបស់ឯកសារ Papyrus នេះទេ។"
+
+msgctxt "field:papyrus.invoice.line,sequence:"
+msgid "Sequence"
+msgstr "លំដាប់"
+
+msgctxt "field:papyrus.purchase.line,sequence:"
+msgid "Sequence"
+msgstr "លំដាប់"
+
+msgctxt "field:papyrus.sale.line,sequence:"
+msgid "Sequence"
+msgstr "លំដាប់"
